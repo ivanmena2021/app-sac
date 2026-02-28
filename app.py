@@ -117,12 +117,96 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # ─── Descarga Automática ───
+    st.markdown("### 🔄 Descarga Automática")
+    auto_download_available = False
+    try:
+        from auto_download import descargar_rimac, descargar_lapositiva
+        auto_download_available = True
+    except ImportError:
+        pass
+
+    if auto_download_available:
+        # Verificar credenciales en secrets
+        has_rimac_creds = False
+        has_lp_creds = False
+        try:
+            has_rimac_creds = bool(st.secrets.get("rimac", {}).get("email"))
+            has_lp_creds = bool(st.secrets.get("lapositiva", {}).get("usuario"))
+        except Exception:
+            pass
+
+        if not has_rimac_creds or not has_lp_creds:
+            st.warning("⚙️ Configure las credenciales en Settings > Secrets")
+        else:
+            col_dl1, col_dl2 = st.columns(2)
+            with col_dl1:
+                btn_rimac = st.button("📥 Rímac", key="dl_rimac", use_container_width=True)
+            with col_dl2:
+                btn_lp = st.button("📥 La Positiva", key="dl_lp", use_container_width=True)
+
+            btn_ambos = st.button("📥 Descargar Ambos", type="primary",
+                                  key="dl_ambos", use_container_width=True)
+
+            if btn_rimac or btn_ambos:
+                with st.spinner("Descargando desde SISGAQSAC (Rímac)..."):
+                    try:
+                        import io
+                        df_r = descargar_rimac()
+                        buffer = io.BytesIO()
+                        df_r.to_excel(buffer, index=False)
+                        st.session_state["auto_siniestros"] = buffer.getvalue()
+                        st.session_state["auto_siniestros_rows"] = len(df_r)
+                        st.success(f"✅ Rímac: {len(df_r):,} filas")
+                    except Exception as e:
+                        st.error(f"Error Rímac: {str(e)}")
+
+            if btn_lp or btn_ambos:
+                with st.spinner("Descargando desde Agroevaluaciones (~70s)..."):
+                    try:
+                        import io
+                        df_lp = descargar_lapositiva()
+                        buffer = io.BytesIO()
+                        df_lp.to_excel(buffer, index=False)
+                        st.session_state["auto_midagri"] = buffer.getvalue()
+                        st.session_state["auto_midagri_rows"] = len(df_lp)
+                        st.success(f"✅ La Positiva: {len(df_lp):,} filas")
+                    except Exception as e:
+                        st.error(f"Error La Positiva: {str(e)}")
+
+            # Si hay datos auto-descargados, usarlos como archivos
+            if st.session_state.get("auto_siniestros") and st.session_state.get("auto_midagri"):
+                st.info(
+                    f"📦 Datos listos: Rímac ({st.session_state['auto_siniestros_rows']:,}) "
+                    f"+ La Positiva ({st.session_state['auto_midagri_rows']:,})"
+                )
+                if st.button("🚀 Procesar datos descargados", type="primary",
+                             use_container_width=True, key="proc_auto"):
+                    import io
+                    siniestros_file = io.BytesIO(st.session_state["auto_siniestros"])
+                    midagri_file = io.BytesIO(st.session_state["auto_midagri"])
+                    st.session_state["auto_procesar"] = True
+    else:
+        st.caption("Playwright no disponible. Use carga manual.")
+
+    st.markdown("---")
+
     if midagri_file and siniestros_file:
         st.success("✅ Ambos archivos cargados")
         procesar = st.button("🚀 Procesar datos", type="primary", use_container_width=True)
-    else:
-        st.info("📌 Suba ambos archivos para continuar")
+    elif not st.session_state.get("auto_procesar"):
+        st.info("📌 Suba ambos archivos o use descarga automática")
         procesar = False
+    else:
+        procesar = False
+
+    # Si se pidió procesar desde descarga automática
+    if st.session_state.get("auto_procesar"):
+        procesar = True
+        import io
+        midagri_file = io.BytesIO(st.session_state["auto_midagri"])
+        siniestros_file = io.BytesIO(st.session_state["auto_siniestros"])
+        st.session_state["auto_procesar"] = False
 
     st.markdown("---")
     st.markdown(

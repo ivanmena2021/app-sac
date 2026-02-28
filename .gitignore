@@ -4,3 +4,6 @@ node_modules/
 output/
 .streamlit/secrets.toml
 *.tmp
+.DS_Store
+test_descarga*.py
+debug_*.png
