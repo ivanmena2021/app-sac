@@ -127,7 +127,7 @@ with st.sidebar:
         pass
 
     if auto_download_available:
-        # Verificar credenciales en secrets
+        # Verificar credenciales en secrets O variables de entorno
         has_rimac_creds = False
         has_lp_creds = False
         try:
@@ -135,6 +135,11 @@ with st.sidebar:
             has_lp_creds = bool(st.secrets.get("lapositiva", {}).get("usuario"))
         except Exception:
             pass
+        # Fallback: verificar variables de entorno (Railway, Docker, etc.)
+        if not has_rimac_creds:
+            has_rimac_creds = bool(os.environ.get("RIMAC_EMAIL"))
+        if not has_lp_creds:
+            has_lp_creds = bool(os.environ.get("LP_USUARIO"))
 
         if not has_rimac_creds or not has_lp_creds:
             st.warning("⚙️ Configure las credenciales en Settings > Secrets")
