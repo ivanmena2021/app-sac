@@ -1,57 +1,67 @@
 """
 gen_word_operatividad.py — Generador de Ayuda Memoria OPERATIVIDAD SAC
 ======================================================================
-Genera un documento Word con el formato de "AM - OPERATIVIDAD SAC"
-que incluye:
-  - Avisos de siniestros por empresa y departamento
-  - Resultados: ajustes, indemnizaciones, siniestralidad
-  - Tabla de siniestralidad por empresa/departamento
-  - Tabla de coberturas (complementaria vs catastrófica)
-  - Tabla de cultivos priorizados vs no priorizados
-  - Tabla de desembolsos por empresa/departamento
+Versión 2.0 — Con gráficos embebidos (matplotlib), numeración correlativa,
+diseño profesional y contenido completo fiel al formato oficial.
 
-Usa python-docx (misma tecnología que los demás generadores).
+Incluye:
+  - Gráfico 1: Avisos por departamento (barras)
+  - Gráfico 2: Avisos por tipo de siniestro (barras)
+  - Gráfico 3: Desembolsos vs Indemnización por empresa (barras agrupadas)
+  - Cuadros 1-5 con formato profesional
+  - Texto narrativo completo
 """
 
 from docx import Document
-from docx.shared import Pt, RGBColor, Inches, Cm
+from docx.shared import Pt, RGBColor, Inches, Cm, Emu
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.section import WD_ORIENT
 from docx.oxml.ns import qn, nsdecls
 from docx.oxml import parse_xml
 from io import BytesIO
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 
 
-# ═══ COLORES ═══
+# ═══ PALETA DE COLORES ═══
+AZUL_OSCURO = "#1F4E79"
+AZUL_MEDIO = "#2E75B6"
+AZUL_CLARO = "#D6E4F0"
+AMARILLO = "#FFC000"
+GRIS = "#666666"
+BLANCO = "#FFFFFF"
+NEGRO = "#000000"
+
 C = {
-    "BLUE": "1F4E79",
-    "LIGHT_BLUE": "2E75B6",
-    "WHITE": "FFFFFF",
-    "BLACK": "000000",
     "HEADER_BG": "1F4E79",
     "SUBTOTAL_BG": "D6E4F0",
     "ALT_ROW": "F2F7FB",
-    "GRAY": "666666",
+    "WHITE": "FFFFFF",
+    "BLACK": "000000",
 }
 
 
+# ═══════════════════════════════════════════════════════════════════
+# FORMATO DE NÚMEROS
+# ═══════════════════════════════════════════════════════════════════
+
 def fmt(val, dec=2):
-    """Formatea número con separador de miles estilo S/."""
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return "S/ -"
     try:
         n = float(val)
         if n == 0:
             return "S/ -"
-        formatted = f"{n:,.{dec}f}"
-        return f"S/ {formatted}"
+        return f"S/ {n:,.{dec}f}"
     except (ValueError, TypeError):
         return "S/ -"
 
 
 def fmt_n(val, dec=2):
-    """Formatea número sin prefijo S/."""
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return "-"
     try:
@@ -64,7 +74,6 @@ def fmt_n(val, dec=2):
 
 
 def fmt_pct(val, dec=2):
-    """Formatea porcentaje."""
     if val is None or (isinstance(val, float) and np.isnan(val)):
         return "0.00%"
     try:
@@ -74,15 +83,143 @@ def fmt_pct(val, dec=2):
 
 
 def fmt_int(val):
-    """Formatea entero con separador de miles."""
     try:
-        return f"{int(float(val)):,}"
+        n = int(float(val))
+        return f"{n:,}"
     except (ValueError, TypeError):
         return "-"
 
 
 # ═══════════════════════════════════════════════════════════════════
-# UTILIDADES PARA TABLAS
+# GENERACIÓN DE GRÁFICOS (matplotlib → BytesIO PNG)
+# ═══════════════════════════════════════════════════════════════════
+
+def _chart_avisos_departamento(avisos_by_depto):
+    """Gráfico de barras: Número de Avisos Reportados por Departamento."""
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+
+    deptos = [d.title() for d in avisos_by_depto.index]
+    valores = avisos_by_depto.values.astype(int)
+
+    bars = ax.bar(range(len(deptos)), valores, color=AZUL_MEDIO, width=0.7, edgecolor="none")
+
+    # Etiquetas encima de cada barra
+    for bar, val in zip(bars, valores):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(valores) * 0.01,
+                f"{val:,}", ha="center", va="bottom", fontsize=7, fontweight="bold",
+                color=AZUL_OSCURO)
+
+    ax.set_xticks(range(len(deptos)))
+    ax.set_xticklabels(deptos, rotation=45, ha="right", fontsize=7)
+    ax.set_title("Número de Avisos Reportados por Departamento",
+                 fontsize=12, fontweight="bold", color=AZUL_OSCURO, pad=12)
+    ax.set_ylabel("")
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#CCCCCC")
+    ax.spines["bottom"].set_color("#CCCCCC")
+    ax.tick_params(axis="y", labelsize=7, colors="#888888")
+    ax.grid(axis="y", alpha=0.3, linestyle="--")
+    ax.set_axisbelow(True)
+
+    plt.tight_layout()
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=180, bbox_inches="tight",
+                facecolor="white", edgecolor="none")
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+def _chart_avisos_tipo(avisos_by_tipo):
+    """Gráfico de barras: Número de Avisos Reportados por Tipo de Siniestro."""
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+
+    tipos = [t.title() for t in avisos_by_tipo.index]
+    valores = avisos_by_tipo.values.astype(int)
+
+    bars = ax.bar(range(len(tipos)), valores, color=AZUL_MEDIO, width=0.7, edgecolor="none")
+
+    for bar, val in zip(bars, valores):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(valores) * 0.01,
+                f"{val:,}", ha="center", va="bottom", fontsize=7, fontweight="bold",
+                color=AZUL_OSCURO)
+
+    ax.set_xticks(range(len(tipos)))
+    ax.set_xticklabels(tipos, rotation=45, ha="right", fontsize=7)
+    ax.set_title("Número de Avisos Reportados por Tipo de Siniestro",
+                 fontsize=12, fontweight="bold", color=AZUL_OSCURO, pad=12)
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{int(x):,}"))
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#CCCCCC")
+    ax.spines["bottom"].set_color("#CCCCCC")
+    ax.tick_params(axis="y", labelsize=7, colors="#888888")
+    ax.grid(axis="y", alpha=0.3, linestyle="--")
+    ax.set_axisbelow(True)
+
+    plt.tight_layout()
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=180, bbox_inches="tight",
+                facecolor="white", edgecolor="none")
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+def _chart_desembolsos_empresa(indemn_lp, desemb_lp, indemn_rimac, desemb_rimac):
+    """Gráfico de barras agrupadas: Desembolsos vs Indemnización por Empresa."""
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    empresas = ["La Positiva", "Rímac"]
+    indemnizaciones = [indemn_lp, indemn_rimac]
+    desembolsos = [desemb_lp, desemb_rimac]
+
+    x = np.arange(len(empresas))
+    width = 0.3
+
+    bars1 = ax.bar(x - width / 2, indemnizaciones, width, label="Suma de INDEMNIZACIÓN",
+                   color=AZUL_MEDIO, edgecolor="none")
+    bars2 = ax.bar(x + width / 2, desembolsos, width, label="Suma de MONTO DESEMBOLSADO",
+                   color=AMARILLO, edgecolor="none")
+
+    # Etiquetas
+    for bar, val in zip(bars1, indemnizaciones):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(indemnizaciones) * 0.02,
+                f"S/ {val:,.2f}", ha="center", va="bottom", fontsize=8, fontweight="bold",
+                color=AZUL_OSCURO)
+    for bar, val in zip(bars2, desembolsos):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(indemnizaciones) * 0.02,
+                f"S/ {val:,.2f}", ha="center", va="bottom", fontsize=8, fontweight="bold",
+                color="#996600")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(empresas, fontsize=10, fontweight="bold")
+    ax.set_title("DESEMBOLSOS REALIZADOS A NIVEL DE EMPRESA DE SEGUROS",
+                 fontsize=11, fontweight="bold", color=AZUL_OSCURO, pad=12)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=2, fontsize=8,
+              frameon=True, fancybox=True)
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"S/ {x:,.0f}"))
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#CCCCCC")
+    ax.spines["bottom"].set_color("#CCCCCC")
+    ax.tick_params(axis="y", labelsize=7, colors="#888888")
+    ax.grid(axis="y", alpha=0.3, linestyle="--")
+    ax.set_axisbelow(True)
+
+    plt.tight_layout()
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=180, bbox_inches="tight",
+                facecolor="white", edgecolor="none")
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+# ═══════════════════════════════════════════════════════════════════
+# UTILIDADES PARA TABLAS WORD
 # ═══════════════════════════════════════════════════════════════════
 
 def _set_bg(cell, color):
@@ -90,7 +227,7 @@ def _set_bg(cell, color):
     cell._tc.get_or_add_tcPr().append(shading)
 
 
-def _set_borders(cell, color="BBBBBB"):
+def _set_borders(cell, color="AAAAAA"):
     tcPr = cell._tc.get_or_add_tcPr()
     borders = parse_xml(
         f'<w:tcBorders {nsdecls("w")}>'
@@ -111,7 +248,6 @@ def _set_cell_width(cell, width_twips):
 
 def _write_cell(cell, text, bold=False, size=8, align=WD_ALIGN_PARAGRAPH.LEFT,
                 font_color=None, bg_color=None):
-    """Escribe en celda con formato."""
     cell.text = ""
     p = cell.paragraphs[0]
     p.alignment = align
@@ -128,48 +264,33 @@ def _write_cell(cell, text, bold=False, size=8, align=WD_ALIGN_PARAGRAPH.LEFT,
     _set_borders(cell)
 
 
-def _merge_vertical(table, col, start_row, end_row):
-    """Merge celdas verticalmente."""
-    cell_start = table.cell(start_row, col)
-    cell_end = table.cell(end_row, col)
-    cell_start.merge(cell_end)
-
-
 # ═══════════════════════════════════════════════════════════════════
-# FUNCIÓN PARA AGREGAR TEXTO FORMATEADO
+# UTILIDADES PARA TEXTO WORD
 # ═══════════════════════════════════════════════════════════════════
 
-def _add_heading(doc, text, level=1):
-    """Agrega un encabezado con formato."""
+def _add_section_heading(doc, text):
+    """Título de sección con línea inferior azul."""
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(10)
+    p.paragraph_format.space_before = Pt(14)
     p.paragraph_format.space_after = Pt(6)
     run = p.add_run(text)
     run.font.name = "Arial"
+    run.font.size = Pt(11)
     run.font.bold = True
     run.underline = True
-    if level == 1:
-        run.font.size = Pt(12)
-        run.font.color.rgb = RGBColor.from_string(C["BLACK"])
-    else:
-        run.font.size = Pt(11)
-        run.font.color.rgb = RGBColor.from_string(C["BLACK"])
+    run.font.color.rgb = RGBColor.from_string("000000")
     return p
 
 
-def _add_bullet(doc, text, bold_prefix="", indent_level=0):
-    """Agrega un bullet point."""
+def _add_bullet(doc, text, bold_start=""):
     p = doc.add_paragraph(style="List Bullet")
     p.paragraph_format.space_after = Pt(4)
-    if indent_level > 0:
-        p.paragraph_format.left_indent = Inches(0.5 * indent_level)
-
-    if bold_prefix:
-        run = p.add_run(bold_prefix)
+    p.paragraph_format.space_before = Pt(2)
+    if bold_start:
+        run = p.add_run(bold_start)
         run.font.name = "Arial"
         run.font.size = Pt(10)
         run.font.bold = True
-
     run = p.add_run(text)
     run.font.name = "Arial"
     run.font.size = Pt(10)
@@ -177,7 +298,6 @@ def _add_bullet(doc, text, bold_prefix="", indent_level=0):
 
 
 def _add_subbullet(doc, text):
-    """Agrega un sub-bullet (nivel 2)."""
     p = doc.add_paragraph(style="List Bullet 2")
     p.paragraph_format.space_after = Pt(2)
     run = p.add_run(text)
@@ -186,10 +306,11 @@ def _add_subbullet(doc, text):
     return p
 
 
-def _add_body(doc, text, bold=False, italic=False, size=10):
-    """Agrega un párrafo de texto normal."""
+def _add_body(doc, text, bold=False, italic=False, size=10, align=None):
     p = doc.add_paragraph()
     p.paragraph_format.space_after = Pt(4)
+    if align:
+        p.alignment = align
     run = p.add_run(text)
     run.font.name = "Arial"
     run.font.size = Pt(size)
@@ -198,19 +319,64 @@ def _add_body(doc, text, bold=False, italic=False, size=10):
     return p
 
 
+def _add_bold_underline_bullet(doc, text):
+    """Bullet con texto negrita y subrayado (para indemnizaciones)."""
+    p = doc.add_paragraph(style="List Bullet")
+    p.paragraph_format.space_after = Pt(4)
+    run = p.add_run(text)
+    run.font.name = "Arial"
+    run.font.size = Pt(10)
+    run.font.bold = True
+    run.underline = True
+    return p
+
+
+def _add_cuadro_title(doc, numero, titulo):
+    """Agrega título de cuadro numerado."""
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(8)
+    p.paragraph_format.space_after = Pt(6)
+    run = p.add_run(f"Cuadro N° {numero:02d}: {titulo}")
+    run.font.name = "Arial"
+    run.font.size = Pt(10)
+    run.font.bold = True
+    run.font.color.rgb = RGBColor.from_string("1F4E79")
+    return p
+
+
+def _add_grafico_caption(doc, numero, titulo):
+    """Agrega pie de gráfico numerado."""
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(2)
+    p.paragraph_format.space_after = Pt(8)
+    run = p.add_run(f"Gráfico N° {numero:02d}: {titulo}")
+    run.font.name = "Arial"
+    run.font.size = Pt(9)
+    run.font.italic = True
+    run.font.color.rgb = RGBColor.from_string("666666")
+    return p
+
+
+def _add_image_centered(doc, image_buf, width_inches=6.0):
+    """Agrega una imagen centrada."""
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run()
+    run.add_picture(image_buf, width=Inches(width_inches))
+    return p
+
+
 # ═══════════════════════════════════════════════════════════════════
 # PREPARACIÓN DE DATOS
 # ═══════════════════════════════════════════════════════════════════
 
 def _prepare_operatividad_data(datos):
-    """
-    Prepara todas las agregaciones necesarias para el documento
-    a partir del dict datos de data_processor.
-    """
-    midagri = datos["midagri"]        # DataFrame combinado (LP + Rímac)
-    materia = datos["materia"]        # Materia asegurada (estático)
+    midagri = datos["midagri"].copy()
+    materia = datos["materia"]
 
-    # ─── Mapeo departamento → empresa ───
+    # Mapeo departamento → empresa
     depto_empresa = {}
     if "EMPRESA_ASEGURADORA" in materia.columns and "DEPARTAMENTO" in materia.columns:
         for _, row in materia.iterrows():
@@ -218,24 +384,21 @@ def _prepare_operatividad_data(datos):
             e = str(row["EMPRESA_ASEGURADORA"]).strip().upper()
             depto_empresa[d] = e
 
-    # Asignar empresa a cada registro
     if "DEPARTAMENTO" in midagri.columns:
-        midagri = midagri.copy()
         midagri["EMPRESA"] = midagri["DEPARTAMENTO"].map(depto_empresa).fillna("OTROS")
     else:
         midagri["EMPRESA"] = "OTROS"
 
-    # Normalizar nombres de empresa
-    def _normalize_empresa(e):
+    def _norm_emp(e):
         eu = str(e).upper()
         if "POSITIVA" in eu:
             return "LA POSITIVA"
         elif "RIMAC" in eu or "RÍMAC" in eu:
             return "RÍMAC"
         return eu
-    midagri["EMPRESA"] = midagri["EMPRESA"].apply(_normalize_empresa)
+    midagri["EMPRESA"] = midagri["EMPRESA"].apply(_norm_emp)
 
-    # ─── Prima neta por departamento (desde materia) ───
+    # Prima neta por departamento
     prima_por_depto = {}
     if "PRIMA_NETA" in materia.columns and "DEPARTAMENTO" in materia.columns:
         for _, row in materia.iterrows():
@@ -243,27 +406,30 @@ def _prepare_operatividad_data(datos):
             prima_por_depto[d] = float(row.get("PRIMA_NETA", 0) or 0)
 
     fecha_corte = datos["fecha_corte"]
-
-    # ═══ 1. AVISOS POR EMPRESA ═══
-    avisos_by_empresa = midagri.groupby("EMPRESA").size().to_dict()
     total_avisos = len(midagri)
 
+    # Avisos por empresa
+    avisos_by_empresa = midagri.groupby("EMPRESA").size().to_dict()
     avisos_lp = avisos_by_empresa.get("LA POSITIVA", 0)
     avisos_rimac = avisos_by_empresa.get("RÍMAC", 0)
 
-    # ═══ 2. TOP DEPARTAMENTOS POR AVISOS ═══
+    # Avisos por departamento (todos)
     avisos_by_depto = midagri.groupby("DEPARTAMENTO").size().sort_values(ascending=False)
+
+    # Top 4 departamentos
     top4_deptos = avisos_by_depto.head(4)
     top4_total = top4_deptos.sum()
     top4_pct = (top4_total / total_avisos * 100) if total_avisos > 0 else 0
 
-    # ═══ 3. TOP TIPOS DE SINIESTRO ═══
+    # Avisos por tipo de siniestro (todos)
     avisos_by_tipo = midagri["TIPO_SINIESTRO"].value_counts() if "TIPO_SINIESTRO" in midagri.columns else pd.Series()
+
+    # Top 3 tipos
     top3_tipos = avisos_by_tipo.head(3)
     top3_total = top3_tipos.sum()
     top3_pct = (top3_total / total_avisos * 100) if total_avisos > 0 else 0
 
-    # ═══ 4. AJUSTADOS POR EMPRESA ═══
+    # Ajustados
     if "ESTADO_INSPECCION" in midagri.columns:
         ajustados_mask = midagri["ESTADO_INSPECCION"].astype(str).str.upper() == "CERRADO"
     elif "ESTADO_SINIESTRO" in midagri.columns:
@@ -271,77 +437,17 @@ def _prepare_operatividad_data(datos):
     else:
         ajustados_mask = pd.Series([False] * len(midagri))
 
-    total_ajustados = ajustados_mask.sum()
+    total_ajustados = int(ajustados_mask.sum())
     pct_ajustados = (total_ajustados / total_avisos * 100) if total_avisos > 0 else 0
 
-    ajust_lp = ajustados_mask[midagri["EMPRESA"] == "LA POSITIVA"].sum()
-    ajust_rimac = ajustados_mask[midagri["EMPRESA"] == "RÍMAC"].sum()
+    ajust_lp = int(ajustados_mask[midagri["EMPRESA"] == "LA POSITIVA"].sum())
+    ajust_rimac = int(ajustados_mask[midagri["EMPRESA"] == "RÍMAC"].sum())
     pct_ajust_lp = (ajust_lp / avisos_lp * 100) if avisos_lp > 0 else 0
     pct_ajust_rimac = (ajust_rimac / avisos_rimac * 100) if avisos_rimac > 0 else 0
 
-    # ═══ 5. INDEMNIZACIÓN TOTAL ═══
+    # Indemnización total
     monto_indemnizado = midagri["INDEMNIZACION"].sum() if "INDEMNIZACION" in midagri.columns else 0
-
-    # ═══ 6. TABLA SINIESTRALIDAD POR EMPRESA/DEPARTAMENTO ═══
-    tabla_siniestralidad = []
-    for empresa in ["LA POSITIVA", "RÍMAC"]:
-        df_emp = midagri[midagri["EMPRESA"] == empresa]
-        deptos = sorted(df_emp["DEPARTAMENTO"].unique())
-
-        emp_indemn_total = 0
-        emp_sup_total = 0
-        emp_prima_total = 0
-
-        filas_empresa = []
-        for depto in deptos:
-            df_d = df_emp[df_emp["DEPARTAMENTO"] == depto]
-            indemn = df_d["INDEMNIZACION"].sum() if "INDEMNIZACION" in df_d.columns else 0
-            sup_ind = df_d["SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in df_d.columns else 0
-            prima = prima_por_depto.get(depto, 0)
-            idx_sin = (indemn / prima * 100) if prima > 0 else 0
-
-            emp_indemn_total += indemn
-            emp_sup_total += sup_ind
-            emp_prima_total += prima
-
-            filas_empresa.append({
-                "empresa": empresa,
-                "departamento": depto.title(),
-                "indemnizacion": indemn,
-                "sup_indemnizada": sup_ind,
-                "prima_neta": prima,
-                "indice": idx_sin,
-            })
-
-        # Ordenar por índice de siniestralidad descendente
-        filas_empresa.sort(key=lambda x: x["indice"], reverse=True)
-        tabla_siniestralidad.extend(filas_empresa)
-
-        # Subtotal empresa
-        idx_emp = (emp_indemn_total / emp_prima_total * 100) if emp_prima_total > 0 else 0
-        tabla_siniestralidad.append({
-            "empresa": f"Total {empresa}",
-            "departamento": "",
-            "indemnizacion": emp_indemn_total,
-            "sup_indemnizada": emp_sup_total,
-            "prima_neta": emp_prima_total,
-            "indice": idx_emp,
-            "is_subtotal": True,
-        })
-
-    # Total general
-    prima_total_neta = datos.get("prima_neta", 0)
-    idx_general = (monto_indemnizado / prima_total_neta * 100) if prima_total_neta > 0 else 0
     sup_ind_total = midagri["SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in midagri.columns else 0
-    tabla_siniestralidad.append({
-        "empresa": "Total general",
-        "departamento": "",
-        "indemnizacion": monto_indemnizado,
-        "sup_indemnizada": sup_ind_total,
-        "prima_neta": prima_total_neta,
-        "indice": idx_general,
-        "is_total": True,
-    })
 
     # Siniestralidad por empresa
     indemn_lp = midagri[midagri["EMPRESA"] == "LA POSITIVA"]["INDEMNIZACION"].sum() if "INDEMNIZACION" in midagri.columns else 0
@@ -350,339 +456,291 @@ def _prepare_operatividad_data(datos):
     prima_rimac = sum(prima_por_depto.get(d, 0) for d in midagri[midagri["EMPRESA"] == "RÍMAC"]["DEPARTAMENTO"].unique())
     idx_lp = (indemn_lp / prima_lp * 100) if prima_lp > 0 else 0
     idx_rimac = (indemn_rimac / prima_rimac * 100) if prima_rimac > 0 else 0
+    prima_total_neta = datos.get("prima_neta", 0)
+    idx_general = (monto_indemnizado / prima_total_neta * 100) if prima_total_neta > 0 else 0
 
-    # ═══ 7. TABLA COBERTURAS (complementaria vs catastrófica) ═══
+    # Desembolsos por empresa
+    desemb_lp = midagri[midagri["EMPRESA"] == "LA POSITIVA"]["MONTO_DESEMBOLSADO"].sum() if "MONTO_DESEMBOLSADO" in midagri.columns else 0
+    desemb_rimac = midagri[midagri["EMPRESA"] == "RÍMAC"]["MONTO_DESEMBOLSADO"].sum() if "MONTO_DESEMBOLSADO" in midagri.columns else 0
+
+    # ─── TABLA SINIESTRALIDAD ───
+    tabla_siniestralidad = []
+    for empresa in ["LA POSITIVA", "RÍMAC"]:
+        df_emp = midagri[midagri["EMPRESA"] == empresa]
+        deptos = sorted(df_emp["DEPARTAMENTO"].unique())
+        emp_indemn, emp_sup, emp_prima = 0, 0, 0
+        filas = []
+        for depto in deptos:
+            df_d = df_emp[df_emp["DEPARTAMENTO"] == depto]
+            indemn = df_d["INDEMNIZACION"].sum() if "INDEMNIZACION" in df_d.columns else 0
+            sup = df_d["SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in df_d.columns else 0
+            prima = prima_por_depto.get(depto, 0)
+            idx = (indemn / prima * 100) if prima > 0 else 0
+            emp_indemn += indemn
+            emp_sup += sup
+            emp_prima += prima
+            filas.append({"empresa": empresa, "departamento": depto.title(),
+                          "indemnizacion": indemn, "sup_indemnizada": sup,
+                          "prima_neta": prima, "indice": idx})
+        filas.sort(key=lambda x: x["indice"], reverse=True)
+        tabla_siniestralidad.extend(filas)
+        idx_emp = (emp_indemn / emp_prima * 100) if emp_prima > 0 else 0
+        tabla_siniestralidad.append({"empresa": f"Total {empresa}", "departamento": "",
+                                     "indemnizacion": emp_indemn, "sup_indemnizada": emp_sup,
+                                     "prima_neta": emp_prima, "indice": idx_emp, "is_subtotal": True})
+
+    tabla_siniestralidad.append({"empresa": "Total general", "departamento": "",
+                                 "indemnizacion": monto_indemnizado, "sup_indemnizada": sup_ind_total,
+                                 "prima_neta": prima_total_neta, "indice": idx_general, "is_total": True})
+
+    # ─── TABLA COBERTURAS ───
     tabla_coberturas = []
     if "TIPO_COBERTURA" in midagri.columns:
         for empresa in ["LA POSITIVA", "RÍMAC"]:
             df_emp = midagri[midagri["EMPRESA"] == empresa]
             deptos = sorted(df_emp["DEPARTAMENTO"].unique())
-
-            emp_comp = 0
-            emp_cat = 0
-            emp_total = 0
-
+            emp_comp, emp_cat, emp_total = 0, 0, 0
             for depto in deptos:
                 df_d = df_emp[df_emp["DEPARTAMENTO"] == depto]
-                # Complementaria
-                comp_mask = df_d["TIPO_COBERTURA"].astype(str).str.upper().str.contains("COMPLEMENT", na=False)
-                cat_mask = df_d["TIPO_COBERTURA"].astype(str).str.upper().str.contains("CATASTR", na=False)
+                comp = df_d.loc[df_d["TIPO_COBERTURA"].astype(str).str.upper().str.contains("COMPLEMENT", na=False), "INDEMNIZACION"].sum()
+                cat = df_d.loc[df_d["TIPO_COBERTURA"].astype(str).str.upper().str.contains("CATASTR", na=False), "INDEMNIZACION"].sum()
+                tot = df_d["INDEMNIZACION"].sum()
+                emp_comp += comp; emp_cat += cat; emp_total += tot
+                if tot > 0:
+                    tabla_coberturas.append({"empresa": empresa, "departamento": depto.title(),
+                                             "complementaria": comp, "catastrofica": cat, "total": tot})
+            tabla_coberturas.append({"empresa": f"Total {empresa}", "departamento": "",
+                                     "complementaria": emp_comp, "catastrofica": emp_cat,
+                                     "total": emp_total, "is_subtotal": True})
+        tc_no_sub = [r for r in tabla_coberturas if not r.get("is_subtotal")]
+        total_comp = sum(r["complementaria"] for r in tc_no_sub)
+        total_cat = sum(r["catastrofica"] for r in tc_no_sub)
+        tabla_coberturas.append({"empresa": "Total general", "departamento": "",
+                                 "complementaria": total_comp, "catastrofica": total_cat,
+                                 "total": total_comp + total_cat, "is_total": True})
 
-                val_comp = df_d.loc[comp_mask, "INDEMNIZACION"].sum() if "INDEMNIZACION" in df_d.columns else 0
-                val_cat = df_d.loc[cat_mask, "INDEMNIZACION"].sum() if "INDEMNIZACION" in df_d.columns else 0
-                val_total = df_d["INDEMNIZACION"].sum() if "INDEMNIZACION" in df_d.columns else 0
-
-                emp_comp += val_comp
-                emp_cat += val_cat
-                emp_total += val_total
-
-                if val_total > 0:
-                    tabla_coberturas.append({
-                        "empresa": empresa,
-                        "departamento": depto.title(),
-                        "complementaria": val_comp,
-                        "catastrofica": val_cat,
-                        "total": val_total,
-                    })
-
-            # Subtotal empresa
-            tabla_coberturas.append({
-                "empresa": f"Total {empresa}",
-                "departamento": "",
-                "complementaria": emp_comp,
-                "catastrofica": emp_cat,
-                "total": emp_total,
-                "is_subtotal": True,
-            })
-
-        # Total general coberturas
-        total_comp = sum(r["complementaria"] for r in tabla_coberturas if not r.get("is_subtotal"))
-        total_cat = sum(r["catastrofica"] for r in tabla_coberturas if not r.get("is_subtotal"))
-        tabla_coberturas.append({
-            "empresa": "Total general",
-            "departamento": "",
-            "complementaria": total_comp,
-            "catastrofica": total_cat,
-            "total": total_comp + total_cat,
-            "is_total": True,
-        })
-
-    # ═══ 8. TABLA CULTIVOS PRIORIZADOS ═══
+    # ─── TABLA PRIORIZADOS ───
     tabla_priorizados = []
+    total_prio_ind, total_noprio_ind = 0, 0
+    total_prio_sup, total_noprio_sup = 0, 0
     if "PRIORIZADO" in midagri.columns:
         for empresa in ["LA POSITIVA", "RÍMAC"]:
             df_emp = midagri[midagri["EMPRESA"] == empresa]
+            no_mask = df_emp["PRIORIZADO"].astype(str).str.upper().str.contains("NO", na=False)
+            si_mask = ~no_mask
 
-            for prio_val in ["PRIORIZADO", "NO PRIORIZADO"]:
-                mask = df_emp["PRIORIZADO"].astype(str).str.upper().str.contains(
-                    "NO" if prio_val == "NO PRIORIZADO" else "^(?!.*NO)", regex=True, na=False
-                )
-                if prio_val == "NO PRIORIZADO":
-                    mask = df_emp["PRIORIZADO"].astype(str).str.upper().str.contains("NO", na=False)
-                else:
-                    mask = ~df_emp["PRIORIZADO"].astype(str).str.upper().str.contains("NO", na=False)
-
+            for label, mask in [("PRIORIZADO", si_mask), ("NO PRIORIZADO", no_mask)]:
                 sup = df_emp.loc[mask, "SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in df_emp.columns else 0
                 ind = df_emp.loc[mask, "INDEMNIZACION"].sum() if "INDEMNIZACION" in df_emp.columns else 0
+                tabla_priorizados.append({"empresa": empresa, "cultivo": label,
+                                          "sup_indemnizada": sup, "indemnizacion": ind})
+                if label == "PRIORIZADO":
+                    total_prio_ind += ind; total_prio_sup += sup
+                else:
+                    total_noprio_ind += ind; total_noprio_sup += sup
 
-                tabla_priorizados.append({
-                    "empresa": empresa,
-                    "cultivo": prio_val,
-                    "sup_indemnizada": sup,
-                    "indemnizacion": ind,
-                })
-
-            # Subtotal
             emp_sup = df_emp["SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in df_emp.columns else 0
             emp_ind = df_emp["INDEMNIZACION"].sum() if "INDEMNIZACION" in df_emp.columns else 0
-            tabla_priorizados.append({
-                "empresa": f"Total {empresa}",
-                "cultivo": "",
-                "sup_indemnizada": emp_sup,
-                "indemnizacion": emp_ind,
-                "is_subtotal": True,
-            })
+            tabla_priorizados.append({"empresa": f"Total {empresa}", "cultivo": "",
+                                      "sup_indemnizada": emp_sup, "indemnizacion": emp_ind,
+                                      "is_subtotal": True})
+        tabla_priorizados.append({"empresa": "Total general", "cultivo": "",
+                                  "sup_indemnizada": sup_ind_total, "indemnizacion": monto_indemnizado,
+                                  "is_total": True})
 
-        tabla_priorizados.append({
-            "empresa": "Total general",
-            "cultivo": "",
-            "sup_indemnizada": sup_ind_total,
-            "indemnizacion": monto_indemnizado,
-            "is_total": True,
-        })
-
-    # ═══ 9. TABLA DESEMBOLSOS ═══
+    # ─── TABLA DESEMBOLSOS ───
     tabla_desembolsos = []
     for empresa in ["LA POSITIVA", "RÍMAC"]:
         df_emp = midagri[midagri["EMPRESA"] == empresa]
         deptos = sorted(df_emp["DEPARTAMENTO"].unique())
-
-        emp_indemn = 0
-        emp_desemb = 0
-        emp_prod = 0
-
-        filas_emp = []
+        emp_indemn, emp_desemb, emp_prod = 0, 0, 0
+        filas = []
         for depto in deptos:
             df_d = df_emp[df_emp["DEPARTAMENTO"] == depto]
             indemn = df_d["INDEMNIZACION"].sum() if "INDEMNIZACION" in df_d.columns else 0
             desemb = df_d["MONTO_DESEMBOLSADO"].sum() if "MONTO_DESEMBOLSADO" in df_d.columns else 0
             prod = df_d["N_PRODUCTORES"].sum() if "N_PRODUCTORES" in df_d.columns else 0
             pct = (desemb / indemn * 100) if indemn > 0 else 0
-
-            emp_indemn += indemn
-            emp_desemb += desemb
-            emp_prod += prod
-
-            filas_emp.append({
-                "empresa": empresa,
-                "departamento": depto.title(),
-                "indemnizacion": indemn,
-                "desembolso": desemb,
-                "pct_desembolso": pct,
-                "productores": int(prod),
-            })
-
-        # Ordenar por % desembolso descendente
-        filas_emp.sort(key=lambda x: x["pct_desembolso"], reverse=True)
-        tabla_desembolsos.extend(filas_emp)
-
+            emp_indemn += indemn; emp_desemb += desemb; emp_prod += prod
+            filas.append({"empresa": empresa, "departamento": depto.title(),
+                          "indemnizacion": indemn, "desembolso": desemb,
+                          "pct_desembolso": pct, "productores": int(prod)})
+        filas.sort(key=lambda x: x["pct_desembolso"], reverse=True)
+        tabla_desembolsos.extend(filas)
         pct_emp = (emp_desemb / emp_indemn * 100) if emp_indemn > 0 else 0
-        tabla_desembolsos.append({
-            "empresa": f"Total {empresa}",
-            "departamento": "",
-            "indemnizacion": emp_indemn,
-            "desembolso": emp_desemb,
-            "pct_desembolso": pct_emp,
-            "productores": int(emp_prod),
-            "is_subtotal": True,
-        })
+        tabla_desembolsos.append({"empresa": f"Total {empresa}", "departamento": "",
+                                  "indemnizacion": emp_indemn, "desembolso": emp_desemb,
+                                  "pct_desembolso": pct_emp, "productores": int(emp_prod),
+                                  "is_subtotal": True})
 
     monto_desembolsado = datos.get("monto_desembolsado", 0)
     productores = datos.get("productores_desembolso", 0)
     pct_desembolso = datos.get("pct_desembolso", 0)
-    tabla_desembolsos.append({
-        "empresa": "Total general",
-        "departamento": "",
-        "indemnizacion": monto_indemnizado,
-        "desembolso": monto_desembolsado,
-        "pct_desembolso": float(pct_desembolso),
-        "productores": int(productores),
-        "is_total": True,
-    })
-
-    # Departamentos con desembolso
-    deptos_con_desembolso = datos.get("deptos_con_desembolso", 0)
+    tabla_desembolsos.append({"empresa": "Total general", "departamento": "",
+                              "indemnizacion": monto_indemnizado, "desembolso": monto_desembolsado,
+                              "pct_desembolso": float(pct_desembolso), "productores": int(productores),
+                              "is_total": True})
 
     return {
-        "fecha_corte": fecha_corte,
-        "total_avisos": total_avisos,
-        "avisos_lp": avisos_lp,
-        "avisos_rimac": avisos_rimac,
-        "top4_deptos": top4_deptos,
-        "top4_total": top4_total,
-        "top4_pct": top4_pct,
+        "fecha_corte": fecha_corte, "total_avisos": total_avisos,
+        "avisos_lp": avisos_lp, "avisos_rimac": avisos_rimac,
+        "avisos_by_depto": avisos_by_depto,
+        "top4_deptos": top4_deptos, "top4_total": top4_total, "top4_pct": top4_pct,
         "avisos_by_tipo": avisos_by_tipo,
-        "top3_tipos": top3_tipos,
-        "top3_total": top3_total,
-        "top3_pct": top3_pct,
-        "total_ajustados": total_ajustados,
-        "pct_ajustados": pct_ajustados,
-        "ajust_lp": ajust_lp,
-        "ajust_rimac": ajust_rimac,
-        "pct_ajust_lp": pct_ajust_lp,
-        "pct_ajust_rimac": pct_ajust_rimac,
-        "monto_indemnizado": monto_indemnizado,
-        "idx_general": idx_general,
-        "idx_lp": idx_lp,
-        "idx_rimac": idx_rimac,
+        "top3_tipos": top3_tipos, "top3_total": top3_total, "top3_pct": top3_pct,
+        "total_ajustados": total_ajustados, "pct_ajustados": pct_ajustados,
+        "ajust_lp": ajust_lp, "ajust_rimac": ajust_rimac,
+        "pct_ajust_lp": pct_ajust_lp, "pct_ajust_rimac": pct_ajust_rimac,
+        "monto_indemnizado": monto_indemnizado, "sup_ind_total": sup_ind_total,
+        "idx_general": idx_general, "idx_lp": idx_lp, "idx_rimac": idx_rimac,
+        "indemn_lp": indemn_lp, "indemn_rimac": indemn_rimac,
+        "desemb_lp": desemb_lp, "desemb_rimac": desemb_rimac,
         "tabla_siniestralidad": tabla_siniestralidad,
         "tabla_coberturas": tabla_coberturas,
         "tabla_priorizados": tabla_priorizados,
+        "total_prio_ind": total_prio_ind, "total_noprio_ind": total_noprio_ind,
         "tabla_desembolsos": tabla_desembolsos,
         "monto_desembolsado": monto_desembolsado,
-        "productores": productores,
-        "pct_desembolso": pct_desembolso,
-        "deptos_con_desembolso": deptos_con_desembolso,
+        "productores": productores, "pct_desembolso": pct_desembolso,
+        "deptos_con_desembolso": datos.get("deptos_con_desembolso", 0),
     }
 
 
 # ═══════════════════════════════════════════════════════════════════
-# GENERADOR DEL DOCUMENTO
+# FUNCIÓN AUXILIAR PARA CREAR TABLAS PROFESIONALES
+# ═══════════════════════════════════════════════════════════════════
+
+def _build_table(doc, headers, data_rows, col_widths):
+    """Crea tabla profesional con header, filas alternas, subtotales y total."""
+    n_rows = len(data_rows) + 1
+    n_cols = len(headers)
+    table = doc.add_table(rows=n_rows, cols=n_cols)
+    table.autofit = False
+
+    # Header
+    for i, h in enumerate(headers):
+        cell = table.rows[0].cells[i]
+        _write_cell(cell, h, bold=True, size=7, align=WD_ALIGN_PARAGRAPH.CENTER,
+                    font_color=C["WHITE"], bg_color=C["HEADER_BG"])
+        _set_cell_width(cell, col_widths[i])
+
+    return table
+
+
+# ═══════════════════════════════════════════════════════════════════
+# GENERADOR PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════
 
 def generate_operatividad_docx(datos):
-    """
-    Genera el documento Word de Ayuda Memoria Operatividad SAC.
-
-    Args:
-        datos: dict de data_processor.process_dynamic_data()
-    Returns:
-        bytes: contenido del archivo .docx
-    """
     d = _prepare_operatividad_data(datos)
     doc = Document()
 
-    # Configurar márgenes
     for section in doc.sections:
-        section.top_margin = Inches(0.8)
+        section.top_margin = Inches(0.7)
         section.bottom_margin = Inches(0.6)
-        section.left_margin = Inches(0.9)
-        section.right_margin = Inches(0.9)
+        section.left_margin = Inches(0.85)
+        section.right_margin = Inches(0.85)
+
+    cuadro_num = 0
+    grafico_num = 0
 
     # ═══════════════════════════════════════════════════════════════
     # TÍTULO
     # ═══════════════════════════════════════════════════════════════
-    t = doc.add_paragraph()
-    t.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    t.paragraph_format.space_after = Pt(2)
-    run = t.add_run("AYUDA MEMORIA OPERATIVIDAD SAC")
-    run.font.name = "Arial"
-    run.font.size = Pt(13)
-    run.font.bold = True
-    run.underline = True
+    for text in ["AYUDA MEMORIA OPERATIVIDAD SAC",
+                 "CAMPAÑA AGRÍCOLA 2025-2026",
+                 f"(AL {d['fecha_corte']})"]:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.space_before = Pt(0)
+        run = p.add_run(text)
+        run.font.name = "Arial"
+        run.font.size = Pt(13)
+        run.font.bold = True
+        run.underline = True
 
-    t2 = doc.add_paragraph()
-    t2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    t2.paragraph_format.space_after = Pt(2)
-    run = t2.add_run("CAMPAÑA AGRÍCOLA 2025-2026")
-    run.font.name = "Arial"
-    run.font.size = Pt(13)
-    run.font.bold = True
-    run.underline = True
-
-    t3 = doc.add_paragraph()
-    t3.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    t3.paragraph_format.space_after = Pt(12)
-    run = t3.add_run(f"(AL {d['fecha_corte']})")
-    run.font.name = "Arial"
-    run.font.size = Pt(13)
-    run.font.bold = True
-    run.underline = True
+    doc.add_paragraph()  # spacer
 
     # ═══════════════════════════════════════════════════════════════
-    # 1. SOBRE LA OPERATIVIDAD
+    # 1. OPERATIVIDAD
     # ═══════════════════════════════════════════════════════════════
-    p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(6)
-    run = p.add_run("1.  Sobre la operatividad de las empresas de seguros en la campaña 2025-2026:")
-    run.font.name = "Arial"
-    run.font.size = Pt(10)
+    _add_body(doc, "1.  Sobre la operatividad de las empresas de seguros en la campaña 2025-2026:", size=10)
 
     # ─── a) Avisos de siniestros ───
-    _add_heading(doc, "a) Avisos de siniestros", level=2)
+    _add_section_heading(doc, "a) Avisos de siniestros")
 
     _add_bullet(doc,
         f"Al {d['fecha_corte']}, se registran {fmt_int(d['total_avisos'])} avisos de siniestros "
         f"reportados por las DRA's/GRA's, que fueron recepcionados por las dos (2) empresas "
-        f"de seguros de acuerdo al siguiente detalle:"
-    )
-
+        f"de seguros de acuerdo al siguiente detalle:")
     _add_subbullet(doc, f"La Positiva: {fmt_int(d['avisos_lp'])} avisos.")
     _add_subbullet(doc, f"Rímac: {fmt_int(d['avisos_rimac'])} avisos.")
 
     # Top 4 departamentos
     top4 = d["top4_deptos"]
-    n_top = len(top4)
     top4_items = []
     for depto, count in top4.items():
-        pct_of_top = (count / d["top4_total"] * 100) if d["top4_total"] > 0 else 0
-        top4_items.append(f"{depto.title()} ({fmt_int(count)}, {pct_of_top:.1f}%)")
+        pct = (count / d["top4_total"] * 100) if d["top4_total"] > 0 else 0
+        top4_items.append(f"{depto.title()} ({fmt_int(count)}, {pct:.1f}%)")
 
     _add_bullet(doc,
-        f"El {d['top4_pct']:.1f}% de avisos reportados se concentra en {n_top} "
+        f"El {d['top4_pct']:.1f}% de avisos reportados se concentra en {len(top4)} "
         f"departamentos: {fmt_int(d['top4_total'])} avisos distribuidos en "
-        f"{', '.join(top4_items[:-1])} y {top4_items[-1]} avisos, respectivamente."
-    )
+        f"{', '.join(top4_items[:-1])} y {top4_items[-1]}, respectivamente, "
+        f"se presenta el detalle de los siniestros según cada departamento:")
+
+    # ─── GRÁFICO 1: Avisos por Departamento ───
+    grafico_num += 1
+    chart1_buf = _chart_avisos_departamento(d["avisos_by_depto"])
+    _add_image_centered(doc, chart1_buf, width_inches=6.2)
+    _add_grafico_caption(doc, grafico_num, "Número de Avisos Reportados por Departamento, SAC 2025-2026")
 
     # Top 3 tipos de siniestro
     top3 = d["top3_tipos"]
-    n_top3 = len(top3)
     top3_items = []
     for tipo, count in top3.items():
-        pct_of_top3 = (count / d["top3_total"] * 100) if d["top3_total"] > 0 else 0
-        top3_items.append(f"{tipo.lower()} ({fmt_int(count)}, {pct_of_top3:.1f}%)")
+        pct = (count / d["top3_total"] * 100) if d["top3_total"] > 0 else 0
+        top3_items.append(f"{tipo.lower()} ({fmt_int(count)}, {pct:.1f}%)")
 
     _add_bullet(doc,
-        f"El {d['top3_pct']:.1f}% de avisos reportados se concentra en {n_top3} siniestros: "
+        f"El {d['top3_pct']:.1f}% de avisos reportados se concentra en {len(top3)} siniestros: "
         f"{fmt_int(d['top3_total'])} avisos distribuidos en "
-        f"{', '.join(top3_items[:-1])} y {top3_items[-1]} avisos."
-    )
+        f"{', '.join(top3_items[:-1])} y {top3_items[-1]}, "
+        f"se presenta el detalle de los avisos reportados según el tipo de siniestro:")
+
+    # ─── GRÁFICO 2: Avisos por Tipo ───
+    grafico_num += 1
+    chart2_buf = _chart_avisos_tipo(d["avisos_by_tipo"])
+    _add_image_centered(doc, chart2_buf, width_inches=6.2)
+    _add_grafico_caption(doc, grafico_num, "Número de Avisos Reportados por Tipo de Siniestro, SAC 2025-2026")
 
     # ─── b) Resultados ───
-    _add_heading(doc, "b) Resultados", level=2)
+    _add_section_heading(doc, "b) Resultados")
 
     _add_bullet(doc,
         f"Del total de avisos de siniestros reportados ({fmt_int(d['total_avisos'])}) a las empresas "
         f"de seguros, al {d['fecha_corte']} se han ajustado y evaluado {fmt_int(d['total_ajustados'])} "
-        f"avisos que representa el {d['pct_ajustados']:.2f}% de los avisos."
-    )
+        f"avisos que representa el {d['pct_ajustados']:.2f}% de los avisos.")
 
     _add_bullet(doc, "Los ajustes y evaluación de los mismos por cada empresa de seguros es la siguiente:")
-
     _add_subbullet(doc,
         f"La Positiva: {fmt_int(d['ajust_lp'])} ajustes de {fmt_int(d['avisos_lp'])} "
-        f"avisos de siniestros, {d['pct_ajust_lp']:.2f}% de avisos atendidos."
-    )
+        f"avisos de siniestros, {d['pct_ajust_lp']:.2f}% de avisos atendidos.")
     _add_subbullet(doc,
         f"Rímac: {fmt_int(d['ajust_rimac'])} ajustes de {fmt_int(d['avisos_rimac'])} "
-        f"avisos de siniestros, {d['pct_ajust_rimac']:.2f}% de avisos atendidos."
-    )
+        f"avisos de siniestros, {d['pct_ajust_rimac']:.2f}% de avisos atendidos.")
 
-    # Indemnizaciones
-    p = _add_bullet(doc, "")
-    p.clear()
-    run = p.add_run(f"Las indemnizaciones reconocidas a la fecha, por parte de las empresas de seguros, equivalen al monto de {fmt(d['monto_indemnizado'])}.")
-    run.font.name = "Arial"
-    run.font.size = Pt(10)
-    run.font.bold = True
-    run.underline = True
+    # Indemnizaciones (bold + underline)
+    _add_bold_underline_bullet(doc,
+        f"Las indemnizaciones reconocidas a la fecha, por parte de las empresas de seguros, "
+        f"equivalen al monto de {fmt(d['monto_indemnizado'])}.")
 
-    # Índice de siniestralidad
+    # Siniestralidad
     _add_bullet(doc,
         f"El índice de siniestralidad (costo de los siniestros entre la prima neta, sin incluir IGV, "
         f"de la póliza) en lo que va de la campaña, es de {d['idx_general']:.2f}%, siendo el índice "
-        f"para cada empresa de seguros el siguiente:"
-    )
+        f"para cada empresa de seguros el siguiente:")
     _add_subbullet(doc, f"La Positiva Seguros: {d['idx_lp']:.2f}%.")
     _add_subbullet(doc, f"Rímac Seguros: {d['idx_rimac']:.2f}%.")
 
@@ -690,59 +748,43 @@ def generate_operatividad_docx(datos):
         "Es preciso resaltar que la vigencia de la póliza es desde el 01 de agosto de 2025 "
         "hasta 01 de agosto de 2026, por lo que, todos los eventos adversos que se presenten "
         "durante este periodo, que afecten los cultivos asegurados, sean reportados por las "
-        "DRAs/GRAs a las empresas de seguros, para que estas realicen las evaluaciones "
-        "correspondientes.",
-        italic=True, size=9,
-    )
+        "DRAs/GRAs a las empresas de seguros, para que estas realicen las evaluaciones correspondientes.",
+        italic=True, size=9)
 
     _add_body(doc, "El índice de siniestralidad para cada departamento se detalla en el siguiente cuadro:", size=10)
 
-    # ═══════════════════════════════════════════════════════════════
-    # TABLA: SINIESTRALIDAD POR DEPARTAMENTO
-    # ═══════════════════════════════════════════════════════════════
+    # ═══ CUADRO 1: SINIESTRALIDAD ═══
+    cuadro_num += 1
+    _add_cuadro_title(doc, cuadro_num, "Índice de Siniestralidad por Departamento y Empresa, SAC 2025-2026")
+
     headers_sin = ["EMPRESA DE SEGUROS", "DEPARTAMENTO", "INDEMNIZACIÓN (S/)",
-                   "SUPERFICIE INDEMNIZADA (Has)", "PRIMA NETA (S/)", "ÍNDICE SINIESTRALIDAD (%)"]
-    col_widths_sin = [2000, 1700, 1700, 1700, 1700, 1500]
+                   "SUP. INDEMNIZADA (Has)", "PRIMA NETA (S/)", "ÍNDICE SINIESTRALIDAD (%)"]
+    col_widths_sin = [1800, 1600, 1700, 1600, 1700, 1500]
+    table = _build_table(doc, headers_sin, d["tabla_siniestralidad"], col_widths_sin)
 
-    n_rows = len(d["tabla_siniestralidad"]) + 1  # +1 header
-    table = doc.add_table(rows=n_rows, cols=6)
-    table.autofit = False
-
-    # Header
-    for i, h in enumerate(headers_sin):
-        cell = table.rows[0].cells[i]
-        _write_cell(cell, h, bold=True, size=7, align=WD_ALIGN_PARAGRAPH.CENTER,
-                    font_color=C["WHITE"], bg_color=C["HEADER_BG"])
-        _set_cell_width(cell, col_widths_sin[i])
-
-    # Data rows
     for row_idx, row_data in enumerate(d["tabla_siniestralidad"]):
         is_sub = row_data.get("is_subtotal", False)
         is_tot = row_data.get("is_total", False)
         bg = C["HEADER_BG"] if is_tot else (C["SUBTOTAL_BG"] if is_sub else (C["ALT_ROW"] if row_idx % 2 == 0 else None))
         fc = C["WHITE"] if is_tot else C["BLACK"]
         b = is_sub or is_tot
-
         r = table.rows[row_idx + 1]
-        _write_cell(r.cells[0], row_data["empresa"], bold=b, size=7, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[1], row_data["departamento"], bold=b, size=7, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[2], fmt(row_data["indemnizacion"]), bold=b, size=7,
-                    align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[3], fmt_n(row_data["sup_indemnizada"]), bold=b, size=7,
-                    align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[4], fmt(row_data["prima_neta"]), bold=b, size=7,
-                    align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[5], fmt_pct(row_data["indice"]), bold=b, size=7,
-                    align=WD_ALIGN_PARAGRAPH.CENTER, bg_color=bg, font_color=fc)
+        vals = [row_data["empresa"], row_data["departamento"],
+                fmt(row_data["indemnizacion"]), fmt_n(row_data["sup_indemnizada"]),
+                fmt(row_data["prima_neta"]), fmt_pct(row_data["indice"])]
+        aligns = [WD_ALIGN_PARAGRAPH.LEFT, WD_ALIGN_PARAGRAPH.LEFT,
+                  WD_ALIGN_PARAGRAPH.RIGHT, WD_ALIGN_PARAGRAPH.RIGHT,
+                  WD_ALIGN_PARAGRAPH.RIGHT, WD_ALIGN_PARAGRAPH.CENTER]
+        for i, (val, align) in enumerate(zip(vals, aligns)):
+            _write_cell(r.cells[i], val, bold=b, size=7, align=align, bg_color=bg, font_color=fc)
 
-    doc.add_paragraph()  # spacer
+    doc.add_paragraph()
 
-    # ═══════════════════════════════════════════════════════════════
-    # TABLA: COBERTURAS
-    # ═══════════════════════════════════════════════════════════════
+    # ═══ CUADRO 2: COBERTURAS ═══
     if d["tabla_coberturas"]:
-        total_comp = sum(r.get("complementaria", 0) for r in d["tabla_coberturas"] if not r.get("is_subtotal") and not r.get("is_total"))
-        total_cat = sum(r.get("catastrofica", 0) for r in d["tabla_coberturas"] if not r.get("is_subtotal") and not r.get("is_total"))
+        tc_no_sub = [r for r in d["tabla_coberturas"] if not r.get("is_subtotal") and not r.get("is_total")]
+        total_comp = sum(r["complementaria"] for r in tc_no_sub)
+        total_cat = sum(r["catastrofica"] for r in tc_no_sub)
         pct_comp = (total_comp / d["monto_indemnizado"] * 100) if d["monto_indemnizado"] > 0 else 0
         pct_cat = (total_cat / d["monto_indemnizado"] * 100) if d["monto_indemnizado"] > 0 else 0
 
@@ -750,22 +792,15 @@ def generate_operatividad_docx(datos):
             f"Del total de las indemnizaciones reconocidas por las empresas de seguros, "
             f"se tiene que el {pct_comp:.0f}% es por la cobertura complementaria "
             f"({fmt(total_comp)}); el {pct_cat:.0f}% restante es por la cobertura "
-            f"catastrófica de evaluación ({fmt(total_cat)})."
-        )
+            f"catastrófica de evaluación ({fmt(total_cat)}).")
 
-        headers_cob = ["EMPRESA DE SEGUROS", "DEPARTAMENTO", "COBERTURA COMPLEMENTARIA",
-                       "COBERTURA CATASTRÓFICA", "INDEMNIZACIÓN TOTAL"]
-        col_widths_cob = [1900, 1600, 2000, 2000, 1800]
+        cuadro_num += 1
+        _add_cuadro_title(doc, cuadro_num, "Indemnizaciones por Tipo de Cobertura, SAC 2025-2026")
 
-        n_rows_c = len(d["tabla_coberturas"]) + 1
-        table_c = doc.add_table(rows=n_rows_c, cols=5)
-        table_c.autofit = False
-
-        for i, h in enumerate(headers_cob):
-            cell = table_c.rows[0].cells[i]
-            _write_cell(cell, h, bold=True, size=7, align=WD_ALIGN_PARAGRAPH.CENTER,
-                        font_color=C["WHITE"], bg_color=C["HEADER_BG"])
-            _set_cell_width(cell, col_widths_cob[i])
+        headers_cob = ["EMPRESA DE SEGUROS", "DEPARTAMENTO",
+                       "COBERTURA COMPLEMENTARIA", "COBERTURA CATASTRÓFICA", "INDEMNIZACIÓN TOTAL"]
+        col_widths_cob = [1800, 1500, 2000, 2000, 1800]
+        table_c = _build_table(doc, headers_cob, d["tabla_coberturas"], col_widths_cob)
 
         for row_idx, row_data in enumerate(d["tabla_coberturas"]):
             is_sub = row_data.get("is_subtotal", False)
@@ -773,38 +808,31 @@ def generate_operatividad_docx(datos):
             bg = C["HEADER_BG"] if is_tot else (C["SUBTOTAL_BG"] if is_sub else (C["ALT_ROW"] if row_idx % 2 == 0 else None))
             fc = C["WHITE"] if is_tot else C["BLACK"]
             b = is_sub or is_tot
-
             r = table_c.rows[row_idx + 1]
-            _write_cell(r.cells[0], row_data["empresa"], bold=b, size=7, bg_color=bg, font_color=fc)
-            _write_cell(r.cells[1], row_data.get("departamento", ""), bold=b, size=7, bg_color=bg, font_color=fc)
-            _write_cell(r.cells[2], fmt(row_data["complementaria"]), bold=b, size=7,
-                        align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-            _write_cell(r.cells[3], fmt(row_data["catastrofica"]), bold=b, size=7,
-                        align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-            _write_cell(r.cells[4], fmt(row_data["total"]), bold=b, size=7,
-                        align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
+            vals = [row_data["empresa"], row_data.get("departamento", ""),
+                    fmt(row_data["complementaria"]), fmt(row_data["catastrofica"]),
+                    fmt(row_data["total"])]
+            aligns = [WD_ALIGN_PARAGRAPH.LEFT, WD_ALIGN_PARAGRAPH.LEFT,
+                      WD_ALIGN_PARAGRAPH.RIGHT, WD_ALIGN_PARAGRAPH.RIGHT,
+                      WD_ALIGN_PARAGRAPH.RIGHT]
+            for i, (val, align) in enumerate(zip(vals, aligns)):
+                _write_cell(r.cells[i], val, bold=b, size=7, align=align, bg_color=bg, font_color=fc)
 
         doc.add_paragraph()
 
-    # ═══════════════════════════════════════════════════════════════
-    # CUADRO 4: CULTIVOS PRIORIZADOS
-    # ═══════════════════════════════════════════════════════════════
+    # ═══ CUADRO 3: PRIORIZADOS ═══
     if d["tabla_priorizados"]:
-        _add_body(doc, "Cuadro N° 04: Indemnizaciones por cultivos Priorizados y No Priorizados, SAC 2025-2026",
-                  bold=True, size=10)
+        _add_bullet(doc,
+            f"Asimismo, las indemnizaciones que se vienen presentando se puede detallar, "
+            f"cultivos priorizados ({fmt(d['total_prio_ind'])}) y cultivos no priorizados "
+            f"({fmt(d['total_noprio_ind'])}), las mismas que se detallan de acuerdo al siguiente cuadro:")
 
-        headers_p = ["EMPRESA DE SEGUROS", "CULTIVOS", "SUPERFICIE INDEMNIZADA (Has)", "INDEMNIZACIÓN (S/)"]
-        col_widths_p = [2200, 1800, 2600, 2700]
+        cuadro_num += 1
+        _add_cuadro_title(doc, cuadro_num, "Indemnizaciones por Cultivos Priorizados y No Priorizados, SAC 2025-2026")
 
-        n_rows_p = len(d["tabla_priorizados"]) + 1
-        table_p = doc.add_table(rows=n_rows_p, cols=4)
-        table_p.autofit = False
-
-        for i, h in enumerate(headers_p):
-            cell = table_p.rows[0].cells[i]
-            _write_cell(cell, h, bold=True, size=7, align=WD_ALIGN_PARAGRAPH.CENTER,
-                        font_color=C["WHITE"], bg_color=C["HEADER_BG"])
-            _set_cell_width(cell, col_widths_p[i])
+        headers_p = ["EMPRESA DE SEGUROS", "CULTIVOS", "SUP. INDEMNIZADA (Has)", "INDEMNIZACIÓN (S/)"]
+        col_widths_p = [2200, 1800, 2500, 2800]
+        table_p = _build_table(doc, headers_p, d["tabla_priorizados"], col_widths_p)
 
         for row_idx, row_data in enumerate(d["tabla_priorizados"]):
             is_sub = row_data.get("is_subtotal", False)
@@ -812,62 +840,53 @@ def generate_operatividad_docx(datos):
             bg = C["HEADER_BG"] if is_tot else (C["SUBTOTAL_BG"] if is_sub else (C["ALT_ROW"] if row_idx % 2 == 0 else None))
             fc = C["WHITE"] if is_tot else C["BLACK"]
             b = is_sub or is_tot
-
             r = table_p.rows[row_idx + 1]
-            _write_cell(r.cells[0], row_data["empresa"], bold=b, size=7, bg_color=bg, font_color=fc)
-            _write_cell(r.cells[1], row_data.get("cultivo", ""), bold=b, size=7, bg_color=bg, font_color=fc)
-            _write_cell(r.cells[2], fmt_n(row_data["sup_indemnizada"]), bold=b, size=7,
-                        align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-            _write_cell(r.cells[3], fmt(row_data["indemnizacion"]), bold=b, size=7,
-                        align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
+            vals = [row_data["empresa"], row_data.get("cultivo", ""),
+                    fmt_n(row_data["sup_indemnizada"]), fmt(row_data["indemnizacion"])]
+            aligns = [WD_ALIGN_PARAGRAPH.LEFT, WD_ALIGN_PARAGRAPH.LEFT,
+                      WD_ALIGN_PARAGRAPH.RIGHT, WD_ALIGN_PARAGRAPH.RIGHT]
+            for i, (val, align) in enumerate(zip(vals, aligns)):
+                _write_cell(r.cells[i], val, bold=b, size=7, align=align, bg_color=bg, font_color=fc)
 
         doc.add_paragraph()
 
-    # ═══════════════════════════════════════════════════════════════
-    # CUADRO 5: DESEMBOLSOS
-    # ═══════════════════════════════════════════════════════════════
+    # ═══ DESEMBOLSOS + GRÁFICO 3 ═══
     _add_bullet(doc,
         f"Con respecto a las indemnizaciones reconocidas por parte de las empresas de seguros "
-        f"del SAC 2025-2026, a la fecha el avance de desembolsos realizados es la siguiente:"
-    )
+        f"del SAC 2025-2026, a la fecha el avance de desembolsos realizados es la siguiente:")
 
-    # Listar departamentos con desembolso
-    deptos_lp_desemb = [r["departamento"] for r in d["tabla_desembolsos"]
-                        if r.get("empresa") == "LA POSITIVA" and r.get("desembolso", 0) > 0
-                        and not r.get("is_subtotal") and not r.get("is_total")]
-    deptos_rimac_desemb = [r["departamento"] for r in d["tabla_desembolsos"]
-                           if r.get("empresa") == "RÍMAC" and r.get("desembolso", 0) > 0
-                           and not r.get("is_subtotal") and not r.get("is_total")]
+    # ─── GRÁFICO 3: Desembolsos por empresa ───
+    grafico_num += 1
+    chart3_buf = _chart_desembolsos_empresa(
+        d["indemn_lp"], d["desemb_lp"], d["indemn_rimac"], d["desemb_rimac"])
+    _add_image_centered(doc, chart3_buf, width_inches=5.5)
+    _add_grafico_caption(doc, grafico_num, "Desembolsos Realizados a Nivel de Empresa de Seguros, SAC 2025-2026")
 
-    if deptos_lp_desemb:
+    # Departamentos con desembolso
+    deptos_lp = [r["departamento"] for r in d["tabla_desembolsos"]
+                 if r.get("empresa") == "LA POSITIVA" and r.get("desembolso", 0) > 0
+                 and not r.get("is_subtotal") and not r.get("is_total")]
+    deptos_rimac = [r["departamento"] for r in d["tabla_desembolsos"]
+                    if r.get("empresa") == "RÍMAC" and r.get("desembolso", 0) > 0
+                    and not r.get("is_subtotal") and not r.get("is_total")]
+
+    if deptos_lp:
         _add_body(doc,
-            f"A nivel de departamento, La Positiva seguros ha iniciado con los desembolsos de "
-            f"las indemnizaciones en los departamentos de {', '.join(deptos_lp_desemb)}.",
-            size=10,
-        )
-    if deptos_rimac_desemb:
+            f"A nivel de departamento, La Positiva Seguros ha iniciado con los desembolsos de "
+            f"las indemnizaciones en los departamentos de {', '.join(deptos_lp)}.", size=10)
+    if deptos_rimac:
         _add_body(doc,
-            f"Rímac ha iniciado con los desembolsos de indemnizaciones en los departamentos de "
-            f"{', '.join(deptos_rimac_desemb)}.",
-            size=10,
-        )
+            f"Rímac Seguros ha iniciado con los desembolsos de indemnizaciones en los "
+            f"departamentos de {', '.join(deptos_rimac)}.", size=10)
 
-    _add_body(doc, "Cuadro N° 05: Desembolsos y número de productores, SAC 2025-2026",
-              bold=True, size=10)
+    # ═══ CUADRO 4: DESEMBOLSOS ═══
+    cuadro_num += 1
+    _add_cuadro_title(doc, cuadro_num, "Desembolsos y Número de Productores, SAC 2025-2026")
 
     headers_d = ["EMPRESA DE SEGUROS", "DEPARTAMENTO", "INDEMNIZACIÓN (S/)",
-                 "DESEMBOLSO (S/)", "% DESEMBOLSO", "N° PRODUCTORES CON DESEMBOLSO"]
-    col_widths_d = [1800, 1500, 1700, 1700, 1200, 1400]
-
-    n_rows_d = len(d["tabla_desembolsos"]) + 1
-    table_d = doc.add_table(rows=n_rows_d, cols=6)
-    table_d.autofit = False
-
-    for i, h in enumerate(headers_d):
-        cell = table_d.rows[0].cells[i]
-        _write_cell(cell, h, bold=True, size=7, align=WD_ALIGN_PARAGRAPH.CENTER,
-                    font_color=C["WHITE"], bg_color=C["HEADER_BG"])
-        _set_cell_width(cell, col_widths_d[i])
+                 "DESEMBOLSO (S/)", "% DESEMBOLSO", "N° PRODUCTORES"]
+    col_widths_d = [1700, 1500, 1700, 1700, 1200, 1400]
+    table_d = _build_table(doc, headers_d, d["tabla_desembolsos"], col_widths_d)
 
     for row_idx, row_data in enumerate(d["tabla_desembolsos"]):
         is_sub = row_data.get("is_subtotal", False)
@@ -875,33 +894,27 @@ def generate_operatividad_docx(datos):
         bg = C["HEADER_BG"] if is_tot else (C["SUBTOTAL_BG"] if is_sub else (C["ALT_ROW"] if row_idx % 2 == 0 else None))
         fc = C["WHITE"] if is_tot else C["BLACK"]
         b = is_sub or is_tot
-
         r = table_d.rows[row_idx + 1]
-        _write_cell(r.cells[0], row_data["empresa"], bold=b, size=7, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[1], row_data.get("departamento", ""), bold=b, size=7, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[2], fmt(row_data["indemnizacion"]), bold=b, size=7,
-                    align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[3], fmt(row_data["desembolso"]), bold=b, size=7,
-                    align=WD_ALIGN_PARAGRAPH.RIGHT, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[4], fmt_pct(row_data["pct_desembolso"]), bold=b, size=7,
-                    align=WD_ALIGN_PARAGRAPH.CENTER, bg_color=bg, font_color=fc)
-        _write_cell(r.cells[5], fmt_int(row_data["productores"]) if row_data["productores"] > 0 else "-",
-                    bold=b, size=7, align=WD_ALIGN_PARAGRAPH.CENTER, bg_color=bg, font_color=fc)
+        prod_text = fmt_int(row_data["productores"]) if row_data["productores"] > 0 else "-"
+        vals = [row_data["empresa"], row_data.get("departamento", ""),
+                fmt(row_data["indemnizacion"]), fmt(row_data["desembolso"]),
+                fmt_pct(row_data["pct_desembolso"]), prod_text]
+        aligns = [WD_ALIGN_PARAGRAPH.LEFT, WD_ALIGN_PARAGRAPH.LEFT,
+                  WD_ALIGN_PARAGRAPH.RIGHT, WD_ALIGN_PARAGRAPH.RIGHT,
+                  WD_ALIGN_PARAGRAPH.CENTER, WD_ALIGN_PARAGRAPH.CENTER]
+        for i, (val, align) in enumerate(zip(vals, aligns)):
+            _write_cell(r.cells[i], val, bold=b, size=7, align=align, bg_color=bg, font_color=fc)
 
     doc.add_paragraph()
 
-    # ═══════════════════════════════════════════════════════════════
-    # PÁRRAFOS FINALES
-    # ═══════════════════════════════════════════════════════════════
+    # ═══ PÁRRAFOS FINALES ═══
     _add_bullet(doc,
         f"A la fecha se van indemnizando a {fmt_int(d['productores'])} productores en "
         f"{d['deptos_con_desembolso']} de los 24 departamentos por el Seguro Agrícola "
-        f"Catastrófico en la presente campaña."
-    )
+        f"Catastrófico en la presente campaña.")
 
     _add_bullet(doc,
-        f"Se va teniendo un porcentaje de desembolso del {float(d['pct_desembolso']):.2f}%."
-    )
+        f"Se va teniendo un porcentaje de desembolso del {float(d['pct_desembolso']):.2f}%.")
 
     # ═══ GUARDAR ═══
     output = BytesIO()
