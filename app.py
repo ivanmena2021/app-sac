@@ -16,6 +16,7 @@ from data_processor import process_dynamic_data, get_departamento_data
 from gen_word_bridge_py import generate_nacional_docx, generate_departamental_docx
 from gen_excel_eme import generate_reporte_eme
 from gen_word_operatividad import generate_operatividad_docx
+from query_engine import process_query, get_suggested_queries
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -726,13 +727,79 @@ else:
     # ─── Generación de reportes ───
     st.markdown('<h3 style="color:#0F2B46;">📥 Generar Reportes</h3>', unsafe_allow_html=True)
 
-    tab1, tab2, tab_op, tab3, tab4 = st.tabs([
+    tab_chat, tab1, tab2, tab_op, tab3, tab4 = st.tabs([
+        "💬 Consultas",
         "📄 Ayuda Memoria Nacional",
         "🗺️ Ayuda Memoria Departamental",
         "📋 Operatividad SAC",
         "📊 Reporte EME",
         "🔍 Explorar Datos",
     ])
+
+    # ═══ TAB CHAT: Consultas ═══
+    with tab_chat:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #f8fafc, #e8f4f8); padding: 1.2rem;
+                    border-radius: 12px; border-left: 4px solid #2980b9; margin-bottom: 1rem;">
+            <span style="font-size: 1.1rem; font-weight: 600; color: #1F4E79;">
+                💬 Consulta rápida sobre datos SAC
+            </span><br>
+            <span style="color: #64748b; font-size: 0.85rem;">
+                Escriba su consulta mencionando departamentos, tipos de siniestro o empresas.
+                El sistema filtra y resume la información automáticamente.
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Consultas sugeridas
+        suggested = get_suggested_queries()
+        st.markdown("**Consultas sugeridas:**")
+        cols_sug = st.columns(4)
+        for i, sug in enumerate(suggested[:8]):
+            with cols_sug[i % 4]:
+                if st.button(f"🔹 {sug}", key=f"sug_{i}", use_container_width=True):
+                    st.session_state["query_input"] = sug
+
+        st.markdown("---")
+
+        # Input de consulta
+        query_text = st.text_area(
+            "Escriba su consulta:",
+            value=st.session_state.get("query_input", ""),
+            height=80,
+            placeholder="Ej: Resumen de intervenciones en Tumbes, Piura, Lambayeque, Lima y Arequipa",
+            key="query_area",
+        )
+
+        col_q1, col_q2 = st.columns([1, 4])
+        with col_q1:
+            btn_query = st.button("🔍 Consultar", type="primary", use_container_width=True, key="btn_query")
+
+        if btn_query and query_text.strip():
+            with st.spinner("Procesando consulta..."):
+                response = process_query(query_text, datos)
+                st.session_state["last_query_response"] = response
+                st.session_state["last_query_text"] = query_text
+
+        # Mostrar respuesta
+        if st.session_state.get("last_query_response"):
+            st.markdown("---")
+            st.markdown(
+                f'<div style="background:#f0f7ff; padding:0.5rem 1rem; border-radius:8px; '
+                f'margin-bottom:0.5rem; color:#1F4E79; font-size:0.85rem;">'
+                f'<strong>Consulta:</strong> {st.session_state.get("last_query_text", "")}</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(st.session_state["last_query_response"])
+
+            # Botón para copiar
+            st.download_button(
+                label="📋 Descargar respuesta como texto",
+                data=st.session_state["last_query_response"],
+                file_name=f"consulta_sac_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                mime="text/markdown",
+                key="dl_query",
+            )
 
     # ═══ TAB 1: Ayuda Memoria Nacional ═══
     with tab1:
