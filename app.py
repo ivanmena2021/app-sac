@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from data_processor import process_dynamic_data, get_departamento_data
 from gen_word_bridge_py import generate_nacional_docx, generate_departamental_docx
 from gen_excel_eme import generate_reporte_eme
+from gen_word_operatividad import generate_operatividad_docx
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -616,7 +617,9 @@ if not st.session_state.get("processed"):
     )
     st.markdown("")
 
-    col_r1, col_r2, col_r3 = st.columns(3)
+    col_r1, col_r2 = st.columns(2)
+    col_r3, col_r4 = st.columns(2)
+
     with col_r1:
         st.markdown("""
         <div class="report-card">
@@ -638,6 +641,16 @@ if not st.session_state.get("processed"):
         """, unsafe_allow_html=True)
 
     with col_r3:
+        st.markdown("""
+        <div class="report-card">
+            <div class="icon">📋</div>
+            <h3>Operatividad SAC</h3>
+            <p>Ayuda Memoria de operatividad por empresa de seguros: siniestralidad,
+            coberturas, cultivos priorizados y desembolsos por departamento.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_r4:
         st.markdown("""
         <div class="report-card">
             <div class="icon">📊</div>
@@ -713,9 +726,10 @@ else:
     # ─── Generación de reportes ───
     st.markdown('<h3 style="color:#0F2B46;">📥 Generar Reportes</h3>', unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab_op, tab3, tab4 = st.tabs([
         "📄 Ayuda Memoria Nacional",
         "🗺️ Ayuda Memoria Departamental",
+        "📋 Operatividad SAC",
         "📊 Reporte EME",
         "🔍 Explorar Datos",
     ])
@@ -822,6 +836,50 @@ else:
             with st.expander("📋 Distribución por Provincia"):
                 if len(depto_data["dist_provincia"]) > 0:
                     st.dataframe(depto_data["dist_provincia"], use_container_width=True, hide_index=True)
+
+    # ═══ TAB OPERATIVIDAD: Ayuda Memoria Operatividad SAC ═══
+    with tab_op:
+        st.markdown(f"**Fecha de corte:** {datos['fecha_corte']}")
+        st.markdown(
+            "Documento Word con el detalle de operatividad del SAC por empresa de seguros: "
+            "avisos, ajustes, siniestralidad por departamento, coberturas, cultivos priorizados y desembolsos."
+        )
+
+        col_gen_op, col_dl_op = st.columns([1, 1])
+        with col_gen_op:
+            if st.button("⚡ Generar Operatividad SAC", type="primary", key="gen_oper", use_container_width=True):
+                with st.spinner("Generando Ayuda Memoria Operatividad..."):
+                    try:
+                        doc_bytes = generate_operatividad_docx(datos)
+                        fecha_str = datetime.now().strftime("%d_%m_%Y")
+                        filename = f"AM_Operatividad_SAC_2025-2026_{fecha_str}.docx"
+                        st.session_state["doc_operatividad"] = doc_bytes
+                        st.session_state["doc_operatividad_name"] = filename
+                        st.success("✅ Documento generado")
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+
+        with col_dl_op:
+            if st.session_state.get("doc_operatividad"):
+                st.download_button(
+                    label="⬇️ Descargar Operatividad SAC",
+                    data=st.session_state["doc_operatividad"],
+                    file_name=st.session_state["doc_operatividad_name"],
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                )
+
+        st.markdown("---")
+        st.markdown("**Contenido del documento:**")
+        st.markdown(
+            "- Avisos de siniestros por empresa (La Positiva / Rímac)\n"
+            "- Top departamentos y tipos de siniestro\n"
+            "- Resultados: ajustes y evaluaciones por empresa\n"
+            "- Tabla de siniestralidad por departamento/empresa\n"
+            "- Indemnizaciones por tipo de cobertura (complementaria vs catastrófica)\n"
+            "- Cultivos priorizados vs no priorizados\n"
+            "- Desembolsos y productores beneficiados por departamento"
+        )
 
     # ═══ TAB 3: Reporte EME ═══
     with tab3:
