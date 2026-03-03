@@ -59,6 +59,38 @@ TIPOS_SINIESTRO = [
     "ALTAS TEMPERATURAS", "NIEVE", "FRIAJE",
 ]
 
+# Grupos semánticos: conceptos que engloban múltiples tipos de siniestro
+CONCEPTOS_SINIESTRO = {
+    "lluvias": ["INUNDACION", "LLUVIAS EXCESIVAS", "HUAYCO", "DESLIZAMIENTO"],
+    "lluvia": ["INUNDACION", "LLUVIAS EXCESIVAS", "HUAYCO", "DESLIZAMIENTO"],
+    "exceso de agua": ["INUNDACION", "LLUVIAS EXCESIVAS", "HUAYCO", "DESLIZAMIENTO"],
+    "exceso hídrico": ["INUNDACION", "LLUVIAS EXCESIVAS", "HUAYCO", "DESLIZAMIENTO"],
+    "hidricos": ["INUNDACION", "LLUVIAS EXCESIVAS", "HUAYCO", "DESLIZAMIENTO"],
+    "hídricos": ["INUNDACION", "LLUVIAS EXCESIVAS", "HUAYCO", "DESLIZAMIENTO"],
+    "frio": ["HELADA", "FRIAJE", "NIEVE"],
+    "frío": ["HELADA", "FRIAJE", "NIEVE"],
+    "bajas temperaturas": ["HELADA", "FRIAJE", "NIEVE"],
+    "temperaturas bajas": ["HELADA", "FRIAJE", "NIEVE"],
+    "climaticos": ["HELADA", "SEQUIA", "GRANIZO", "INUNDACION", "LLUVIAS EXCESIVAS",
+                    "HUAYCO", "DESLIZAMIENTO", "VIENTO FUERTE", "NIEVE", "FRIAJE",
+                    "ALTAS TEMPERATURAS", "INCENDIO"],
+    "climáticos": ["HELADA", "SEQUIA", "GRANIZO", "INUNDACION", "LLUVIAS EXCESIVAS",
+                    "HUAYCO", "DESLIZAMIENTO", "VIENTO FUERTE", "NIEVE", "FRIAJE",
+                    "ALTAS TEMPERATURAS", "INCENDIO"],
+    "biologicos": ["ENFERMEDADES", "PLAGAS"],
+    "biológicos": ["ENFERMEDADES", "PLAGAS"],
+    "fitosanitarios": ["ENFERMEDADES", "PLAGAS"],
+    "plagas y enfermedades": ["ENFERMEDADES", "PLAGAS"],
+    "sequia": ["SEQUIA"],
+    "sequía": ["SEQUIA"],
+    "deficit hídrico": ["SEQUIA"],
+    "déficit hídrico": ["SEQUIA"],
+    "falta de agua": ["SEQUIA"],
+    "calor": ["ALTAS TEMPERATURAS", "INCENDIO"],
+    "altas temperaturas": ["ALTAS TEMPERATURAS", "INCENDIO"],
+    "vientos": ["VIENTO FUERTE"],
+}
+
 EMPRESAS = {
     "LA POSITIVA": ["POSITIVA", "LP"],
     "RÍMAC": ["RIMAC", "RÍMAC"],
@@ -125,13 +157,23 @@ def _detect_departamentos(query):
 
 
 def _detect_tipos_siniestro(query):
-    """Detecta tipos de siniestro mencionados."""
+    """Detecta tipos de siniestro mencionados, incluyendo conceptos semánticos."""
     query_upper = _normalize(query)
-    found = []
+    query_lower = query.lower()
+    found = set()
+
+    # 1. Buscar conceptos semánticos primero (e.g., "lluvias" → varios tipos)
+    for concepto, tipos_asociados in CONCEPTOS_SINIESTRO.items():
+        if concepto in query_lower:
+            for t in tipos_asociados:
+                found.add(t.upper())
+
+    # 2. Buscar tipos directos
     for tipo in TIPOS_SINIESTRO:
         if _normalize(tipo) in query_upper:
-            found.append(tipo.upper())
-    return found
+            found.add(tipo.upper())
+
+    return sorted(found)
 
 
 def _detect_empresa(query):
@@ -379,7 +421,9 @@ def process_query(query, datos):
 
     # ─── Filtrar por tipo de siniestro ───
     if tipos and "TIPO_SINIESTRO" in df.columns:
-        df = df[df["TIPO_SINIESTRO"].isin([_normalize(t) for t in tipos])]
+        # Normalizar tanto los tipos buscados como los del DataFrame
+        tipos_norm = {_normalize(t) for t in tipos}
+        df = df[df["TIPO_SINIESTRO"].apply(lambda x: _normalize(str(x)) in tipos_norm)]
 
     # ─── Filtrar por período temporal ───
     temporal = days  # ahora es dict o None
@@ -570,8 +614,8 @@ def get_suggested_queries():
         "Intervenciones del SAC en Cajamarca y Lambayeque",
         "¿Cuántos avisos tiene Ayacucho?",
         "Desembolsos en Junín y Cusco",
-        "Heladas en Puno y Huancavelica",
-        "Resumen de La Positiva",
-        "Siniestros en la última semana",
-        "¿Cuál es la siniestralidad de Rímac?",
+        "Avisos por eventos asociados a lluvias en 2026",
+        "Heladas y frío en Puno y Huancavelica",
+        "Resumen de La Positiva en febrero 2026",
+        "Plagas y enfermedades a nivel nacional",
     ]
