@@ -16,7 +16,8 @@ from data_processor import process_dynamic_data, get_departamento_data
 from gen_word_bridge_py import generate_nacional_docx, generate_departamental_docx
 from gen_excel_eme import generate_reporte_eme
 from gen_word_operatividad import generate_operatividad_docx
-from query_engine import process_query, get_suggested_queries
+from query_engine import process_query, get_suggested_queries as get_suggested_basic
+from query_llm import process_query_llm, is_llm_available, get_suggested_queries as get_suggested_llm
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -738,21 +739,41 @@ else:
 
     # ═══ TAB CHAT: Consultas ═══
     with tab_chat:
-        st.markdown("""
+        llm_ready = is_llm_available()
+
+        # Header
+        engine_label = "IA + SQL" if llm_ready else "Motor básico"
+        engine_color = "#27ae60" if llm_ready else "#f39c12"
+        st.markdown(f"""
         <div style="background: linear-gradient(135deg, #f8fafc, #e8f4f8); padding: 1.2rem;
                     border-radius: 12px; border-left: 4px solid #2980b9; margin-bottom: 1rem;">
-            <span style="font-size: 1.1rem; font-weight: 600; color: #1F4E79;">
-                💬 Consulta rápida sobre datos SAC
-            </span><br>
-            <span style="color: #64748b; font-size: 0.85rem;">
-                Escriba su consulta mencionando departamentos, tipos de siniestro o empresas.
-                El sistema filtra y resume la información automáticamente.
-            </span>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <span style="font-size: 1.1rem; font-weight: 600; color: #1F4E79;">
+                        💬 Consulta de Coyuntura SAC
+                    </span><br>
+                    <span style="color: #64748b; font-size: 0.85rem;">
+                        Escriba su consulta en lenguaje natural. El sistema analiza los datos
+                        y genera texto profesional listo para comunicar.
+                    </span>
+                </div>
+                <span style="background:{engine_color}; color:white; padding:0.3rem 0.8rem;
+                       border-radius:20px; font-size:0.75rem; font-weight:600;">
+                    {engine_label}
+                </span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
+        if not llm_ready:
+            st.info(
+                "⚙️ Para habilitar consultas con IA (redacción automática de párrafos), "
+                "agregue `ANTHROPIC_API_KEY` en las variables de entorno de Railway. "
+                "Mientras tanto, funciona el motor básico de filtrado."
+            )
+
         # Consultas sugeridas
-        suggested = get_suggested_queries()
+        suggested = get_suggested_llm() if llm_ready else get_suggested_basic()
         st.markdown("**Consultas sugeridas:**")
         cols_sug = st.columns(4)
         for i, sug in enumerate(suggested[:8]):
@@ -762,7 +783,7 @@ else:
 
         st.markdown("---")
 
-        # Input de consulta
+        # Input
         query_text = st.text_area(
             "Escriba su consulta:",
             value=st.session_state.get("query_input", ""),
@@ -771,35 +792,99 @@ else:
             key="query_area",
         )
 
-        col_q1, col_q2 = st.columns([1, 4])
+        col_q1, col_q2, col_q3 = st.columns([1, 1, 3])
         with col_q1:
             btn_query = st.button("🔍 Consultar", type="primary", use_container_width=True, key="btn_query")
 
+        # Procesar
         if btn_query and query_text.strip():
-            with st.spinner("Procesando consulta..."):
-                response = process_query(query_text, datos)
-                st.session_state["last_query_response"] = response
-                st.session_state["last_query_text"] = query_text
+            if llm_ready:
+                with st.spinner("🤖 Analizando datos y redactando respuesta..."):
+                    result = process_query_llm(query_text, datos)
+
+                if result["error"]:
+                    st.error(f"Error: {result['error']}")
+                    # Fallback al motor básico
+                    with st.spinner("Usando motor básico..."):
+                        basic_response = process_query(query_text, datos)
+                        st.session_state["last_query_prose"] = basic_response
+                        st.session_state["last_query_sql"] = None
+                        st.session_state["last_query_data"] = None
+                        st.session_state["last_query_text"] = query_text
+                        st.session_state["last_query_engine"] = "básico"
+                else:
+                    st.session_state["last_query_prose"] = result["prose"]
+                    st.session_state["last_query_sql"] = result["sql"]
+                    st.session_state["last_query_data"] = result["data"]
+                    st.session_state["last_query_text"] = query_text
+                    st.session_state["last_query_engine"] = "IA"
+            else:
+                with st.spinner("Procesando consulta..."):
+                    basic_response = process_query(query_text, datos)
+                    st.session_state["last_query_prose"] = basic_response
+                    st.session_state["last_query_sql"] = None
+                    st.session_state["last_query_data"] = None
+                    st.session_state["last_query_text"] = query_text
+                    st.session_state["last_query_engine"] = "básico"
 
         # Mostrar respuesta
-        if st.session_state.get("last_query_response"):
+        if st.session_state.get("last_query_prose"):
             st.markdown("---")
+
+            engine_used = st.session_state.get("last_query_engine", "básico")
             st.markdown(
-                f'<div style="background:#f0f7ff; padding:0.5rem 1rem; border-radius:8px; '
-                f'margin-bottom:0.5rem; color:#1F4E79; font-size:0.85rem;">'
-                f'<strong>Consulta:</strong> {st.session_state.get("last_query_text", "")}</div>',
+                f'<div style="background:#f0f7ff; padding:0.6rem 1rem; border-radius:8px; '
+                f'margin-bottom:0.8rem; color:#1F4E79; font-size:0.85rem;">'
+                f'<strong>Consulta:</strong> {st.session_state.get("last_query_text", "")}'
+                f'<span style="float:right; background:#e8f4f8; padding:0.15rem 0.5rem; '
+                f'border-radius:10px; font-size:0.7rem;">{engine_used}</span></div>',
                 unsafe_allow_html=True,
             )
-            st.markdown(st.session_state["last_query_response"])
 
-            # Botón para copiar
-            st.download_button(
-                label="📋 Descargar respuesta como texto",
-                data=st.session_state["last_query_response"],
-                file_name=f"consulta_sac_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                mime="text/markdown",
-                key="dl_query",
+            # Texto de respuesta
+            prose = st.session_state["last_query_prose"]
+            st.markdown(
+                f'<div style="background:white; padding:1.2rem; border-radius:10px; '
+                f'border:1px solid #e2e8f0; font-family:Arial,sans-serif; '
+                f'font-size:0.92rem; line-height:1.7; color:#1a1a1a; '
+                f'white-space:pre-wrap;">{prose}</div>',
+                unsafe_allow_html=True,
             )
+
+            # Botones de descarga
+            st.markdown("")
+            col_dl1, col_dl2, col_dl3 = st.columns([1, 1, 2])
+
+            with col_dl1:
+                st.download_button(
+                    label="📋 Descargar .txt",
+                    data=prose,
+                    file_name=f"SAC_consulta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    key="dl_txt",
+                    use_container_width=True,
+                )
+
+            with col_dl2:
+                st.download_button(
+                    label="📄 Descargar .docx (texto)",
+                    data=prose.encode("utf-8"),
+                    file_name=f"SAC_consulta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
+                    key="dl_docx_txt",
+                    use_container_width=True,
+                )
+
+            # SQL y datos (expandible)
+            if st.session_state.get("last_query_sql"):
+                with st.expander("🔧 Ver consulta SQL generada"):
+                    st.code(st.session_state["last_query_sql"], language="sql")
+
+            if st.session_state.get("last_query_data") is not None:
+                df_result = st.session_state["last_query_data"]
+                if len(df_result) > 0:
+                    with st.expander(f"📊 Ver datos ({len(df_result)} filas)"):
+                        st.dataframe(df_result, use_container_width=True, hide_index=True)
 
     # ═══ TAB 1: Ayuda Memoria Nacional ═══
     with tab1:
