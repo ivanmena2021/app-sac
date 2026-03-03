@@ -268,11 +268,12 @@ def _build_depto_summary(df_depto, depto_name, materia_depto=None):
     # Avisos
     lines.append(f"- **Avisos reportados:** {total:,}")
 
-    # Ajustados
+    # Ajustados / Avance de evaluación
     if "ESTADO_INSPECCION" in df_depto.columns:
         ajust = len(df_depto[df_depto["ESTADO_INSPECCION"].astype(str).str.upper() == "CERRADO"])
         pct = (ajust / total * 100) if total > 0 else 0
-        lines.append(f"- **Ajustados/evaluados:** {ajust:,} ({pct:.1f}%)")
+        lines.append(f"- **Evaluados (cerrados):** {ajust:,}")
+        lines.append(f"- **Avance de evaluación:** {pct:.1f}%")
 
     # Indemnización
     if "INDEMNIZACION" in df_depto.columns:
@@ -282,14 +283,16 @@ def _build_depto_summary(df_depto, depto_name, materia_depto=None):
     # Superficie indemnizada
     if "SUP_INDEMNIZADA" in df_depto.columns:
         sup = df_depto["SUP_INDEMNIZADA"].sum()
-        lines.append(f"- **Superficie indemnizada:** {_fmt(sup, 2, '')} ha")
+        if sup > 0:
+            lines.append(f"- **Superficie indemnizada:** {_fmt(sup, 2, '')} ha")
 
-    # Desembolso
+    # Desembolso / Avance de desembolso
     if "MONTO_DESEMBOLSADO" in df_depto.columns:
         desemb = df_depto["MONTO_DESEMBOLSADO"].sum()
         indemn = df_depto["INDEMNIZACION"].sum() if "INDEMNIZACION" in df_depto.columns else 0
         pct_d = (desemb / indemn * 100) if indemn > 0 else 0
-        lines.append(f"- **Desembolso:** {_fmt(desemb)} ({pct_d:.1f}%)")
+        lines.append(f"- **Desembolso:** {_fmt(desemb)}")
+        lines.append(f"- **Avance de desembolso:** {pct_d:.1f}%")
 
     # Productores
     if "N_PRODUCTORES" in df_depto.columns:
@@ -326,17 +329,22 @@ def _build_emergency_summary(df_filtered, deptos, fecha_corte):
     ]
 
     total_avisos = len(df_filtered)
+    total_ajust = len(df_filtered[df_filtered["ESTADO_INSPECCION"].astype(str).str.upper() == "CERRADO"]) if "ESTADO_INSPECCION" in df_filtered.columns else 0
+    pct_eval = (total_ajust / total_avisos * 100) if total_avisos > 0 else 0
     total_indemn = df_filtered["INDEMNIZACION"].sum() if "INDEMNIZACION" in df_filtered.columns else 0
     total_desemb = df_filtered["MONTO_DESEMBOLSADO"].sum() if "MONTO_DESEMBOLSADO" in df_filtered.columns else 0
+    pct_desemb = (total_desemb / total_indemn * 100) if total_indemn > 0 else 0
     total_prod = df_filtered["N_PRODUCTORES"].sum() if "N_PRODUCTORES" in df_filtered.columns else 0
     total_sup = df_filtered["SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in df_filtered.columns else 0
 
     lines.append(f"### Cifras consolidadas:")
     lines.append(f"- **Avisos de siniestro:** {total_avisos:,}")
+    lines.append(f"- **Evaluados (cerrados):** {total_ajust:,} — **Avance de evaluación: {pct_eval:.1f}%**")
     lines.append(f"- **Indemnizaciones reconocidas:** {_fmt(total_indemn)}")
-    lines.append(f"- **Desembolsos realizados:** {_fmt(total_desemb)}")
+    lines.append(f"- **Desembolsos realizados:** {_fmt(total_desemb)} — **Avance de desembolso: {pct_desemb:.1f}%**")
     lines.append(f"- **Productores beneficiados:** {int(total_prod):,}")
-    lines.append(f"- **Superficie indemnizada:** {_fmt(total_sup, 2, '')} ha")
+    if total_sup > 0:
+        lines.append(f"- **Superficie indemnizada:** {_fmt(total_sup, 2, '')} ha")
     lines.append("")
 
     return "\n".join(lines)
@@ -538,9 +546,9 @@ def process_query(query, datos):
                 sections.append(f"## 📊 Resumen Nacional SAC 2025-2026{titulo_empresa}{titulo_periodo}")
                 sections.append(f"**Fecha de corte:** {fecha_corte}\n")
                 sections.append(f"- **Avisos totales:** {n_avisos:,}")
-                sections.append(f"- **Ajustados:** {n_ajust:,} ({pct_ajust}%)")
-                sections.append(f"- **Indemnización:** {_fmt(indemn)}")
-                sections.append(f"- **Desembolso:** {_fmt(desemb)} ({pct_desemb}%)")
+                sections.append(f"- **Evaluados (cerrados):** {n_ajust:,} — **Avance de evaluación: {pct_ajust}%**")
+                sections.append(f"- **Indemnización reconocida:** {_fmt(indemn)}")
+                sections.append(f"- **Desembolso:** {_fmt(desemb)} — **Avance de desembolso: {pct_desemb}%**")
                 sections.append(f"- **Productores:** {n_prod:,}")
                 if sup_indemn > 0:
                     sections.append(f"- **Superficie indemnizada:** {_fmt(sup_indemn, 2, '')} ha")
@@ -563,9 +571,9 @@ def process_query(query, datos):
                 sections.append(f"## 📊 Resumen Nacional SAC 2025-2026")
                 sections.append(f"**Fecha de corte:** {fecha_corte}\n")
                 sections.append(f"- **Avisos totales:** {datos['total_avisos']:,}")
-                sections.append(f"- **Ajustados:** {datos['total_ajustados']:,} ({datos['pct_ajustados']}%)")
-                sections.append(f"- **Indemnización:** {_fmt(datos['monto_indemnizado'])}")
-                sections.append(f"- **Desembolso:** {_fmt(datos['monto_desembolsado'])} ({datos['pct_desembolso']}%)")
+                sections.append(f"- **Evaluados (cerrados):** {datos['total_ajustados']:,} — **Avance de evaluación: {datos['pct_ajustados']}%**")
+                sections.append(f"- **Indemnización reconocida:** {_fmt(datos['monto_indemnizado'])}")
+                sections.append(f"- **Desembolso:** {_fmt(datos['monto_desembolsado'])} — **Avance de desembolso: {datos['pct_desembolso']}%**")
                 sections.append(f"- **Productores:** {datos['productores_desembolso']:,}")
                 sections.append(f"- **Siniestralidad:** {datos['indice_siniestralidad']}%")
 
@@ -602,7 +610,7 @@ def process_query(query, datos):
         header = " · ".join(context_parts)
         response = f"{header}\n\n---\n\n{response}"
 
-    response += f"\n\n---\n*Fuente: SAC 2025-2026, datos al {fecha_corte}*"
+    response += f"\n\n---\n*Fuente: Dirección de Seguro y Fomento del Financiamiento Agrario - MIDAGRI, SAC 2025-2026, datos al {fecha_corte}*"
 
     return response
 

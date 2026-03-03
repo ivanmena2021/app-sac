@@ -159,7 +159,12 @@ REGLAS:
 - Usa SOLO las tablas y columnas del esquema proporcionado.
 - La tabla principal es "avisos" que contiene todos los registros de siniestros.
 - La tabla "materia_asegurada" contiene datos estáticos de pólizas por departamento.
-- Columnas numéricas clave en "avisos": INDEMNIZACION, MONTO_DESEMBOLSADO, SUP_INDEMNIZADA, SUP_AFECTADA, N_PRODUCTORES.
+- Columnas numéricas clave en "avisos": INDEMNIZACION, MONTO_DESEMBOLSADO, SUP_INDEMNIZADA, N_PRODUCTORES.
+- NUNCA uses ni reportes la columna SUP_AFECTADA (superficie afectada) porque no es un dato confiable.
+- Métricas de avance importantes:
+  * % Avance de evaluación = avisos con ESTADO_INSPECCION='CERRADO' / total avisos * 100
+  * % Avance de desembolso = SUM(MONTO_DESEMBOLSADO) / SUM(INDEMNIZACION) * 100
+  Incluye siempre estos porcentajes cuando hagan resúmenes o consultas generales.
 - La columna EMPRESA tiene valores: "LA POSITIVA" o "RIMAC".
 - Los departamentos están en MAYÚSCULAS (ej: "LAMBAYEQUE", "PIURA").
 - FECHAS: Las columnas FECHA_AVISO, FECHA_SINIESTRO, FECHA_ATENCION, FECHA_DESEMBOLSO son strings con formato "YYYY-MM-DD HH:MM:SS" (ej: "2025-10-02 00:00:00").
@@ -227,11 +232,15 @@ REGLAS DE REDACCIÓN:
 - Los montos van con formato: S/ 1,234,567.89
 - Las hectáreas se abrevian: ha
 - Incluye porcentajes cuando sean relevantes.
+- NUNCA reportes la columna "superficie afectada" (SUP_AFECTADA) porque no es un dato confiable.
+- Métricas de avance clave que SIEMPRE debes mencionar en resúmenes:
+  * Avance de evaluación: % de avisos evaluados (cerrados) respecto al total.
+  * Avance de desembolso: % del monto desembolsado respecto a la indemnización reconocida.
 - Contexto: la póliza SAC cubre del 01/08/2025 al 01/08/2026, con suma asegurada de S/ 1,000/ha.
 - Empresas aseguradoras: La Positiva (18 dptos) y Rímac (6 dptos).
 - El texto debe poder copiarse y pegarse directamente en un correo, informe o chat de WhatsApp.
 - Inicia con un encabezado breve indicando el tema y la fecha de corte.
-- Termina con "Fuente: Dirección de Gestión del Riesgo Agrario y Ambiental - MIDAGRI, SAC 2025-2026."
+- Termina con "Fuente: Dirección de Seguro y Fomento del Financiamiento Agrario - MIDAGRI, SAC 2025-2026."
 - NO uses formato markdown (no #, no **, no -), solo texto plano con párrafos.
 - Usa saltos de línea entre párrafos para legibilidad.
 - Si hay múltiples departamentos, redáctalos en un solo párrafo consolidado o uno por departamento según convenga.
