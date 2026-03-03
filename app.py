@@ -34,81 +34,115 @@ st.set_page_config(
 # ═══════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-    /* ── Reset & Base ── */
-    .block-container { padding-top: 1rem; max-width: 1200px; }
+    /* ══════════════════════════════════════════
+       GLOBAL RESET & BASE
+       ══════════════════════════════════════════ */
+    .block-container { padding-top: 0.8rem; max-width: 1200px; }
     [data-testid="stSidebar"] { background: #f8fafc; }
+    [data-testid="stAppViewBlockContainer"] { background: #f4f7fa; }
 
-    /* ── Hero Header ── */
+    /* ══════════════════════════════════════════
+       HERO HEADER — Gradient con pattern sutil
+       ══════════════════════════════════════════ */
     .hero {
-        background: linear-gradient(135deg, #0F2B46 0%, #1a5276 40%, #2980b9 100%);
-        padding: 2rem 2.5rem;
-        border-radius: 16px;
-        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, #0c2340 0%, #1a5276 35%, #2980b9 70%, #3498db 100%);
+        padding: 1.8rem 2.5rem;
+        border-radius: 18px;
+        margin-bottom: 1.2rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 4px 20px rgba(15,43,70,0.3);
+        box-shadow: 0 8px 32px rgba(12,35,64,0.25);
     }
     .hero::before {
         content: '';
         position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 400px;
-        height: 400px;
-        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+        top: -60%;
+        right: -15%;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .hero::after {
+        content: '';
+        position: absolute;
+        bottom: -40%;
+        left: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(46,204,113,0.08) 0%, transparent 70%);
         border-radius: 50%;
     }
     .hero h1 {
         color: #fff !important;
-        font-size: 2rem;
-        font-weight: 700;
-        margin: 0 0 0.3rem 0;
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: 0 0 0.2rem 0;
         position: relative;
+        letter-spacing: -0.3px;
     }
     .hero .subtitle {
-        color: #a8d8f0;
-        font-size: 0.95rem;
+        color: rgba(255,255,255,0.75);
+        font-size: 0.9rem;
         margin: 0;
+        position: relative;
+        font-weight: 400;
+    }
+    .hero .hero-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         position: relative;
     }
     .hero .badge {
-        display: inline-block;
-        background: rgba(255,255,255,0.15);
-        color: #fff;
-        padding: 0.25rem 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.9);
+        padding: 0.3rem 0.9rem;
         border-radius: 20px;
-        font-size: 0.75rem;
-        margin-top: 0.5rem;
-        position: relative;
-        backdrop-filter: blur(4px);
+        font-size: 0.72rem;
+        font-weight: 500;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* ── Tarjeta de acción principal ── */
+    /* ══════════════════════════════════════════
+       ACTION CARD — Pantalla inicial
+       ══════════════════════════════════════════ */
     .action-card {
-        background: #fff;
+        background: white;
         border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 2rem;
+        border-radius: 20px;
+        padding: 2.5rem 2rem;
         text-align: center;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.04);
         transition: all 0.3s ease;
     }
     .action-card:hover {
-        box-shadow: 0 4px 24px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+        transform: translateY(-3px);
     }
     .action-card h2 {
-        color: #1a5276;
-        margin: 0.5rem 0;
-        font-size: 1.4rem;
+        color: #0c2340;
+        margin: 0.8rem 0 0.4rem;
+        font-size: 1.5rem;
+        font-weight: 700;
     }
     .action-card p {
         color: #64748b;
         font-size: 0.9rem;
         margin: 0;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
     }
 
-    /* ── Stepper de progreso ── */
+    /* ══════════════════════════════════════════
+       STEPPER — Progreso de descarga
+       ══════════════════════════════════════════ */
     .stepper {
         display: flex;
         justify-content: center;
@@ -122,8 +156,8 @@ st.markdown("""
         gap: 0.5rem;
     }
     .step-circle {
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -131,133 +165,121 @@ st.markdown("""
         font-weight: 700;
         font-size: 0.85rem;
         flex-shrink: 0;
+        transition: all 0.3s ease;
     }
-    .step-pending .step-circle {
-        background: #e2e8f0;
-        color: #94a3b8;
-    }
-    .step-active .step-circle {
-        background: #2980b9;
-        color: #fff;
-        animation: pulse 1.5s infinite;
-    }
-    .step-done .step-circle {
-        background: #27ae60;
-        color: #fff;
-    }
-    .step-error .step-circle {
-        background: #e74c3c;
-        color: #fff;
-    }
-    .step-label {
-        font-size: 0.82rem;
-        font-weight: 500;
-    }
+    .step-pending .step-circle { background: #e8ecf1; color: #94a3b8; }
+    .step-active .step-circle { background: #2980b9; color: #fff; animation: pulse 1.5s infinite; }
+    .step-done .step-circle { background: #27ae60; color: #fff; }
+    .step-error .step-circle { background: #e74c3c; color: #fff; }
+    .step-label { font-size: 0.82rem; font-weight: 500; }
     .step-pending .step-label { color: #94a3b8; }
     .step-active .step-label { color: #2980b9; font-weight: 600; }
     .step-done .step-label { color: #27ae60; }
     .step-error .step-label { color: #e74c3c; }
-    .step-connector {
-        width: 40px;
-        height: 2px;
-        background: #e2e8f0;
-        margin: 0 0.3rem;
-        align-self: center;
-    }
+    .step-connector { width: 40px; height: 2px; background: #e2e8f0; margin: 0 0.3rem; align-self: center; }
     .step-connector.done { background: #27ae60; }
-
     @keyframes pulse {
         0%, 100% { box-shadow: 0 0 0 0 rgba(41,128,185,0.4); }
-        50% { box-shadow: 0 0 0 8px rgba(41,128,185,0); }
+        50% { box-shadow: 0 0 0 10px rgba(41,128,185,0); }
     }
 
-    /* ── Metric Cards ── */
-    .metric-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-        margin: 1rem 0;
-    }
-    @media (max-width: 768px) {
-        .metric-grid { grid-template-columns: repeat(2, 1fr); }
-    }
+    /* ══════════════════════════════════════════
+       METRIC CARDS — Dashboard
+       ══════════════════════════════════════════ */
     .metric-card-v2 {
-        background: #fff;
-        border-radius: 12px;
-        padding: 1.2rem;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 1px 8px rgba(0,0,0,0.04);
-        transition: all 0.2s ease;
+        background: white;
+        border-radius: 14px;
+        padding: 1.2rem 1.3rem;
+        border: 1px solid #e8ecf1;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+        transition: all 0.25s ease;
     }
     .metric-card-v2:hover {
-        box-shadow: 0 3px 16px rgba(0,0,0,0.08);
-        transform: translateY(-1px);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.07);
+        transform: translateY(-2px);
     }
     .metric-card-v2 .label {
         color: #64748b;
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 600;
-        margin-bottom: 0.4rem;
+        letter-spacing: 0.6px;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
     }
     .metric-card-v2 .value {
-        color: #0F2B46;
-        font-size: 1.5rem;
-        font-weight: 700;
+        color: #0c2340;
+        font-size: 1.4rem;
+        font-weight: 800;
         line-height: 1.2;
     }
     .metric-card-v2 .delta {
-        font-size: 0.8rem;
-        margin-top: 0.2rem;
+        font-size: 0.78rem;
+        margin-top: 0.3rem;
+        font-weight: 500;
     }
     .delta-positive { color: #27ae60; }
     .delta-neutral { color: #64748b; }
+    .delta-warning { color: #f39c12; }
 
-    /* ── Colores de acento por tipo ── */
+    /* Acentos */
     .accent-blue { border-left: 4px solid #2980b9; }
     .accent-green { border-left: 4px solid #27ae60; }
     .accent-amber { border-left: 4px solid #f39c12; }
     .accent-purple { border-left: 4px solid #8e44ad; }
+    .accent-red { border-left: 4px solid #e74c3c; }
 
-    /* ── Sección de reportes ── */
+    /* ══════════════════════════════════════════
+       REPORT CARDS — Pantalla inicial
+       ══════════════════════════════════════════ */
     .report-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.5rem;
+        background: white;
+        border: 1px solid #e8ecf1;
+        border-radius: 16px;
+        padding: 1.6rem;
         height: 100%;
-        box-shadow: 0 1px 8px rgba(0,0,0,0.04);
-        transition: all 0.2s ease;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+        transition: all 0.25s ease;
     }
     .report-card:hover {
-        box-shadow: 0 3px 16px rgba(0,0,0,0.08);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.07);
+        transform: translateY(-2px);
     }
     .report-card .icon {
         font-size: 2rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.6rem;
+        display: inline-block;
+        width: 52px;
+        height: 52px;
+        line-height: 52px;
+        text-align: center;
+        background: #f0f7ff;
+        border-radius: 14px;
     }
     .report-card h3 {
-        color: #1a5276;
-        margin: 0.3rem 0;
-        font-size: 1.1rem;
+        color: #0c2340;
+        margin: 0.5rem 0;
+        font-size: 1.05rem;
+        font-weight: 700;
     }
     .report-card p {
         color: #64748b;
-        font-size: 0.85rem;
-        margin: 0.3rem 0 1rem 0;
+        font-size: 0.83rem;
+        margin: 0.3rem 0 0;
+        line-height: 1.6;
     }
 
-    /* ── Status banner ── */
+    /* ══════════════════════════════════════════
+       STATUS BANNER — Datos actualizados
+       ══════════════════════════════════════════ */
     .status-banner {
-        background: linear-gradient(90deg, #d4edda 0%, #c3e6cb 100%);
-        border: 1px solid #b1dfbb;
-        border-radius: 10px;
-        padding: 0.8rem 1.2rem;
+        background: linear-gradient(90deg, #e8f8ee 0%, #d4f1de 100%);
+        border: 1px solid #b8e6c8;
+        border-radius: 12px;
+        padding: 0.7rem 1.2rem;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        margin: 1rem 0;
+        gap: 0.6rem;
+        margin: 0.5rem 0;
     }
     .status-banner .dot {
         width: 8px;
@@ -265,6 +287,7 @@ st.markdown("""
         background: #27ae60;
         border-radius: 50%;
         animation: blink 2s infinite;
+        flex-shrink: 0;
     }
     @keyframes blink {
         0%, 100% { opacity: 1; }
@@ -272,62 +295,218 @@ st.markdown("""
     }
     .status-banner span {
         color: #155724;
-        font-size: 0.88rem;
+        font-size: 0.82rem;
         font-weight: 500;
     }
 
-    /* ── Footer ── */
+    /* ══════════════════════════════════════════
+       SECTION HEADERS
+       ══════════════════════════════════════════ */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin: 1rem 0 0.8rem;
+    }
+    .section-header .icon-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    .section-header h3 {
+        color: #0c2340;
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    /* ══════════════════════════════════════════
+       TABS — Navegación moderna
+       ══════════════════════════════════════════ */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
+        background: #e8ecf1;
+        border-radius: 12px;
+        padding: 4px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-weight: 500;
+        font-size: 0.88rem;
+        color: #475569;
+        transition: all 0.2s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background: rgba(255,255,255,0.5);
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: white !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        color: #0c2340 !important;
+        font-weight: 600;
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none;
+    }
+    .stTabs [data-baseweb="tab-border"] {
+        display: none;
+    }
+
+    /* ══════════════════════════════════════════
+       TAB CONTENT CARDS — Contenido de reportes
+       ══════════════════════════════════════════ */
+    .tab-intro {
+        background: linear-gradient(135deg, #f8fafc, #edf2f7);
+        padding: 1.2rem 1.5rem;
+        border-radius: 14px;
+        border-left: 4px solid #2980b9;
+        margin-bottom: 1rem;
+    }
+    .tab-intro .title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0c2340;
+        margin-bottom: 0.3rem;
+    }
+    .tab-intro .desc {
+        color: #64748b;
+        font-size: 0.85rem;
+        line-height: 1.6;
+    }
+
+    /* ══════════════════════════════════════════
+       CHAT — Consulta area
+       ══════════════════════════════════════════ */
+    .chat-header {
+        background: linear-gradient(135deg, #f0f7ff 0%, #e8f4f8 100%);
+        padding: 1.3rem 1.5rem;
+        border-radius: 14px;
+        border-left: 4px solid #2980b9;
+        margin-bottom: 1rem;
+    }
+    .chat-header .title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0c2340;
+    }
+    .chat-header .subtitle {
+        color: #64748b;
+        font-size: 0.83rem;
+        margin-top: 0.2rem;
+    }
+    .engine-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0.3rem 0.9rem;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .sug-btn {
+        display: inline-block;
+        background: white;
+        border: 1px solid #dce4ec;
+        border-radius: 10px;
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .sug-btn:hover {
+        border-color: #2980b9;
+        color: #2980b9;
+        background: #f0f7ff;
+    }
+
+    .query-result-box {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 0.92rem;
+        line-height: 1.75;
+        color: #1a1a1a;
+        white-space: pre-wrap;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+    }
+    .query-context {
+        background: #f0f7ff;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        margin-bottom: 0.8rem;
+        color: #1a5276;
+        font-size: 0.83rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* ══════════════════════════════════════════
+       FOOTER
+       ══════════════════════════════════════════ */
     .footer {
         text-align: center;
         color: #94a3b8;
-        font-size: 0.75rem;
-        padding: 2rem 0 1rem 0;
+        font-size: 0.72rem;
+        padding: 1.5rem 0 1rem 0;
         border-top: 1px solid #e2e8f0;
         margin-top: 2rem;
     }
 
-    /* ── Tabs styling ── */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
-        background: #f1f5f9;
-        border-radius: 10px;
-        padding: 4px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 8px 20px;
-        font-weight: 500;
-    }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: #fff;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-
-    /* ── Ocultar hamburger menu default ── */
+    /* ══════════════════════════════════════════
+       BUTTONS & MISC
+       ══════════════════════════════════════════ */
     #MainMenu {visibility: hidden;}
 
-    /* ── Botón primario mejorado ── */
     .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #1a5276, #2980b9) !important;
+        background: linear-gradient(135deg, #0c2340, #1a5276, #2980b9) !important;
         border: none !important;
-        border-radius: 10px !important;
-        padding: 0.6rem 1.5rem !important;
-        font-weight: 600 !important;
+        border-radius: 12px !important;
+        padding: 0.65rem 1.8rem !important;
+        font-weight: 700 !important;
         letter-spacing: 0.3px !important;
-        box-shadow: 0 2px 8px rgba(41,128,185,0.3) !important;
-        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 14px rgba(41,128,185,0.25) !important;
+        transition: all 0.25s ease !important;
     }
     .stButton > button[kind="primary"]:hover {
-        box-shadow: 0 4px 16px rgba(41,128,185,0.4) !important;
-        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 22px rgba(41,128,185,0.35) !important;
+        transform: translateY(-2px) !important;
     }
 
-    /* ── Expander mejorado ── */
     .streamlit-expanderHeader {
         background: #f8fafc;
-        border-radius: 8px;
-        font-weight: 500;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
     }
+
+    /* download buttons */
+    .stDownloadButton > button {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        border: 1px solid #d1d9e0 !important;
+        transition: all 0.2s ease !important;
+    }
+    .stDownloadButton > button:hover {
+        border-color: #2980b9 !important;
+        color: #2980b9 !important;
+        background: #f0f7ff !important;
+    }
+
+    /* dataframes */
+    .stDataFrame { border-radius: 10px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -399,9 +578,13 @@ def render_metric(label, value, delta=None, accent="blue"):
 hora_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
 st.markdown(f"""
 <div class="hero">
-    <h1>🌾 SAC 2025 — 2026</h1>
-    <p class="subtitle">Sistema de Reportes del Seguro Agrícola Catastrófico · MIDAGRI</p>
-    <span class="badge">🕐 {hora_actual}</span>
+    <div class="hero-row">
+        <div>
+            <h1>SAC 2025 — 2026</h1>
+            <p class="subtitle">Sistema Automatizado de Reportes · Seguro Agrícola Catastrófico</p>
+        </div>
+        <span class="badge">MIDAGRI · {hora_actual}</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -697,14 +880,19 @@ else:
             st.rerun()
 
     # ─── Dashboard de métricas ───
-    st.markdown('<h3 style="color:#0F2B46; margin-top:0.5rem;">📊 Panel Nacional</h3>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="section-header">
+        <div class="icon-box" style="background:#e8f4f8;">📊</div>
+        <h3>Panel Nacional</h3>
+    </div>
+    """, unsafe_allow_html=True)
 
     row1 = st.columns(4)
     metrics_row1 = [
         ("Avisos Reportados", f"{datos['total_avisos']:,}", None, "blue"),
-        ("Avisos Ajustados", f"{datos['total_ajustados']:,}", f"{datos['pct_ajustados']:.1f}% del total", "green"),
-        ("Indemnización Total", f"S/ {datos['monto_indemnizado']:,.0f}", None, "amber"),
-        ("Desembolsos", f"S/ {datos['monto_desembolsado']:,.0f}", f"{datos['pct_desembolso']:.1f}% ejecutado", "green"),
+        ("Avance Evaluación", f"{datos['pct_ajustados']:.1f}%", f"{datos['total_ajustados']:,} cerrados", "green"),
+        ("Indemnización", f"S/ {datos['monto_indemnizado']:,.0f}", None, "amber"),
+        ("Avance Desembolso", f"{datos['pct_desembolso']:.1f}%", f"S/ {datos['monto_desembolsado']:,.0f}", "green"),
     ]
     for col, (label, value, delta, accent) in zip(row1, metrics_row1):
         with col:
@@ -717,16 +905,21 @@ else:
         ("Ha Aseguradas", f"{datos['sup_asegurada']:,.0f}", None, "blue"),
         ("Ha Indemnizadas", f"{datos['ha_indemnizadas']:,.0f}", None, "amber"),
         ("Siniestralidad", f"{datos['indice_siniestralidad']:.2f}%", None, "purple"),
-        ("Productores Beneficiados", f"{int(datos['productores_desembolso']):,}", None, "green"),
+        ("Productores", f"{int(datos['productores_desembolso']):,}", "beneficiados", "green"),
     ]
     for col, (label, value, delta, accent) in zip(row2, metrics_row2):
         with col:
             st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown('<div style="height:0.8rem;"></div>', unsafe_allow_html=True)
 
     # ─── Generación de reportes ───
-    st.markdown('<h3 style="color:#0F2B46;">📥 Generar Reportes</h3>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="section-header">
+        <div class="icon-box" style="background:#f0e8ff;">📥</div>
+        <h3>Generar Reportes</h3>
+    </div>
+    """, unsafe_allow_html=True)
 
     tab_chat, tab1, tab2, tab_op, tab3, tab4 = st.tabs([
         "💬 Consultas",
@@ -742,24 +935,21 @@ else:
         llm_ready = is_llm_available()
 
         # Header
-        engine_label = "IA + SQL" if llm_ready else "Motor básico"
+        engine_label = "IA + SQL" if llm_ready else "Motor Básico"
         engine_color = "#27ae60" if llm_ready else "#f39c12"
+        engine_icon = "🤖" if llm_ready else "⚙️"
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #f8fafc, #e8f4f8); padding: 1.2rem;
-                    border-radius: 12px; border-left: 4px solid #2980b9; margin-bottom: 1rem;">
+        <div class="chat-header">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <span style="font-size: 1.1rem; font-weight: 600; color: #1F4E79;">
-                        💬 Consulta de Coyuntura SAC
-                    </span><br>
-                    <span style="color: #64748b; font-size: 0.85rem;">
+                    <div class="title">Consulta de Coyuntura SAC</div>
+                    <div class="subtitle">
                         Escriba su consulta en lenguaje natural. El sistema analiza los datos
-                        y genera texto profesional listo para comunicar.
-                    </span>
+                        y genera texto profesional listo para copiar y comunicar.
+                    </div>
                 </div>
-                <span style="background:{engine_color}; color:white; padding:0.3rem 0.8rem;
-                       border-radius:20px; font-size:0.75rem; font-weight:600;">
-                    {engine_label}
+                <span class="engine-badge" style="background:{engine_color}; color:white;">
+                    {engine_icon} {engine_label}
                 </span>
             </div>
         </div>
@@ -832,24 +1022,18 @@ else:
             st.markdown("---")
 
             engine_used = st.session_state.get("last_query_engine", "básico")
+            engine_badge_color = "#27ae60" if engine_used == "IA" else "#f39c12"
             st.markdown(
-                f'<div style="background:#f0f7ff; padding:0.6rem 1rem; border-radius:8px; '
-                f'margin-bottom:0.8rem; color:#1F4E79; font-size:0.85rem;">'
-                f'<strong>Consulta:</strong> {st.session_state.get("last_query_text", "")}'
-                f'<span style="float:right; background:#e8f4f8; padding:0.15rem 0.5rem; '
-                f'border-radius:10px; font-size:0.7rem;">{engine_used}</span></div>',
+                f'<div class="query-context">'
+                f'<span><strong>Consulta:</strong> {st.session_state.get("last_query_text", "")}</span>'
+                f'<span class="engine-badge" style="background:{engine_badge_color}; color:white; font-size:0.65rem;">'
+                f'{engine_used}</span></div>',
                 unsafe_allow_html=True,
             )
 
             # Texto de respuesta
             prose = st.session_state["last_query_prose"]
-            st.markdown(
-                f'<div style="background:white; padding:1.2rem; border-radius:10px; '
-                f'border:1px solid #e2e8f0; font-family:Arial,sans-serif; '
-                f'font-size:0.92rem; line-height:1.7; color:#1a1a1a; '
-                f'white-space:pre-wrap;">{prose}</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'<div class="query-result-box">{prose}</div>', unsafe_allow_html=True)
 
             # Botones de descarga
             st.markdown("")
@@ -888,11 +1072,13 @@ else:
 
     # ═══ TAB 1: Ayuda Memoria Nacional ═══
     with tab1:
-        st.markdown(f"**Fecha de corte:** {datos['fecha_corte']}")
-        st.markdown(
-            "Documento Word con el resumen de operatividad del SAC a nivel nacional: "
-            "datos generales, primas y cobertura, indemnizaciones y eventos asociados a lluvias intensas."
-        )
+        st.markdown(f"""
+        <div class="tab-intro">
+            <div class="title">Ayuda Memoria Nacional · Corte {datos['fecha_corte']}</div>
+            <div class="desc">Resumen de operatividad SAC a nivel nacional: datos generales, primas y cobertura,
+            indemnizaciones y eventos asociados a lluvias intensas.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         col_gen, col_dl = st.columns([1, 1])
         with col_gen:
@@ -991,11 +1177,13 @@ else:
 
     # ═══ TAB OPERATIVIDAD: Ayuda Memoria Operatividad SAC ═══
     with tab_op:
-        st.markdown(f"**Fecha de corte:** {datos['fecha_corte']}")
-        st.markdown(
-            "Documento Word con el detalle de operatividad del SAC por empresa de seguros: "
-            "avisos, ajustes, siniestralidad por departamento, coberturas, cultivos priorizados y desembolsos."
-        )
+        st.markdown(f"""
+        <div class="tab-intro">
+            <div class="title">Operatividad SAC · Corte {datos['fecha_corte']}</div>
+            <div class="desc">Detalle de operatividad por empresa de seguros: avisos, ajustes, siniestralidad por
+            departamento, coberturas, cultivos priorizados y desembolsos.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         col_gen_op, col_dl_op = st.columns([1, 1])
         with col_gen_op:
@@ -1021,21 +1209,24 @@ else:
                     use_container_width=True,
                 )
 
-        st.markdown("---")
-        st.markdown("**Contenido del documento:**")
-        st.markdown(
-            "- Avisos de siniestros por empresa (La Positiva / Rímac)\n"
-            "- Top departamentos y tipos de siniestro\n"
-            "- Resultados: ajustes y evaluaciones por empresa\n"
-            "- Tabla de siniestralidad por departamento/empresa\n"
-            "- Indemnizaciones por tipo de cobertura (complementaria vs catastrófica)\n"
-            "- Cultivos priorizados vs no priorizados\n"
-            "- Desembolsos y productores beneficiados por departamento"
-        )
+        with st.expander("📋 Contenido del documento"):
+            st.markdown(
+                "El documento incluye: avisos de siniestros por empresa (La Positiva / Rímac), "
+                "top departamentos y tipos de siniestro, resultados de ajustes y evaluaciones, "
+                "tabla de siniestralidad por departamento/empresa, indemnizaciones por tipo de cobertura "
+                "(complementaria vs catastrófica), cultivos priorizados vs no priorizados, "
+                "y desembolsos con productores beneficiados por departamento."
+            )
 
     # ═══ TAB 3: Reporte EME ═══
     with tab3:
-        st.markdown("Reporte consolidado por región con acciones implementadas, en implementación y por implementar.")
+        st.markdown("""
+        <div class="tab-intro">
+            <div class="title">Reporte de Emergencia (EME)</div>
+            <div class="desc">Formato consolidado por región con acciones implementadas,
+            en implementación y por implementar.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         col_gen, col_dl = st.columns([1, 1])
         with col_gen:
@@ -1086,7 +1277,7 @@ else:
 # ═══════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class="footer">
-    SAC 2025-2026 · Dirección de Gestión del Riesgo Agrario y Ambiental · MIDAGRI<br>
-    Sistema desarrollado para la gestión del Seguro Agrícola Catastrófico
+    SAC 2025-2026 · Dirección de Seguro y Fomento del Financiamiento Agrario · MIDAGRI<br>
+    Sistema automatizado para la gestión de reportes del Seguro Agrícola Catastrófico
 </div>
 """, unsafe_allow_html=True)
