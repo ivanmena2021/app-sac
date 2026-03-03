@@ -93,6 +93,12 @@ TEMPORAL_KEYWORDS = {
     "ayer": 2,
 }
 
+MESES = {
+    "enero": 1, "febrero": 2, "marzo": 3, "abril": 4,
+    "mayo": 5, "junio": 6, "julio": 7, "agosto": 8,
+    "septiembre": 9, "octubre": 10, "noviembre": 11, "diciembre": 12,
+}
+
 
 def _normalize(text):
     """Normaliza texto eliminando acentos y pasando a mayúsculas."""
@@ -153,11 +159,45 @@ def _detect_metrics(query):
 
 
 def _detect_temporal(query):
-    """Detecta período temporal mencionado."""
+    """
+    Detecta período temporal mencionado.
+    Retorna dict con tipo de filtro:
+      {"type": "days", "days": N}
+      {"type": "year", "year": YYYY}
+      {"type": "year_month", "year": YYYY, "month": M}
+      {"type": "month", "month": M}
+      None si no detecta nada
+    """
     query_lower = query.lower()
+
+    # 1. Detectar año explícito (e.g., "2026", "en este 2026", "del 2025")
+    year_match = re.search(r'\b(20[2-3]\d)\b', query_lower)
+    detected_year = int(year_match.group(1)) if year_match else None
+
+    # 2. Detectar mes explícito (e.g., "enero", "febrero 2026")
+    detected_month = None
+    for mes_name, mes_num in MESES.items():
+        if mes_name in query_lower:
+            detected_month = mes_num
+            break
+
+    # 3. Si encontró año + mes → rango mes/año
+    if detected_year and detected_month:
+        return {"type": "year_month", "year": detected_year, "month": detected_month}
+
+    # 4. Si solo año → filtrar por ese año
+    if detected_year:
+        return {"type": "year", "year": detected_year}
+
+    # 5. Si solo mes → asumir año actual
+    if detected_month:
+        return {"type": "month", "month": detected_month}
+
+    # 6. Fallback: keywords relativos ("semana", "hoy", etc.)
     for keyword, days in sorted(TEMPORAL_KEYWORDS.items(), key=lambda x: -len(x[0])):
         if keyword in query_lower:
-            return days
+            return {"type": "days", "days": days}
+
     return None
 
 
@@ -342,16 +382,53 @@ def process_query(query, datos):
         df = df[df["TIPO_SINIESTRO"].isin([_normalize(t) for t in tipos])]
 
     # ─── Filtrar por período temporal ───
-    if days:
+    temporal = days  # ahora es dict o None
+    temporal_label = None
+    if temporal:
+        # Determinar columna de fecha preferida
+        # Para "fecha de ocurrencia" usar FECHA_SINIESTRO preferentemente
+        query_lower_check = query.lower()
+        prefer_ocurrencia = any(w in query_lower_check for w in [
+            "ocurrencia", "ocurrieron", "ocurrido", "sucedieron", "siniestro"
+        ])
+
+        if prefer_ocurrencia:
+            date_candidates = ["FECHA_SINIESTRO", "FECHA_AVISO", "FECHA_ATENCION"]
+        else:
+            date_candidates = ["FECHA_AVISO", "FECHA_SINIESTRO", "FECHA_ATENCION"]
+
         date_col = None
-        for col in ["FECHA_AVISO", "FECHA_SINIESTRO", "FECHA_ATENCION"]:
+        for col in date_candidates:
             if col in df.columns:
                 date_col = col
                 break
+
         if date_col:
             df["_fecha_tmp"] = pd.to_datetime(df[date_col], errors="coerce", dayfirst=True)
-            cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
-            df = df[df["_fecha_tmp"] >= cutoff]
+
+            if temporal["type"] == "days":
+                cutoff = pd.Timestamp.now() - pd.Timedelta(days=temporal["days"])
+                df = df[df["_fecha_tmp"] >= cutoff]
+                temporal_label = f"últimos {temporal['days']} días"
+
+            elif temporal["type"] == "year":
+                yr = temporal["year"]
+                df = df[df["_fecha_tmp"].dt.year == yr]
+                temporal_label = f"año {yr}"
+
+            elif temporal["type"] == "year_month":
+                yr = temporal["year"]
+                mo = temporal["month"]
+                df = df[(df["_fecha_tmp"].dt.year == yr) & (df["_fecha_tmp"].dt.month == mo)]
+                mes_nombre = [k for k, v in MESES.items() if v == mo][0].capitalize()
+                temporal_label = f"{mes_nombre} {yr}"
+
+            elif temporal["type"] == "month":
+                mo = temporal["month"]
+                df = df[df["_fecha_tmp"].dt.month == mo]
+                mes_nombre = [k for k, v in MESES.items() if v == mo][0].capitalize()
+                temporal_label = f"{mes_nombre}"
+
             df = df.drop(columns=["_fecha_tmp"], errors="ignore")
 
     # ─── Construir respuesta ───
@@ -365,8 +442,8 @@ def process_query(query, datos):
             filters_text.append(f"siniestros: {', '.join([t.title() for t in tipos])}")
         if empresa:
             filters_text.append(f"empresa: {empresa}")
-        if days:
-            filters_text.append(f"últimos {days} días")
+        if temporal_label:
+            filters_text.append(f"período: {temporal_label}")
 
         return (
             f"⚠️ No se encontraron registros con los filtros aplicados: "
@@ -383,8 +460,8 @@ def process_query(query, datos):
         context_parts.append(f"**Empresa:** {empresa}")
     if tipos:
         context_parts.append(f"**Siniestros:** {', '.join([t.title() for t in tipos])}")
-    if days:
-        context_parts.append(f"**Período:** últimos {days} días")
+    if temporal_label:
+        context_parts.append(f"**Período:** {temporal_label}")
 
     # ─── Tipo emergencia / resumen general ───
     if "emergencia" in metrics or "resumen" in metrics:
@@ -398,15 +475,55 @@ def process_query(query, datos):
                 sections.append(_build_depto_summary(df_d, depto, mat_d))
                 sections.append("")
         else:
-            # Resumen nacional
-            sections.append(f"## 📊 Resumen Nacional SAC 2025-2026")
-            sections.append(f"**Fecha de corte:** {fecha_corte}\n")
-            sections.append(f"- **Avisos totales:** {datos['total_avisos']:,}")
-            sections.append(f"- **Ajustados:** {datos['total_ajustados']:,} ({datos['pct_ajustados']}%)")
-            sections.append(f"- **Indemnización:** {_fmt(datos['monto_indemnizado'])}")
-            sections.append(f"- **Desembolso:** {_fmt(datos['monto_desembolsado'])} ({datos['pct_desembolso']}%)")
-            sections.append(f"- **Productores:** {datos['productores_desembolso']:,}")
-            sections.append(f"- **Siniestralidad:** {datos['indice_siniestralidad']}%")
+            # Resumen nacional — usar df filtrado si hay filtros activos
+            has_filters = bool(empresa or temporal_label or tipos)
+
+            if has_filters:
+                # Recalcular desde el df filtrado
+                n_avisos = len(df)
+                n_ajust = len(df[df["ESTADO_INSPECCION"].astype(str).str.upper() == "CERRADO"]) if "ESTADO_INSPECCION" in df.columns else 0
+                pct_ajust = round(n_ajust / n_avisos * 100, 2) if n_avisos > 0 else 0
+                indemn = df["INDEMNIZACION"].sum() if "INDEMNIZACION" in df.columns else 0
+                desemb = df["MONTO_DESEMBOLSADO"].sum() if "MONTO_DESEMBOLSADO" in df.columns else 0
+                pct_desemb = round(desemb / indemn * 100, 2) if indemn > 0 else 0
+                n_prod = int(df["N_PRODUCTORES"].sum()) if "N_PRODUCTORES" in df.columns else 0
+                sup_indemn = df["SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in df.columns else 0
+
+                titulo_periodo = f" — {temporal_label}" if temporal_label else ""
+                titulo_empresa = f" — {empresa}" if empresa else ""
+                sections.append(f"## 📊 Resumen Nacional SAC 2025-2026{titulo_empresa}{titulo_periodo}")
+                sections.append(f"**Fecha de corte:** {fecha_corte}\n")
+                sections.append(f"- **Avisos totales:** {n_avisos:,}")
+                sections.append(f"- **Ajustados:** {n_ajust:,} ({pct_ajust}%)")
+                sections.append(f"- **Indemnización:** {_fmt(indemn)}")
+                sections.append(f"- **Desembolso:** {_fmt(desemb)} ({pct_desemb}%)")
+                sections.append(f"- **Productores:** {n_prod:,}")
+                if sup_indemn > 0:
+                    sections.append(f"- **Superficie indemnizada:** {_fmt(sup_indemn, 2, '')} ha")
+
+                # Top departamentos del subconjunto filtrado
+                if "DEPARTAMENTO" in df.columns and len(df) > 0:
+                    top_deptos = df["DEPARTAMENTO"].value_counts().head(5)
+                    sections.append(f"\n**Principales departamentos:**")
+                    for dpto, cnt in top_deptos.items():
+                        sections.append(f"- {dpto.title()}: {cnt:,} avisos")
+
+                # Top tipos de siniestro del subconjunto filtrado
+                if "TIPO_SINIESTRO" in df.columns and len(df) > 0:
+                    top_tipos = df["TIPO_SINIESTRO"].value_counts().head(5)
+                    sections.append(f"\n**Principales tipos de siniestro:**")
+                    for tipo, cnt in top_tipos.items():
+                        sections.append(f"- {tipo.title()}: {cnt:,} avisos")
+            else:
+                # Sin filtros → usar totales pre-calculados
+                sections.append(f"## 📊 Resumen Nacional SAC 2025-2026")
+                sections.append(f"**Fecha de corte:** {fecha_corte}\n")
+                sections.append(f"- **Avisos totales:** {datos['total_avisos']:,}")
+                sections.append(f"- **Ajustados:** {datos['total_ajustados']:,} ({datos['pct_ajustados']}%)")
+                sections.append(f"- **Indemnización:** {_fmt(datos['monto_indemnizado'])}")
+                sections.append(f"- **Desembolso:** {_fmt(datos['monto_desembolsado'])} ({datos['pct_desembolso']}%)")
+                sections.append(f"- **Productores:** {datos['productores_desembolso']:,}")
+                sections.append(f"- **Siniestralidad:** {datos['indice_siniestralidad']}%")
 
     # ─── Específico por tipo de siniestro ───
     elif tipos:
