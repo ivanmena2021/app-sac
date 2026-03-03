@@ -84,6 +84,14 @@ def _load_to_duckdb(datos):
             return eu
         midagri["EMPRESA"] = midagri["EMPRESA"].apply(_norm)
 
+    # Convertir columnas de fecha a datetime para que DuckDB las maneje nativamente
+    date_cols = ["FECHA_AVISO", "FECHA_SINIESTRO", "FECHA_ATENCION",
+                 "FECHA_DESEMBOLSO", "FECHA_SIEMBRA", "FECHA_COSECHA",
+                 "FECHA_ENVIO_DRAS", "FECHA_VALIDACION"]
+    for col in date_cols:
+        if col in midagri.columns:
+            midagri[col] = pd.to_datetime(midagri[col], errors="coerce", dayfirst=True)
+
     # Registrar DataFrames como tablas
     conn.register("avisos", midagri)
     conn.register("materia_asegurada", materia)
@@ -154,7 +162,15 @@ REGLAS:
 - Columnas numéricas clave en "avisos": INDEMNIZACION, MONTO_DESEMBOLSADO, SUP_INDEMNIZADA, SUP_AFECTADA, N_PRODUCTORES.
 - La columna EMPRESA tiene valores: "LA POSITIVA" o "RIMAC".
 - Los departamentos están en MAYÚSCULAS (ej: "LAMBAYEQUE", "PIURA").
-- Para fechas, usa FECHA_AVISO o FECHA_SINIESTRO (formato date).
+- FECHAS: Las columnas FECHA_AVISO, FECHA_SINIESTRO, FECHA_ATENCION, FECHA_DESEMBOLSO son strings con formato "YYYY-MM-DD HH:MM:SS" (ej: "2025-10-02 00:00:00").
+  Para filtrar por año: CAST(FECHA_SINIESTRO AS DATE) >= '2026-01-01'
+  Para extraer año: YEAR(CAST(FECHA_SINIESTRO AS DATE))
+  Para extraer mes: MONTH(CAST(FECHA_SINIESTRO AS DATE))
+  NUNCA uses strptime con formato '%d-%m-%Y'. Las fechas ya están en formato ISO (YYYY-MM-DD).
+  Para "fecha de ocurrencia" usa FECHA_SINIESTRO. Para "fecha de reporte" usa FECHA_AVISO.
+- Cuando pregunten por "eventos asociados a lluvias", filtra por TIPO_SINIESTRO IN ('INUNDACION', 'LLUVIAS EXCESIVAS', 'HUAYCO', 'DESLIZAMIENTO', 'DESLIZAMIENTOS').
+- Cuando pregunten por "frío" o "bajas temperaturas", filtra por TIPO_SINIESTRO IN ('HELADA', 'FRIAJE', 'NIEVE').
+- Cuando pregunten por "plagas y enfermedades" o "biológicos", filtra por TIPO_SINIESTRO IN ('ENFERMEDADES', 'PLAGAS').
 - Cuando pregunten por "intervenciones", "acciones", "emergencia" o "resumen", muestra avisos totales, indemnizaciones, desembolsos y productores agrupados por departamento.
 - Redondea montos a 2 decimales.
 - Si la pregunta menciona varias departamentos, filtra con WHERE DEPARTAMENTO IN (...).
