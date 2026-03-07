@@ -141,6 +141,26 @@ def _generate_schema(conn):
                     schema_parts.append(f"  Empresas: {', '.join([r[0] for r in empresas])}")
                 except Exception:
                     pass
+                # Provincias (muestra algunas para contexto)
+                try:
+                    provs = conn.execute("SELECT DISTINCT PROVINCIA FROM avisos WHERE PROVINCIA IS NOT NULL ORDER BY 1 LIMIT 30").fetchall()
+                    if provs:
+                        schema_parts.append(f"  Provincias (muestra): {', '.join([r[0] for r in provs if r[0]])}")
+                except Exception:
+                    pass
+                # Contar niveles geográficos
+                try:
+                    geo_counts = conn.execute("""
+                        SELECT
+                            COUNT(DISTINCT DEPARTAMENTO) as n_deptos,
+                            COUNT(DISTINCT PROVINCIA) as n_provs,
+                            COUNT(DISTINCT DISTRITO) as n_dists,
+                            COUNT(DISTINCT SECTOR_ESTADISTICO) as n_sectors
+                        FROM avisos
+                    """).fetchone()
+                    schema_parts.append(f"  Niveles geográficos: {geo_counts[0]} departamentos, {geo_counts[1]} provincias, {geo_counts[2]} distritos, {geo_counts[3]} sectores estadísticos")
+                except Exception:
+                    pass
 
         except Exception as e:
             schema_parts.append(f"Tabla: {table} — Error: {str(e)}")
@@ -161,28 +181,44 @@ REGLAS:
 - La tabla "materia_asegurada" contiene datos estáticos de pólizas por departamento.
 - Columnas numéricas clave en "avisos": INDEMNIZACION, MONTO_DESEMBOLSADO, SUP_INDEMNIZADA, N_PRODUCTORES.
 - NUNCA uses ni reportes la columna SUP_AFECTADA (superficie afectada) porque no es un dato confiable.
-- Métricas de avance importantes:
+
+COLUMNAS GEOGRÁFICAS en la tabla "avisos":
+- DEPARTAMENTO: nivel más alto (24 departamentos, en MAYÚSCULAS: "LAMBAYEQUE", "PIURA", etc.)
+- PROVINCIA: nivel intermedio (en MAYÚSCULAS). Ejemplo: "CHICLAYO", "SULLANA", "HUANCAYO"
+- DISTRITO: nivel detallado (en MAYÚSCULAS). Ejemplo: "MORROPE", "TAMBOGRANDE"
+- SECTOR_ESTADISTICO: nivel más granular (en MAYÚSCULAS). Ubicación específica dentro del distrito.
+- EMPRESA: "LA POSITIVA" o "RIMAC" (derivada de materia_asegurada)
+
+AGRUPACIÓN GEOGRÁFICA:
+- Si preguntan "por provincia", agrupa con GROUP BY PROVINCIA
+- Si preguntan "por distrito", agrupa con GROUP BY DISTRITO (puedes incluir PROVINCIA también)
+- Si preguntan "por sector", agrupa con GROUP BY SECTOR_ESTADISTICO
+- Si mencionan un distrito/provincia/sector específico, filtra con WHERE
+- Cuando agrupes por provincia o distrito, incluye el DEPARTAMENTO para contexto
+- Si mencionan una provincia o distrito concreto, usa UPPER(PROVINCIA) = 'NOMBRE' o UPPER(DISTRITO) = 'NOMBRE'
+
+Métricas de avance importantes:
   * % Avance de evaluación = avisos con ESTADO_INSPECCION='CERRADO' / total avisos * 100
   * % Avance de desembolso = SUM(MONTO_DESEMBOLSADO) / SUM(INDEMNIZACION) * 100
   Incluye siempre estos porcentajes cuando hagan resúmenes o consultas generales.
-- La columna EMPRESA tiene valores: "LA POSITIVA" o "RIMAC".
-- Los departamentos están en MAYÚSCULAS (ej: "LAMBAYEQUE", "PIURA").
-- FECHAS: Las columnas FECHA_AVISO, FECHA_SINIESTRO, FECHA_ATENCION, FECHA_DESEMBOLSO son strings con formato "YYYY-MM-DD HH:MM:SS" (ej: "2025-10-02 00:00:00").
-  Para filtrar por año: CAST(FECHA_SINIESTRO AS DATE) >= '2026-01-01'
-  Para extraer año: YEAR(CAST(FECHA_SINIESTRO AS DATE))
-  Para extraer mes: MONTH(CAST(FECHA_SINIESTRO AS DATE))
-  NUNCA uses strptime con formato '%d-%m-%Y'. Las fechas ya están en formato ISO (YYYY-MM-DD).
+
+FECHAS: Las columnas FECHA_AVISO, FECHA_SINIESTRO, FECHA_ATENCION, FECHA_DESEMBOLSO son de tipo DATE/TIMESTAMP.
+  Para filtrar por año: YEAR(FECHA_SINIESTRO) = 2026
+  Para filtrar por mes: MONTH(FECHA_SINIESTRO) = 3
+  Para rangos: FECHA_SINIESTRO >= '2026-01-01'
+  NUNCA uses strptime con formato '%d-%m-%Y'.
   Para "fecha de ocurrencia" usa FECHA_SINIESTRO. Para "fecha de reporte" usa FECHA_AVISO.
-- Cuando pregunten por "eventos asociados a lluvias", filtra por TIPO_SINIESTRO IN ('INUNDACION', 'LLUVIAS EXCESIVAS', 'HUAYCO', 'DESLIZAMIENTO', 'DESLIZAMIENTOS').
-- Cuando pregunten por "frío" o "bajas temperaturas", filtra por TIPO_SINIESTRO IN ('HELADA', 'FRIAJE', 'NIEVE').
-- Cuando pregunten por "plagas y enfermedades" o "biológicos", filtra por TIPO_SINIESTRO IN ('ENFERMEDADES', 'PLAGAS').
-- Cuando pregunten por "intervenciones", "acciones", "emergencia" o "resumen", muestra avisos totales, indemnizaciones, desembolsos y productores agrupados por departamento.
+
+CONCEPTOS SEMÁNTICOS:
+- "eventos asociados a lluvias" → TIPO_SINIESTRO IN ('INUNDACION', 'LLUVIAS EXCESIVAS', 'HUAYCO', 'DESLIZAMIENTO', 'DESLIZAMIENTOS')
+- "frío" o "bajas temperaturas" → TIPO_SINIESTRO IN ('HELADA', 'FRIAJE', 'NIEVE')
+- "plagas y enfermedades" o "biológicos" → TIPO_SINIESTRO IN ('ENFERMEDADES', 'PLAGAS')
+- "intervenciones", "acciones", "emergencia" o "resumen" → avisos totales, indemnizaciones, desembolsos y productores
+
+OTRAS REGLAS:
 - Redondea montos a 2 decimales.
-- Si la pregunta menciona varias departamentos, filtra con WHERE DEPARTAMENTO IN (...).
-- Si mencionan ciudades o distritos, tradúcelos al departamento correspondiente:
-  Chiclayo/Mórrope/Oyotún → LAMBAYEQUE; Nanchoc/Bolívar → CAJAMARCA; etc.
 - Siempre incluye ORDER BY relevante.
-- Si preguntan genéricamente, da un resumen nacional agrupado por departamento.
+- Si preguntan genéricamente sin nivel, da resumen agrupado por departamento.
 - Devuelve SOLAMENTE la consulta SQL, sin explicaciones, sin markdown, sin backticks."""
 
 
@@ -391,6 +427,7 @@ def get_suggested_queries():
         "Desembolsos realizados en Junín y Cusco",
         "¿Cuál es la siniestralidad por departamento?",
         "Resumen de La Positiva vs Rímac",
-        "Top 5 departamentos con mayor indemnización",
-        "Avisos de la última semana en Ayacucho",
+        "Avisos por provincia en Cusco y Junín",
+        "Top distritos con mayor indemnización en Lambayeque",
+        "Resumen por distrito en Piura con lluvias",
     ]

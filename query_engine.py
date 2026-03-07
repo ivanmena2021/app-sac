@@ -6,6 +6,7 @@ y resúmenes formateados del DataFrame combinado (midagri).
 
 Detecta:
   - Departamentos mencionados
+  - Provincias, distritos y sectores estadísticos
   - Tipos de siniestro
   - Empresa aseguradora
   - Métricas solicitadas (avisos, indemnizaciones, desembolsos, etc.)
@@ -154,6 +155,70 @@ def _detect_departamentos(query):
             found.add(depto)
 
     return sorted(found)
+
+
+def _detect_provincias(query, df):
+    """Detecta provincias mencionadas en la consulta comparando con los datos."""
+    if "PROVINCIA" not in df.columns:
+        return []
+    query_norm = _normalize(query)
+    provincias_unicas = df["PROVINCIA"].dropna().astype(str).str.strip().str.upper().unique()
+    found = set()
+    for prov in provincias_unicas:
+        prov_clean = prov.strip()
+        if len(prov_clean) < 3:
+            continue
+        if _normalize(prov_clean) in query_norm:
+            found.add(prov_clean)
+    return sorted(found)
+
+
+def _detect_distritos(query, df):
+    """Detecta distritos mencionados en la consulta comparando con los datos."""
+    if "DISTRITO" not in df.columns:
+        return []
+    query_norm = _normalize(query)
+    distritos_unicos = df["DISTRITO"].dropna().astype(str).str.strip().str.upper().unique()
+    found = set()
+    # Excluir nombres muy cortos o genéricos que podrían causar falsos positivos
+    stop_words = {"DE", "LA", "EL", "LOS", "LAS", "SAN", "DEL", "EN", "POR", "CON", "PARA", "COMO"}
+    for dist in distritos_unicos:
+        dist_clean = dist.strip()
+        if len(dist_clean) < 4 or dist_clean in stop_words:
+            continue
+        if _normalize(dist_clean) in query_norm:
+            found.add(dist_clean)
+    return sorted(found)
+
+
+def _detect_sectores(query, df):
+    """Detecta sectores estadísticos mencionados en la consulta."""
+    if "SECTOR_ESTADISTICO" not in df.columns:
+        return []
+    query_norm = _normalize(query)
+    sectores_unicos = df["SECTOR_ESTADISTICO"].dropna().astype(str).str.strip().str.upper().unique()
+    found = set()
+    for sec in sectores_unicos:
+        sec_clean = sec.strip()
+        if len(sec_clean) < 4 or sec_clean in ("NAN", "", "NONE", "-"):
+            continue
+        if _normalize(sec_clean) in query_norm:
+            found.add(sec_clean)
+    return sorted(found)
+
+
+def _detect_geographic_level(query):
+    """Detecta si el usuario pide agrupar por un nivel geográfico específico."""
+    query_lower = query.lower()
+
+    # Detectar pedidos de agrupación por nivel
+    if any(w in query_lower for w in ["por distrito", "a nivel de distrito", "por distritos", "nivel distrito", "nivel distrital"]):
+        return "distrito"
+    if any(w in query_lower for w in ["por provincia", "a nivel de provincia", "por provincias", "nivel provincia", "nivel provincial"]):
+        return "provincia"
+    if any(w in query_lower for w in ["por sector", "por sectores", "sector estadistico", "sector estadístico", "nivel sector"]):
+        return "sector"
+    return None
 
 
 def _detect_tipos_siniestro(query):
@@ -372,6 +437,68 @@ def _build_tipo_siniestro_summary(df_filtered, tipos):
     return "\n".join(lines)
 
 
+def _build_geographic_summary(df, group_col, group_label, top_n=15):
+    """Construye resumen agrupado por nivel geográfico (provincia, distrito o sector)."""
+    if group_col not in df.columns:
+        return f"⚠️ No se encontró la columna {group_col} en los datos."
+
+    lines = [f"## 📍 Resumen por {group_label}", ""]
+
+    # Agregar dinámicamente según columnas disponibles
+    agg_dict = {}
+    agg_dict["avisos"] = (group_col, "count")
+    if "INDEMNIZACION" in df.columns:
+        agg_dict["indemnizacion"] = ("INDEMNIZACION", "sum")
+    if "MONTO_DESEMBOLSADO" in df.columns:
+        agg_dict["desembolso"] = ("MONTO_DESEMBOLSADO", "sum")
+    if "SUP_INDEMNIZADA" in df.columns:
+        agg_dict["sup_indemn"] = ("SUP_INDEMNIZADA", "sum")
+    if "N_PRODUCTORES" in df.columns:
+        agg_dict["productores"] = ("N_PRODUCTORES", "sum")
+
+    grouped = df.groupby(group_col).agg(**agg_dict).reset_index()
+    grouped = grouped.sort_values("avisos", ascending=False).head(top_n)
+
+    total_avisos = len(df)
+    lines.append(f"**Total de avisos:** {total_avisos:,} | Mostrando top {min(top_n, len(grouped))} {group_label.lower()}s\n")
+
+    for _, row in grouped.iterrows():
+        name = str(row[group_col]).title()
+        n = int(row["avisos"])
+        pct = (n / total_avisos * 100) if total_avisos > 0 else 0
+
+        line = f"### {name} ({n:,} avisos — {pct:.1f}%)"
+        lines.append(line)
+
+        details = []
+        if "indemnizacion" in row and row["indemnizacion"] > 0:
+            details.append(f"Indemnización: {_fmt(row['indemnizacion'])}")
+        if "desembolso" in row and row["desembolso"] > 0:
+            details.append(f"Desembolso: {_fmt(row['desembolso'])}")
+            if "indemnizacion" in row and row["indemnizacion"] > 0:
+                pct_d = (row["desembolso"] / row["indemnizacion"] * 100)
+                details.append(f"Avance desembolso: {pct_d:.1f}%")
+        if "sup_indemn" in row and row["sup_indemn"] > 0:
+            details.append(f"Sup. indemnizada: {row['sup_indemn']:,.2f} ha")
+        if "productores" in row and row["productores"] > 0:
+            details.append(f"Productores: {int(row['productores']):,}")
+
+        if details:
+            lines.append("- " + " | ".join(details))
+
+        # Tipos de siniestro en este grupo
+        if "TIPO_SINIESTRO" in df.columns:
+            df_g = df[df[group_col] == row[group_col]]
+            top_tipos = df_g["TIPO_SINIESTRO"].value_counts().head(3)
+            if len(top_tipos) > 0:
+                tipos_txt = ", ".join([f"{t.title()} ({c})" for t, c in top_tipos.items()])
+                lines.append(f"- Siniestros: {tipos_txt}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 # ═══════════════════════════════════════════════════════════════════
 # FUNCIÓN PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════
@@ -398,6 +525,7 @@ def process_query(query, datos):
     empresa = _detect_empresa(query)
     metrics = _detect_metrics(query)
     days = _detect_temporal(query)
+    geo_level = _detect_geographic_level(query)
 
     # Asignar empresa al DataFrame
     depto_empresa = {}
@@ -419,9 +547,26 @@ def process_query(query, datos):
             return eu
         df["EMPRESA"] = df["EMPRESA"].apply(_norm_emp)
 
+    # ─── Detectar provincias, distritos, sectores ───
+    provincias = _detect_provincias(query, df)
+    distritos = _detect_distritos(query, df)
+    sectores = _detect_sectores(query, df)
+
     # ─── Filtrar por departamentos ───
     if deptos:
         df = df[df["DEPARTAMENTO"].isin(deptos)]
+
+    # ─── Filtrar por provincias ───
+    if provincias and "PROVINCIA" in df.columns:
+        df = df[df["PROVINCIA"].astype(str).str.strip().str.upper().isin(provincias)]
+
+    # ─── Filtrar por distritos ───
+    if distritos and "DISTRITO" in df.columns:
+        df = df[df["DISTRITO"].astype(str).str.strip().str.upper().isin(distritos)]
+
+    # ─── Filtrar por sectores estadísticos ───
+    if sectores and "SECTOR_ESTADISTICO" in df.columns:
+        df = df[df["SECTOR_ESTADISTICO"].astype(str).str.strip().str.upper().isin(sectores)]
 
     # ─── Filtrar por empresa ───
     if empresa:
@@ -490,6 +635,12 @@ def process_query(query, datos):
         filters_text = []
         if deptos:
             filters_text.append(f"departamentos: {', '.join([d.title() for d in deptos])}")
+        if provincias:
+            filters_text.append(f"provincias: {', '.join([p.title() for p in provincias])}")
+        if distritos:
+            filters_text.append(f"distritos: {', '.join([d.title() for d in distritos])}")
+        if sectores:
+            filters_text.append(f"sectores: {', '.join([s.title() for s in sectores])}")
         if tipos:
             filters_text.append(f"siniestros: {', '.join([t.title() for t in tipos])}")
         if empresa:
@@ -508,6 +659,12 @@ def process_query(query, datos):
     context_parts = []
     if deptos:
         context_parts.append(f"**Departamentos:** {', '.join([d.title() for d in deptos])}")
+    if provincias:
+        context_parts.append(f"**Provincias:** {', '.join([p.title() for p in provincias])}")
+    if distritos:
+        context_parts.append(f"**Distritos:** {', '.join([d.title() for d in distritos])}")
+    if sectores:
+        context_parts.append(f"**Sectores:** {', '.join([s.title() for s in sectores])}")
     if empresa:
         context_parts.append(f"**Empresa:** {empresa}")
     if tipos:
@@ -515,8 +672,18 @@ def process_query(query, datos):
     if temporal_label:
         context_parts.append(f"**Período:** {temporal_label}")
 
+    # ─── Si se pidió agrupación geográfica ───
+    if geo_level:
+        col_map = {
+            "provincia": ("PROVINCIA", "Provincia"),
+            "distrito": ("DISTRITO", "Distrito"),
+            "sector": ("SECTOR_ESTADISTICO", "Sector Estadístico"),
+        }
+        col_name, col_label = col_map.get(geo_level, ("DEPARTAMENTO", "Departamento"))
+        sections.append(_build_geographic_summary(df, col_name, col_label))
+
     # ─── Tipo emergencia / resumen general ───
-    if "emergencia" in metrics or "resumen" in metrics:
+    elif "emergencia" in metrics or "resumen" in metrics:
         if deptos:
             sections.append(_build_emergency_summary(df, deptos, fecha_corte))
 
@@ -528,7 +695,7 @@ def process_query(query, datos):
                 sections.append("")
         else:
             # Resumen nacional — usar df filtrado si hay filtros activos
-            has_filters = bool(empresa or temporal_label or tipos)
+            has_filters = bool(empresa or temporal_label or tipos or provincias or distritos or sectores)
 
             if has_filters:
                 # Recalcular desde el df filtrado
@@ -625,5 +792,6 @@ def get_suggested_queries():
         "Avisos por eventos asociados a lluvias en 2026",
         "Heladas y frío en Puno y Huancavelica",
         "Resumen de La Positiva en febrero 2026",
-        "Plagas y enfermedades a nivel nacional",
+        "Avisos por provincia en Cusco",
+        "Resumen por distrito en Lambayeque",
     ]

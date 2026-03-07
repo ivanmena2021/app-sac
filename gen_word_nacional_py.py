@@ -1,35 +1,43 @@
 """
-gen_word_nacional_py.py — Pure Python Nacional Document Generator (python-docx)
-
-Rewrite of gen_word_nacional.js using python-docx only.
-No Node.js dependency. Professional styling maintained with XML manipulation.
-
-Usage:
-    from gen_word_nacional_py import generate_nacional_docx
-    docx_bytes = generate_nacional_docx(datos_dict)
+gen_word_nacional_py.py — Generador Ayuda Memoria Nacional SAC (python-docx)
+==============================================================================
+Versión 3.0 — Diseño compacto profesional (máximo 2 páginas)
+- Título con franja de color
+- Datos generales como tarjeta compacta
+- Tablas con fuente 7.5pt para caber en 2 páginas
+- Sin sección de activación (se omite para ahorrar espacio)
+- Sin filas TOTAL duplicadas
 """
 
 from docx import Document
-from docx.shared import Pt, RGBColor, Inches
+from docx.shared import Pt, RGBColor, Inches, Twips, Cm, Emu
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn, nsdecls
 from docx.oxml import parse_xml
 from io import BytesIO
 
 
-# ═══ Colors ═══
-C = {
-    "BLUE": "2F5496",
-    "GRAY": "666666",
-    "WHITE": "FFFFFF",
-    "HEADER_BG": "2F5496",
-    "ALT_ROW": "D6E4F0",
-    "BLACK": "000000",
-}
+# ═══════════════════════════════════════════════════════
+# PALETA DE COLORES
+# ═══════════════════════════════════════════════════════
+AZUL = "1F4E79"
+AZUL_CLARO = "D6E4F0"
+AZUL_MED = "2E75B6"
+GRIS = "F2F2F2"
+BLANCO = "FFFFFF"
+NEGRO = "1A1A1A"
+VERDE = "548235"
+BORDE = "B4C6D9"
+
+FONT_TABLE = Pt(7.5)
+FONT_HEADER = Pt(7.5)
+FONT_BODY = Pt(9)
+FONT_SMALL = Pt(8)
 
 
-def fmt_num(val, dec=2):
-    """Format number with thousands separator (es-PE locale)."""
+def fmt(val, dec=2):
+    """Formato numérico peruano: 1.234.567,89"""
     if val is None or val == "":
         return "0"
     try:
@@ -41,403 +49,280 @@ def fmt_num(val, dec=2):
         return "0"
 
 
-def set_cell_background(cell, fill_color):
-    """Set cell background color using XML shading."""
-    shading = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_color}" w:val="clear"/>')
-    cell._tc.get_or_add_tcPr().append(shading)
+def _shading(cell, color):
+    """Aplica fondo a celda."""
+    shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{color}" w:val="clear"/>')
+    cell._tc.get_or_add_tcPr().append(shd)
 
 
-def set_cell_border(cell, **kwargs):
-    """Set cell borders. Usage: set_cell_border(cell, top={...}, bottom={...})"""
+def _borders(cell, color=BORDE, sz="3"):
+    """Aplica bordes a celda."""
     tcPr = cell._tc.get_or_add_tcPr()
-    tcBorders = parse_xml(r'<w:tcBorders %s><w:top w:val="single" w:sz="4" w:space="0" w:color="BBBBBB"/>'
-                          r'<w:left w:val="single" w:sz="4" w:space="0" w:color="BBBBBB"/>'
-                          r'<w:bottom w:val="single" w:sz="4" w:space="0" w:color="BBBBBB"/>'
-                          r'<w:right w:val="single" w:sz="4" w:space="0" w:color="BBBBBB"/></w:tcBorders>' % nsdecls("w"))
-    tcPr.append(tcBorders)
+    xml = (f'<w:tcBorders {nsdecls("w")}>'
+           f'<w:top w:val="single" w:sz="{sz}" w:space="0" w:color="{color}"/>'
+           f'<w:left w:val="single" w:sz="{sz}" w:space="0" w:color="{color}"/>'
+           f'<w:bottom w:val="single" w:sz="{sz}" w:space="0" w:color="{color}"/>'
+           f'<w:right w:val="single" w:sz="{sz}" w:space="0" w:color="{color}"/>'
+           f'</w:tcBorders>')
+    tcPr.append(parse_xml(xml))
 
 
-def set_paragraph_bottom_border(paragraph, color="C0392B", size="6"):
-    """Add bottom border to paragraph."""
-    pPr = paragraph._element.get_or_add_pPr()
-    pBdr = parse_xml(
-        f'<w:pBdr {nsdecls("w")}><w:bottom w:val="single" w:sz="{size}" w:space="1" w:color="{color}"/></w:pBdr>'
+def _cell_margins(cell, top=30, bottom=30, left=60, right=60):
+    """Márgenes internos de celda."""
+    tcPr = cell._tc.get_or_add_tcPr()
+    margins = parse_xml(
+        f'<w:tcMar {nsdecls("w")}>'
+        f'<w:top w:w="{top}" w:type="dxa"/>'
+        f'<w:left w:w="{left}" w:type="dxa"/>'
+        f'<w:bottom w:w="{bottom}" w:type="dxa"/>'
+        f'<w:right w:w="{right}" w:type="dxa"/>'
+        f'</w:tcMar>'
     )
-    pPr.append(pBdr)
+    tcPr.append(margins)
 
 
-def create_table(doc, headers, rows, col_widths_twips=None):
-    """Create a professional table with headers and data rows."""
-    table = doc.add_table(rows=len(rows) + 1, cols=len(headers))
-    table.style = "Light Grid Accent 1"
+def _set_row_height(row, height_twips):
+    """Fija altura de fila."""
+    tr = row._tr
+    trPr = tr.get_or_add_trPr()
+    trHeight = parse_xml(f'<w:trHeight {nsdecls("w")} w:val="{height_twips}" w:hRule="atLeast"/>')
+    trPr.append(trHeight)
 
-    # Auto width if not specified
-    if col_widths_twips is None:
-        col_widths_twips = [9360 // len(headers)] * len(headers)
 
-    # Set column widths
-    for i, width in enumerate(col_widths_twips):
-        table.columns[i].width = width
+def _add_run(para, text, size=FONT_BODY, bold=False, color=NEGRO, font="Arial Narrow"):
+    """Agrega run formateado."""
+    r = para.add_run(text)
+    r.font.name = font
+    r.font.size = size
+    r.font.bold = bold
+    if color:
+        r.font.color.rgb = RGBColor.from_string(color)
+    return r
 
-    # Header row
-    header_cells = table.rows[0].cells
-    for i, header_text in enumerate(headers):
-        cell = header_cells[i]
-        cell.text = header_text
-        set_cell_background(cell, C["HEADER_BG"])
 
-        # Format header text
-        paragraph = cell.paragraphs[0]
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        for run in paragraph.runs:
-            run.font.bold = True
-            run.font.color.rgb = RGBColor(255, 255, 255)
-            run.font.size = Pt(9)
-        
-        # Add proper borders
-        set_cell_border(cell)
+def _heading(doc, text, level=1):
+    """Crea heading compacto con línea azul inferior."""
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(8) if level == 1 else Pt(6)
+    p.paragraph_format.space_after = Pt(4)
+    size = Pt(11) if level == 1 else Pt(10)
+    _add_run(p, text, size=size, bold=True, color=AZUL)
+    # Línea inferior
+    pPr = p._element.get_or_add_pPr()
+    bdr = parse_xml(f'<w:pBdr {nsdecls("w")}><w:bottom w:val="single" w:sz="6" w:space="1" w:color="{AZUL_MED}"/></w:pBdr>')
+    pPr.append(bdr)
+    return p
 
-    # Data rows
-    for row_idx, row_data in enumerate(rows):
-        is_total = row_data[0].upper() == "TOTAL" if row_data else False
-        is_alt = row_idx % 2 == 0
-        bg_color = C["HEADER_BG"] if is_total else (C["ALT_ROW"] if is_alt else None)
-        text_color = C["WHITE"] if is_total else C["BLACK"]
 
-        table_row = table.rows[row_idx + 1]
-        for col_idx, cell_text in enumerate(row_data):
-            cell = table_row.cells[col_idx]
-            cell.text = str(cell_text) if cell_text else ""
-            
-            if bg_color:
-                set_cell_background(cell, bg_color)
-            
-            # Format cell text
-            paragraph = cell.paragraphs[0]
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT if col_idx > 0 else WD_ALIGN_PARAGRAPH.LEFT
-            
-            for run in paragraph.runs:
-                run.font.bold = is_total
-                run.font.size = Pt(9)
-                if text_color == C["WHITE"]:
-                    run.font.color.rgb = RGBColor(255, 255, 255)
-            
-            # Add borders
-            set_cell_border(cell)
+def _compact_table(doc, headers, rows, col_widths):
+    """Crea tabla compacta profesional."""
+    n_cols = len(headers)
+    n_rows = len(rows) + 1
+    table = doc.add_table(rows=n_rows, cols=n_cols)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+
+    # Anchos de columna
+    for i, w in enumerate(col_widths):
+        table.columns[i].width = Twips(w)
+
+    # Header
+    for i, h in enumerate(headers):
+        cell = table.rows[0].cells[i]
+        cell.text = ""
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        _add_run(p, h, size=FONT_HEADER, bold=True, color=BLANCO)
+        _shading(cell, AZUL)
+        _borders(cell, AZUL)
+        _cell_margins(cell, 25, 25, 40, 40)
+
+    _set_row_height(table.rows[0], 260)
+
+    # Datos
+    for r_idx, row_data in enumerate(rows):
+        is_total = str(row_data[0]).upper() == "TOTAL"
+        is_alt = r_idx % 2 == 0
+
+        table_row = table.rows[r_idx + 1]
+        _set_row_height(table_row, 220)
+
+        for c_idx, val in enumerate(row_data):
+            cell = table_row.cells[c_idx]
+            cell.text = ""
+            p = cell.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.RIGHT if c_idx > 0 else WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after = Pt(0)
+
+            txt_color = BLANCO if is_total else NEGRO
+            _add_run(p, str(val) if val else "", size=FONT_TABLE, bold=is_total, color=txt_color)
+
+            if is_total:
+                _shading(cell, AZUL)
+            elif is_alt:
+                _shading(cell, AZUL_CLARO)
+
+            _borders(cell, BORDE)
+            _cell_margins(cell, 20, 20, 40, 40)
 
     return table
 
 
+# ═══════════════════════════════════════════════════════
+# GENERADOR PRINCIPAL
+# ═══════════════════════════════════════════════════════
+
 def generate_nacional_docx(datos):
-    """
-    Generate NACIONAL ayuda memoria document.
-    
-    Args:
-        datos (dict): Data dictionary with keys:
-            - fecha_corte
-            - total_avisos, total_ajustados, pct_ajustados
-            - monto_indemnizado, monto_desembolsado, productores_desembolso
-            - prima_total, prima_neta, sup_asegurada, prod_asegurados
-            - indice_siniestralidad, pct_desembolso, deptos_con_desembolso
-            - empresas_text
-            - cuadro1, cuadro2, cuadro3 (list of dicts)
-            - total_lluvia, pct_lluvia, lluvia_desc
-            - top3_lluvia_text, top3_siniestros_text
-    
-    Returns:
-        bytes: DOCX file content
-    """
+    """Genera Ayuda Memoria Nacional SAC — diseño compacto 2 páginas."""
     doc = Document()
-    
-    # Set page margins: 1200 twips = 0.833 inches
-    sections = doc.sections
-    for section in sections:
-        section.top_margin = Inches(0.833)
-        section.bottom_margin = Inches(0.833)
-        section.left_margin = Inches(0.833)
-        section.right_margin = Inches(0.833)
-    
-    # ═══ TITLE ═══
-    title_para = doc.add_paragraph()
-    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    title_para.paragraph_format.space_after = Pt(12)
-    
-    # "AYUDA MEMORIA: " (14pt)
-    run = title_para.add_run("AYUDA MEMORIA: ")
-    run.font.name = "Arial"
-    run.font.size = Pt(14)
-    run.font.bold = True
-    run.font.color.rgb = RGBColor(47, 84, 150)  # #2F5496
-    
-    # "RESUMEN OPERATIVIDAD SAC 2025-2026" (12pt)
-    run = title_para.add_run("RESUMEN OPERATIVIDAD SAC 2025-2026")
-    run.font.name = "Arial"
-    run.font.size = Pt(12)
-    run.font.bold = True
-    run.font.color.rgb = RGBColor(47, 84, 150)
-    
-    # Subtitle: "(al fecha)"
-    subtitle_para = doc.add_paragraph()
-    subtitle_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    subtitle_para.paragraph_format.space_after = Pt(18)
-    run = subtitle_para.add_run(f"(al {datos['fecha_corte']})")
-    run.font.name = "Arial"
-    run.font.size = Pt(10)
-    run.font.color.rgb = RGBColor(102, 102, 102)  # #666666
-    
-    # ═══ ACTIVATION SECTION ═══
-    h1 = doc.add_paragraph()
-    h1.paragraph_format.space_before = Pt(12)
-    h1.paragraph_format.space_after = Pt(8)
-    run = h1.add_run("Activación del SAC")
-    run.font.name = "Arial"
-    run.font.size = Pt(14)
-    run.font.bold = True
-    run.font.color.rgb = RGBColor(47, 84, 150)
-    
-    # Body text
-    body = doc.add_paragraph("El Seguro Agrícola Catastrófico se activa mediante el siguiente procedimiento:")
-    body.paragraph_format.space_after = Pt(6)
-    for run in body.runs:
-        run.font.name = "Arial"
-        run.font.size = Pt(11)
-    
-    # Steps (numbered list)
-    pasos = [
-        "El productor reporta el siniestro a la Agencia/Oficina Agraria (presencial o telefónicamente).",
-        "La Agencia Agraria, vía la DRA, notifica a la aseguradora por correo electrónico dentro de 7 días calendario.",
-        "La aseguradora designa un perito ajustador para evaluar daños en campo dentro de 15 días calendario.",
-        "El perito evalúa los daños con un agente agrario y elabora el acta de ajuste.",
-        "Si se confirma pérdida catastrófica, se coordina el empadronamiento de agricultores dentro de 20 días calendario.",
-        "La aseguradora abre cuentas bancarias y paga S/ 1,000 por hectárea asegurada dentro de 15 días hábiles tras la aprobación del padrón.",
-    ]
-    
-    for paso in pasos:
-        p = doc.add_paragraph(paso, style="List Number")
-        p.paragraph_format.space_after = Pt(4)
-        for run in p.runs:
-            run.font.name = "Arial"
-            run.font.size = Pt(11)
-            run.font.bold = True
-    
-    doc.add_paragraph()  # spacing
-    
-    # ═══ GENERAL DATA SECTION ═══
-    h1 = doc.add_paragraph()
-    h1.paragraph_format.space_before = Pt(12)
-    h1.paragraph_format.space_after = Pt(8)
-    run = h1.add_run("Datos Generales a Nivel Nacional")
-    run.font.name = "Arial"
-    run.font.size = Pt(14)
-    run.font.bold = True
-    run.font.color.rgb = RGBColor(47, 84, 150)
-    
-    # Bullets
-    bullets = [
-        f"Empresas aseguradoras: {datos['empresas_text']}.",
-        f"Prima total (con IGV): S/ {fmt_num(datos['prima_total'])} | Prima neta (sin IGV): S/ {fmt_num(datos['prima_neta'])}",
-        f"Superficie asegurada: {fmt_num(datos['sup_asegurada'])} hectáreas en 24 departamentos.",
-        f"Productores asegurados (estimados): {fmt_num(datos['prod_asegurados'], 0)} / Suma asegurada por hectárea: S/ 1,000.00",
-        f"Avisos de siniestros: {fmt_num(datos['total_avisos'], 0)} reportados | {fmt_num(datos['total_ajustados'], 0)} ajustados ({datos['pct_ajustados']}%)",
-        f"Indemnizaciones reconocidas: S/ {fmt_num(datos['monto_indemnizado'])} | Índice de siniestralidad: {datos['indice_siniestralidad']}%",
-        f"Desembolsos realizados: S/ {fmt_num(datos['monto_desembolsado'])} ({datos['pct_desembolso']}%) a {fmt_num(datos['productores_desembolso'], 0)} productores en {datos['deptos_con_desembolso']} de 24 departamentos.",
-    ]
-    
-    for bullet_text in bullets:
-        p = doc.add_paragraph(bullet_text, style="List Bullet")
-        p.paragraph_format.space_after = Pt(4)
-        for run in p.runs:
-            run.font.name = "Arial"
-            run.font.size = Pt(11)
-            run.font.bold = True
-    
-    doc.add_paragraph()  # spacing
-    
-    # ═══ TABLA 1 ═══
-    h1 = doc.add_paragraph()
-    h1.paragraph_format.space_before = Pt(12)
-    h1.paragraph_format.space_after = Pt(8)
-    run = h1.add_run("Cuadro 1: Primas y Cobertura por Departamento")
-    run.font.name = "Arial"
-    run.font.size = Pt(14)
-    run.font.bold = True
-    run.font.color.rgb = RGBColor(47, 84, 150)
-    
+
+    # Márgenes estrechos para maximizar espacio
+    for section in doc.sections:
+        section.top_margin = Cm(1.5)
+        section.bottom_margin = Cm(1.0)
+        section.left_margin = Cm(1.5)
+        section.right_margin = Cm(1.5)
+
+    # ═══ TÍTULO ═══
+    title_p = doc.add_paragraph()
+    title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_p.paragraph_format.space_after = Pt(2)
+    _add_run(title_p, "AYUDA MEMORIA", size=Pt(16), bold=True, color=AZUL)
+
+    sub_p = doc.add_paragraph()
+    sub_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sub_p.paragraph_format.space_after = Pt(2)
+    _add_run(sub_p, "RESUMEN OPERATIVIDAD SAC 2025-2026", size=Pt(12), bold=True, color=AZUL_MED)
+
+    date_p = doc.add_paragraph()
+    date_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    date_p.paragraph_format.space_after = Pt(8)
+    _add_run(date_p, f"(al {datos['fecha_corte']})", size=Pt(9), color="666666")
+
+    # ═══ DATOS GENERALES — como párrafo denso ═══
+    _heading(doc, "Datos Generales a Nivel Nacional")
+
+    # Párrafo consolidado en vez de bullets
+    info_p = doc.add_paragraph()
+    info_p.paragraph_format.space_after = Pt(4)
+    info_p.paragraph_format.line_spacing = Pt(13)
+
+    text = (
+        f"Empresas aseguradoras: {datos['empresas_text']}. "
+        f"Prima total (con IGV): S/ {fmt(datos['prima_total'])} | "
+        f"Prima neta (sin IGV): S/ {fmt(datos['prima_neta'])}. "
+        f"Superficie asegurada: {fmt(datos['sup_asegurada'])} ha en 24 departamentos. "
+        f"Productores asegurados (est.): {fmt(datos['prod_asegurados'], 0)} | "
+        f"Suma asegurada: S/ 1.000/ha."
+    )
+    _add_run(info_p, text, size=FONT_SMALL, bold=False, color=NEGRO)
+
+    # Línea de indicadores clave
+    ind_p = doc.add_paragraph()
+    ind_p.paragraph_format.space_after = Pt(6)
+    ind_p.paragraph_format.line_spacing = Pt(13)
+
+    ind_text = (
+        f"Avisos de siniestros: {fmt(datos['total_avisos'], 0)} reportados | "
+        f"{fmt(datos['total_ajustados'], 0)} evaluados ({datos['pct_ajustados']}%). "
+        f"Indemnización: S/ {fmt(datos['monto_indemnizado'])} | Siniestralidad: {datos['indice_siniestralidad']}%. "
+        f"Desembolsos: S/ {fmt(datos['monto_desembolsado'])} ({datos['pct_desembolso']}%) "
+        f"a {fmt(datos['productores_desembolso'], 0)} productores en {datos['deptos_con_desembolso']} de 24 dptos."
+    )
+    _add_run(ind_p, ind_text, size=FONT_SMALL, bold=True, color=NEGRO)
+
+    # ═══ CUADRO 1: Primas y Cobertura ═══
+    _heading(doc, "Cuadro 1: Primas y Cobertura por Departamento")
+
     if datos.get("cuadro1") and len(datos["cuadro1"]) > 0:
-        headers = ["Departamento", "Prima Total (S/)", "Hectáreas Aseguradas", "Suma Asegurada Máxima (S/)"]
+        headers = ["Departamento", "Prima Total (S/)", "Ha Aseguradas", "Suma Asegurada (S/)"]
         rows = []
-        
         for item in datos["cuadro1"]:
             rows.append([
                 item.get("departamento", ""),
-                fmt_num(item.get("prima_total", 0)),
-                fmt_num(item.get("hectareas", 0)),
-                fmt_num(item.get("suma_asegurada", 0)),
+                fmt(item.get("prima_total", 0)),
+                fmt(item.get("hectareas", 0)),
+                fmt(item.get("suma_asegurada", 0)),
             ])
-        
-        # Add TOTAL row
-        if len(rows) > 0:
-            total_prima = sum(float(item.get("prima_total", 0) or 0) for item in datos["cuadro1"])
-            total_ha = sum(float(item.get("hectareas", 0) or 0) for item in datos["cuadro1"])
-            total_suma = sum(float(item.get("suma_asegurada", 0) or 0) for item in datos["cuadro1"])
-            rows.append(["TOTAL", fmt_num(total_prima), fmt_num(total_ha), fmt_num(total_suma)])
-        
-        col_widths = [1920, 1760, 1760, 2048]
-        create_table(doc, headers, rows, col_widths)
-    
-    doc.add_paragraph()  # spacing
-    
-    # ═══ TABLA 2 ═══
-    h1 = doc.add_paragraph()
-    h1.paragraph_format.space_before = Pt(12)
-    h1.paragraph_format.space_after = Pt(8)
-    run = h1.add_run("Cuadro 2: Indemnizaciones y Desembolsos por Departamento")
-    run.font.name = "Arial"
-    run.font.size = Pt(12)
-    run.font.bold = True
-    run.font.color.rgb = RGBColor(47, 84, 150)
-    
-    subtitle = h1.insert_paragraph_before(f"(al {datos['fecha_corte']})")
-    subtitle.paragraph_format.space_after = Pt(6)
-    for run in subtitle.runs:
-        run.font.name = "Arial"
-        run.font.size = Pt(10)
-        run.font.italic = True
-        run.font.color.rgb = RGBColor(102, 102, 102)
-    
+
+        # TOTAL único
+        t_prima = sum(float(item.get("prima_total", 0) or 0) for item in datos["cuadro1"])
+        t_ha = sum(float(item.get("hectareas", 0) or 0) for item in datos["cuadro1"])
+        t_suma = sum(float(item.get("suma_asegurada", 0) or 0) for item in datos["cuadro1"])
+        rows.append(["TOTAL", fmt(t_prima), fmt(t_ha), fmt(t_suma)])
+
+        _compact_table(doc, headers, rows, [2100, 1800, 1800, 2100])
+
+    # ═══ CUADRO 2: Indemnizaciones y Desembolsos ═══
+    _heading(doc, "Cuadro 2: Indemnizaciones y Desembolsos por Departamento")
+
     if datos.get("cuadro2") and len(datos["cuadro2"]) > 0:
-        headers = ["Departamento", "Ha Indemnizadas", "Monto Indemnizado (S/)", "Monto Desembolsado (S/)", "Productores con Desembolso"]
+        headers = ["Departamento", "Ha Indemn.", "Indemnización (S/)", "Desembolso (S/)", "Productores"]
         rows = []
-        
         for item in datos["cuadro2"]:
             rows.append([
                 item.get("departamento", ""),
-                fmt_num(item.get("ha_indemnizadas", 0)),
-                fmt_num(item.get("monto_indemnizado", 0)),
-                fmt_num(item.get("monto_desembolsado", 0)),
-                fmt_num(item.get("productores", 0), 0),
+                fmt(item.get("ha_indemnizadas", 0)),
+                fmt(item.get("monto_indemnizado", 0)),
+                fmt(item.get("monto_desembolsado", 0)),
+                fmt(item.get("productores", 0), 0),
             ])
-        
-        # Add TOTAL row
-        if len(rows) > 0:
-            total_ha_i = sum(float(item.get("ha_indemnizadas", 0) or 0) for item in datos["cuadro2"])
-            total_monto_i = sum(float(item.get("monto_indemnizado", 0) or 0) for item in datos["cuadro2"])
-            total_monto_d = sum(float(item.get("monto_desembolsado", 0) or 0) for item in datos["cuadro2"])
-            total_prod = sum(float(item.get("productores", 0) or 0) for item in datos["cuadro2"])
-            rows.append(["TOTAL", fmt_num(total_ha_i), fmt_num(total_monto_i), fmt_num(total_monto_d), fmt_num(total_prod, 0)])
-        
-        col_widths = [1600, 1280, 1680, 1680, 1248]
-        create_table(doc, headers, rows, col_widths)
-    
-    doc.add_paragraph()  # spacing
-    
-    # ═══ TABLA 3 ═══
-    h1 = doc.add_paragraph()
-    h1.paragraph_format.space_before = Pt(12)
-    h1.paragraph_format.space_after = Pt(8)
-    run = h1.add_run("Cuadro 3: Eventos Asociados a Lluvias Intensas por Departamento")
-    run.font.name = "Arial"
-    run.font.size = Pt(14)
-    run.font.bold = True
-    run.font.color.rgb = RGBColor(47, 84, 150)
-    
-    # Descriptive paragraph
-    desc_para = doc.add_paragraph()
-    desc_para.paragraph_format.space_after = Pt(8)
-    run = desc_para.add_run(
-        f"Se registran {fmt_num(datos['total_lluvia'], 0)} avisos por eventos asociados a lluvias intensas "
+
+        t_ha = sum(float(item.get("ha_indemnizadas", 0) or 0) for item in datos["cuadro2"])
+        t_ind = sum(float(item.get("monto_indemnizado", 0) or 0) for item in datos["cuadro2"])
+        t_des = sum(float(item.get("monto_desembolsado", 0) or 0) for item in datos["cuadro2"])
+        t_pro = sum(float(item.get("productores", 0) or 0) for item in datos["cuadro2"])
+        rows.append(["TOTAL", fmt(t_ha), fmt(t_ind), fmt(t_des), fmt(t_pro, 0)])
+
+        _compact_table(doc, headers, rows, [2100, 1200, 1800, 1800, 900])
+
+    # ═══ CUADRO 3: Lluvias Intensas ═══
+    _heading(doc, "Cuadro 3: Eventos Asociados a Lluvias Intensas")
+
+    # Párrafo descriptivo compacto
+    desc_p = doc.add_paragraph()
+    desc_p.paragraph_format.space_after = Pt(4)
+    desc_text = (
+        f"Se registran {fmt(datos['total_lluvia'], 0)} avisos por eventos asociados a lluvias intensas "
         f"({datos['pct_lluvia']}% del total), que incluyen {datos['lluvia_desc']}. "
         f"Los departamentos más afectados son {datos['top3_lluvia_text']}."
     )
-    run.font.name = "Arial"
-    run.font.size = Pt(11)
-    run.font.bold = True
-    
+    _add_run(desc_p, desc_text, size=FONT_SMALL, bold=False)
+
     if datos.get("cuadro3") and len(datos["cuadro3"]) > 0:
-        headers = ["Departamento", "Avisos", "Ha Indemn.", "Monto Indemnizado (S/)", "Monto Desembolsado (S/)", "Productores"]
+        headers = ["Departamento", "Avisos", "Ha Indemn.", "Indemnización (S/)", "Desembolso (S/)", "Prod."]
         rows = []
-        
         for item in datos["cuadro3"]:
             rows.append([
                 item.get("departamento", ""),
-                fmt_num(item.get("avisos", 0), 0),
-                fmt_num(item.get("ha_indemn", 0)),
-                fmt_num(item.get("monto_indemnizado", 0)),
-                fmt_num(item.get("monto_desembolsado", 0)),
-                fmt_num(item.get("productores", 0), 0),
+                fmt(item.get("avisos", 0), 0),
+                fmt(item.get("ha_indemn", 0)),
+                fmt(item.get("monto_indemnizado", 0)),
+                fmt(item.get("monto_desembolsado", 0)),
+                fmt(item.get("productores", 0), 0),
             ])
-        
-        col_widths = [1440, 800, 1040, 1680, 1680, 848]
-        create_table(doc, headers, rows, col_widths)
-    
-    doc.add_paragraph()  # spacing
-    
-    # ═══ FINAL NOTE ═══
-    note_para = doc.add_paragraph()
-    note_para.paragraph_format.space_after = Pt(4)
-    
-    run = note_para.add_run("Nota: ")
-    run.font.name = "Arial"
-    run.font.size = Pt(9)
-    run.font.bold = True
-    run.font.italic = True
-    
-    run = note_para.add_run("La vigencia de la póliza es del 01/08/2025 al 01/08/2026. ")
-    run.font.name = "Arial"
-    run.font.size = Pt(9)
-    run.font.italic = True
-    
-    run = note_para.add_run(datos.get("top3_siniestros_text", ""))
-    run.font.name = "Arial"
-    run.font.size = Pt(9)
-    run.font.italic = True
-    
-    # ═══ RETURN BYTES ═══
+
+        _compact_table(doc, headers, rows, [1800, 700, 1000, 1700, 1700, 700])
+
+    # ═══ NOTA FINAL ═══
+    doc.add_paragraph()  # pequeño espacio
+    note_p = doc.add_paragraph()
+    note_p.paragraph_format.space_after = Pt(2)
+    _add_run(note_p, "Nota: ", size=Pt(7.5), bold=True, color="666666")
+    _add_run(note_p, "Vigencia de póliza: 01/08/2025 al 01/08/2026. ", size=Pt(7.5), color="666666")
+    _add_run(note_p, datos.get("top3_siniestros_text", ""), size=Pt(7.5), color="666666")
+
+    # Fuente
+    src_p = doc.add_paragraph()
+    src_p.paragraph_format.space_before = Pt(4)
+    _add_run(src_p, "Fuente: Dirección de Seguro y Fomento del Financiamiento Agrario - MIDAGRI, SAC 2025-2026.",
+             size=Pt(7), bold=False, color="888888")
+
+    # ═══ RETORNAR BYTES ═══
     output = BytesIO()
     doc.save(output)
     output.seek(0)
     return output.getvalue()
-
-
-if __name__ == "__main__":
-    # Quick test
-    import json
-    
-    sample_data = {
-        "fecha_corte": "27/02/2026",
-        "total_avisos": 1250,
-        "total_ajustados": 1100,
-        "pct_ajustados": "88.0%",
-        "monto_indemnizado": 5500000.00,
-        "monto_desembolsado": 4200000.00,
-        "productores_desembolso": 890,
-        "prima_total": 12500000.00,
-        "prima_neta": 11200000.00,
-        "sup_asegurada": 125000.00,
-        "prod_asegurados": 8900,
-        "indice_siniestralidad": 49.0,
-        "pct_desembolso": "76.4%",
-        "deptos_con_desembolso": 20,
-        "empresas_text": "La Positiva y Rímac",
-        "cuadro1": [
-            {"departamento": "Lambayeque", "prima_total": 1200000, "hectareas": 15000, "suma_asegurada": 15000000},
-            {"departamento": "Piura", "prima_total": 1100000, "hectareas": 14000, "suma_asegurada": 14000000},
-            {"departamento": "Áncash", "prima_total": 950000, "hectareas": 12000, "suma_asegurada": 12000000},
-        ],
-        "cuadro2": [
-            {"departamento": "Lambayeque", "ha_indemnizadas": 8900, "monto_indemnizado": 2500000, "monto_desembolsado": 1900000, "productores": 450},
-            {"departamento": "Piura", "ha_indemnizadas": 7200, "monto_indemnizado": 1800000, "monto_desembolsado": 1400000, "productores": 320},
-        ],
-        "cuadro3": [
-            {"departamento": "Lambayeque", "avisos": 450, "ha_indemn": 5600, "monto_indemnizado": 2800000, "monto_desembolsado": 2100000, "productores": 280},
-        ],
-        "total_lluvia": 980,
-        "pct_lluvia": "78.4%",
-        "lluvia_desc": "inundación, huayco, lluvias excesivas y deslizamiento",
-        "top3_lluvia_text": "Lambayeque (450 avisos), Piura (320 avisos), Áncash (210 avisos)",
-        "top3_siniestros_text": "Los siniestros principales son inundación (65%), lluvias excesivas (20%) y huayco (15%).",
-    }
-    
-    docx_bytes = generate_nacional_docx(sample_data)
-    print(f"Generated NACIONAL document: {len(docx_bytes)} bytes")
-    print("✓ No import errors, document structure valid")

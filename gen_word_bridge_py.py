@@ -20,8 +20,11 @@ def generate_nacional_docx(datos):
     cuadro1 = []
     if hasattr(datos.get("cuadro1"), "iterrows"):
         for _, row in datos["cuadro1"].iterrows():
+            depto = str(row.get("Departamento", ""))
+            if depto.upper() == "TOTAL":
+                continue  # Skip TOTAL rows — generator adds its own
             cuadro1.append({
-                "departamento": str(row.get("Departamento", "")),
+                "departamento": depto,
                 "prima_total": float(row.get("Prima Total (S/)", 0) or 0),
                 "hectareas": float(row.get("Hectáreas Aseguradas", 0) or 0),
                 "suma_asegurada": float(row.get("Suma Asegurada Máxima (S/)", 0) or 0),
@@ -32,8 +35,11 @@ def generate_nacional_docx(datos):
     cuadro2 = []
     if hasattr(datos.get("cuadro2"), "iterrows"):
         for _, row in datos["cuadro2"].iterrows():
+            depto = str(row.get("Departamento", ""))
+            if depto.upper() == "TOTAL":
+                continue
             cuadro2.append({
-                "departamento": str(row.get("Departamento", "")),
+                "departamento": depto,
                 "ha_indemnizadas": float(row.get("Hectáreas Indemnizadas", 0) or 0),
                 "monto_indemnizado": float(row.get("Monto Indemnizado (S/)", 0) or 0),
                 "monto_desembolsado": float(row.get("Monto Desembolsado (S/)", 0) or 0),
@@ -45,8 +51,11 @@ def generate_nacional_docx(datos):
     cuadro3 = []
     if hasattr(datos.get("cuadro3"), "iterrows"):
         for _, row in datos["cuadro3"].iterrows():
+            depto = str(row.get("Departamento", ""))
+            if depto.upper() == "TOTAL":
+                continue
             cuadro3.append({
-                "departamento": str(row.get("Departamento", "")),
+                "departamento": depto,
                 "avisos": float(row.get("Avisos", 0) or 0),
                 "ha_indemn": float(row.get("Ha Indemn.", 0) or 0),
                 "monto_indemnizado": float(row.get("Monto Indemnizado (S/)", 0) or 0),
