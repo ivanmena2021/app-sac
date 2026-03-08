@@ -327,36 +327,65 @@ st.markdown("""
     }
 
     /* ══════════════════════════════════════════
-       TABS — Navegación moderna
+       TABS — Navegación principal (2 tabs)
        ══════════════════════════════════════════ */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-        background: #e8ecf1;
-        border-radius: 12px;
-        padding: 4px;
+        gap: 4px;
+        background: linear-gradient(135deg, #0c2340 0%, #1a5276 100%);
+        border-radius: 14px;
+        padding: 5px;
     }
     .stTabs [data-baseweb="tab"] {
         border-radius: 10px;
-        padding: 10px 18px;
-        font-weight: 500;
-        font-size: 0.88rem;
-        color: #475569;
-        transition: all 0.2s ease;
+        padding: 12px 28px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: rgba(255,255,255,0.7);
+        transition: all 0.25s ease;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(255,255,255,0.5);
+        background: rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.95);
     }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
         background: white !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: 0 3px 12px rgba(0,0,0,0.15);
         color: #0c2340 !important;
-        font-weight: 600;
+        font-weight: 700;
     }
     .stTabs [data-baseweb="tab-highlight"] {
         display: none;
     }
     .stTabs [data-baseweb="tab-border"] {
         display: none;
+    }
+
+    /* ══════════════════════════════════════════
+       SUB-TABS — Navegación secundaria (nested)
+       ══════════════════════════════════════════ */
+    .stTabs .stTabs [data-baseweb="tab-list"] {
+        background: #edf2f7;
+        border-radius: 10px;
+        padding: 3px;
+        gap: 2px;
+        margin-top: 0.5rem;
+    }
+    .stTabs .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 500;
+        font-size: 0.84rem;
+        color: #64748b;
+    }
+    .stTabs .stTabs [data-baseweb="tab"]:hover {
+        background: rgba(255,255,255,0.6);
+        color: #1a5276;
+    }
+    .stTabs .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: white !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        color: #1a5276 !important;
+        font-weight: 600;
     }
 
     /* ══════════════════════════════════════════
@@ -914,500 +943,517 @@ else:
 
     st.markdown('<div style="height:0.8rem;"></div>', unsafe_allow_html=True)
 
-    # ─── Generación de reportes ───
+    # ─── Navegación principal: 2 secciones ───
     st.markdown("""
     <div class="section-header">
-        <div class="icon-box" style="background:#f0e8ff;">📥</div>
-        <h3>Generar Reportes</h3>
+        <div class="icon-box" style="background:#e8f4f8;">🧭</div>
+        <h3>Herramientas SAC</h3>
     </div>
     """, unsafe_allow_html=True)
 
-    tab_chat, tab_mapa, tab1, tab2, tab_op, tab3, tab4 = st.tabs([
-        "💬 Consultas",
-        "🗺️ Mapa de Calor",
-        "📄 Ayuda Memoria Nacional",
-        "🏔️ Ayuda Memoria Departamental",
-        "📋 Operatividad SAC",
-        "📊 Reporte EME",
-        "🔍 Explorar Datos",
+    tab_analisis, tab_reportes = st.tabs([
+        "🔍 Análisis Interactivo",
+        "📥 Generar Reportes",
     ])
 
-    # ═══ TAB CHAT: Consultas ═══
-    with tab_chat:
-        llm_ready = is_llm_available()
+    # ═══════════════════════════════════════════════════════════════════
+    # SECCIÓN 1: ANÁLISIS INTERACTIVO
+    # ═══════════════════════════════════════════════════════════════════
+    with tab_analisis:
+        sub_chat, sub_mapa, sub_explorar = st.tabs([
+            "💬 Consultas",
+            "🗺️ Mapa de Calor",
+            "🔍 Explorar Datos",
+        ])
 
-        # Header
-        engine_label = "IA + SQL" if llm_ready else "Motor Básico"
-        engine_color = "#27ae60" if llm_ready else "#f39c12"
-        engine_icon = "🤖" if llm_ready else "⚙️"
-        st.markdown(f"""
-        <div class="chat-header">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div class="title">Consulta de Coyuntura SAC</div>
-                    <div class="subtitle">
-                        Escriba su consulta en lenguaje natural. El sistema analiza los datos
-                        y genera texto profesional listo para copiar y comunicar.
+        # ─── Sub-tab: Consultas ───
+        with sub_chat:
+            llm_ready = is_llm_available()
+
+            # Header
+            engine_label = "IA + SQL" if llm_ready else "Motor Básico"
+            engine_color = "#27ae60" if llm_ready else "#f39c12"
+            engine_icon = "🤖" if llm_ready else "⚙️"
+            st.markdown(f"""
+            <div class="chat-header">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div class="title">Consulta de Coyuntura SAC</div>
+                        <div class="subtitle">
+                            Escriba su consulta en lenguaje natural. El sistema analiza los datos
+                            y genera texto profesional listo para copiar y comunicar.
+                        </div>
                     </div>
+                    <span class="engine-badge" style="background:{engine_color}; color:white;">
+                        {engine_icon} {engine_label}
+                    </span>
                 </div>
-                <span class="engine-badge" style="background:{engine_color}; color:white;">
-                    {engine_icon} {engine_label}
-                </span>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        if not llm_ready:
-            st.info(
-                "⚙️ Para habilitar consultas con IA (redacción automática de párrafos), "
-                "agregue `ANTHROPIC_API_KEY` en las variables de entorno de Railway. "
-                "Mientras tanto, funciona el motor básico de filtrado."
+            if not llm_ready:
+                st.info(
+                    "⚙️ Para habilitar consultas con IA (redacción automática de párrafos), "
+                    "agregue `ANTHROPIC_API_KEY` en las variables de entorno de Railway. "
+                    "Mientras tanto, funciona el motor básico de filtrado."
+                )
+
+            # Consultas sugeridas
+            suggested = get_suggested_llm() if llm_ready else get_suggested_basic()
+            st.markdown("**Consultas sugeridas:**")
+            cols_sug = st.columns(4)
+            for i, sug in enumerate(suggested[:8]):
+                with cols_sug[i % 4]:
+                    if st.button(f"🔹 {sug}", key=f"sug_{i}", use_container_width=True):
+                        st.session_state["query_input"] = sug
+
+            st.markdown("---")
+
+            # Input
+            query_text = st.text_area(
+                "Escriba su consulta:",
+                value=st.session_state.get("query_input", ""),
+                height=80,
+                placeholder="Ej: Resumen de intervenciones en Tumbes, Piura, Lambayeque, Lima y Arequipa",
+                key="query_area",
             )
 
-        # Consultas sugeridas
-        suggested = get_suggested_llm() if llm_ready else get_suggested_basic()
-        st.markdown("**Consultas sugeridas:**")
-        cols_sug = st.columns(4)
-        for i, sug in enumerate(suggested[:8]):
-            with cols_sug[i % 4]:
-                if st.button(f"🔹 {sug}", key=f"sug_{i}", use_container_width=True):
-                    st.session_state["query_input"] = sug
+            col_q1, col_q2, col_q3 = st.columns([1, 1, 3])
+            with col_q1:
+                btn_query = st.button("🔍 Consultar", type="primary", use_container_width=True, key="btn_query")
 
-        st.markdown("---")
+            # Procesar
+            if btn_query and query_text.strip():
+                if llm_ready:
+                    with st.spinner("🤖 Analizando datos y redactando respuesta..."):
+                        result = process_query_llm(query_text, datos)
 
-        # Input
-        query_text = st.text_area(
-            "Escriba su consulta:",
-            value=st.session_state.get("query_input", ""),
-            height=80,
-            placeholder="Ej: Resumen de intervenciones en Tumbes, Piura, Lambayeque, Lima y Arequipa",
-            key="query_area",
-        )
-
-        col_q1, col_q2, col_q3 = st.columns([1, 1, 3])
-        with col_q1:
-            btn_query = st.button("🔍 Consultar", type="primary", use_container_width=True, key="btn_query")
-
-        # Procesar
-        if btn_query and query_text.strip():
-            if llm_ready:
-                with st.spinner("🤖 Analizando datos y redactando respuesta..."):
-                    result = process_query_llm(query_text, datos)
-
-                if result["error"]:
-                    st.error(f"Error: {result['error']}")
-                    # Fallback al motor básico
-                    with st.spinner("Usando motor básico..."):
+                    if result["error"]:
+                        st.error(f"Error: {result['error']}")
+                        # Fallback al motor básico
+                        with st.spinner("Usando motor básico..."):
+                            basic_response = process_query(query_text, datos)
+                            st.session_state["last_query_prose"] = basic_response
+                            st.session_state["last_query_sql"] = None
+                            st.session_state["last_query_data"] = None
+                            st.session_state["last_query_text"] = query_text
+                            st.session_state["last_query_engine"] = "básico"
+                    else:
+                        st.session_state["last_query_prose"] = result["prose"]
+                        st.session_state["last_query_sql"] = result["sql"]
+                        st.session_state["last_query_data"] = result["data"]
+                        st.session_state["last_query_text"] = query_text
+                        st.session_state["last_query_engine"] = "IA"
+                else:
+                    with st.spinner("Procesando consulta..."):
                         basic_response = process_query(query_text, datos)
                         st.session_state["last_query_prose"] = basic_response
                         st.session_state["last_query_sql"] = None
                         st.session_state["last_query_data"] = None
                         st.session_state["last_query_text"] = query_text
                         st.session_state["last_query_engine"] = "básico"
-                else:
-                    st.session_state["last_query_prose"] = result["prose"]
-                    st.session_state["last_query_sql"] = result["sql"]
-                    st.session_state["last_query_data"] = result["data"]
-                    st.session_state["last_query_text"] = query_text
-                    st.session_state["last_query_engine"] = "IA"
-            else:
-                with st.spinner("Procesando consulta..."):
-                    basic_response = process_query(query_text, datos)
-                    st.session_state["last_query_prose"] = basic_response
-                    st.session_state["last_query_sql"] = None
-                    st.session_state["last_query_data"] = None
-                    st.session_state["last_query_text"] = query_text
-                    st.session_state["last_query_engine"] = "básico"
 
-        # Mostrar respuesta
-        if st.session_state.get("last_query_prose"):
-            st.markdown("---")
+            # Mostrar respuesta
+            if st.session_state.get("last_query_prose"):
+                st.markdown("---")
 
-            engine_used = st.session_state.get("last_query_engine", "básico")
-            engine_badge_color = "#27ae60" if engine_used == "IA" else "#f39c12"
-            st.markdown(
-                f'<div class="query-context">'
-                f'<span><strong>Consulta:</strong> {st.session_state.get("last_query_text", "")}</span>'
-                f'<span class="engine-badge" style="background:{engine_badge_color}; color:white; font-size:0.65rem;">'
-                f'{engine_used}</span></div>',
-                unsafe_allow_html=True,
-            )
-
-            # Texto de respuesta
-            prose = st.session_state["last_query_prose"]
-            st.markdown(f'<div class="query-result-box">{prose}</div>', unsafe_allow_html=True)
-
-            # Botones de descarga
-            st.markdown("")
-            col_dl1, col_dl2, col_dl3 = st.columns([1, 1, 2])
-
-            with col_dl1:
-                st.download_button(
-                    label="📋 Descargar .txt",
-                    data=prose,
-                    file_name=f"SAC_consulta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                    mime="text/plain",
-                    key="dl_txt",
-                    use_container_width=True,
+                engine_used = st.session_state.get("last_query_engine", "básico")
+                engine_badge_color = "#27ae60" if engine_used == "IA" else "#f39c12"
+                st.markdown(
+                    f'<div class="query-context">'
+                    f'<span><strong>Consulta:</strong> {st.session_state.get("last_query_text", "")}</span>'
+                    f'<span class="engine-badge" style="background:{engine_badge_color}; color:white; font-size:0.65rem;">'
+                    f'{engine_used}</span></div>',
+                    unsafe_allow_html=True,
                 )
 
-            with col_dl2:
-                st.download_button(
-                    label="📄 Descargar .docx (texto)",
-                    data=prose.encode("utf-8"),
-                    file_name=f"SAC_consulta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                    mime="text/plain",
-                    key="dl_docx_txt",
-                    use_container_width=True,
-                )
+                # Texto de respuesta
+                prose = st.session_state["last_query_prose"]
+                st.markdown(f'<div class="query-result-box">{prose}</div>', unsafe_allow_html=True)
 
-            # SQL y datos (expandible)
-            if st.session_state.get("last_query_sql"):
-                with st.expander("🔧 Ver consulta SQL generada"):
-                    st.code(st.session_state["last_query_sql"], language="sql")
+                # Botones de descarga
+                st.markdown("")
+                col_dl1, col_dl2, col_dl3 = st.columns([1, 1, 2])
 
-            if st.session_state.get("last_query_data") is not None:
-                df_result = st.session_state["last_query_data"]
-                if len(df_result) > 0:
-                    with st.expander(f"📊 Ver datos ({len(df_result)} filas)"):
-                        st.dataframe(df_result, use_container_width=True, hide_index=True)
-
-    # ═══ TAB MAPA: Mapa de Calor ═══
-    with tab_mapa:
-        st.markdown(f"""
-        <div class="tab-intro">
-            <div class="title">Mapa de Calor SAC · Corte {datos['fecha_corte']}</div>
-            <div class="desc">Visualización geográfica interactiva de los indicadores del SAC.
-            Seleccione nivel geográfico, métrica y filtre por departamento.</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # ─── Controles: Nivel + Departamento + Métrica ───
-        col_ctrl1, col_ctrl2 = st.columns([1, 2])
-
-        with col_ctrl1:
-            nivel_seleccionado = st.radio(
-                "Nivel geográfico:",
-                options=list(NIVELES.keys()),
-                horizontal=True,
-                key="nivel_mapa",
-            )
-
-        with col_ctrl2:
-            # Filtro de departamento (para Provincial y Distrital)
-            depto_filter = None
-            if nivel_seleccionado in ("Provincial", "Distrital"):
-                depto_options = ["Todos"] + datos.get("departamentos_list", [])
-                depto_sel = st.selectbox(
-                    "Filtrar por departamento:",
-                    options=depto_options,
-                    format_func=lambda x: x.title() if x != "Todos" else "Todos los departamentos",
-                    key="depto_filter_mapa",
-                )
-                if depto_sel != "Todos":
-                    depto_filter = [depto_sel]
-
-        # Métricas disponibles según nivel
-        metricas_nivel = get_metricas_for_nivel(nivel_seleccionado)
-        metrica_seleccionada = st.radio(
-            "Métrica a visualizar:",
-            options=list(metricas_nivel.keys()),
-            horizontal=True,
-            key="metrica_mapa",
-        )
-
-        # Descripción
-        meta_info = metricas_nivel[metrica_seleccionada]
-        st.markdown(
-            f'<div style="background:#f0f7ff; padding:0.5rem 1rem; border-radius:10px; '
-            f'color:#1a5276; font-size:0.83rem; margin-bottom:0.8rem;">'
-            f'ℹ️ {meta_info["description"]}</div>',
-            unsafe_allow_html=True,
-        )
-
-        # ─── Tarjetas de contexto ───
-        try:
-            cards = get_summary_cards(datos, nivel_seleccionado, depto_filter)
-            if cards:
-                lbl = cards.get("label", "Unidad")
-                cc1, cc2, cc3, cc4 = st.columns(4)
-                with cc1:
-                    st.markdown(render_metric(
-                        f"Mayor N° Avisos",
-                        f"{cards['top_avisos']}",
-                        f"{cards['top_avisos_n']:,} avisos",
-                        "blue"
-                    ), unsafe_allow_html=True)
-                with cc2:
-                    st.markdown(render_metric(
-                        "Mayor Indemnización",
-                        f"{cards['top_indemn']}",
-                        f"S/ {cards['top_indemn_val']:,.0f}",
-                        "amber"
-                    ), unsafe_allow_html=True)
-                with cc3:
-                    st.markdown(render_metric(
-                        "Mayor Avance Desemb.",
-                        f"{cards['top_desemb_pct']}",
-                        f"{cards['top_desemb_pct_val']:.1f}%",
-                        "green"
-                    ), unsafe_allow_html=True)
-                with cc4:
-                    st.markdown(render_metric(
-                        f"{cards['units_con_avisos']} {lbl}s",
-                        f"con avisos",
-                        f"de {cards['total_units']} total",
-                        "purple"
-                    ), unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
-
-        # ─── Mapa y ranking lado a lado ───
-        col_mapa, col_ranking = st.columns([3, 2])
-
-        with col_mapa:
-            try:
-                fig = generate_map(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)
-                st.plotly_chart(fig, use_container_width=True, config={
-                    "displayModeBar": True,
-                    "modeBarButtonsToRemove": ["select2d", "lasso2d"],
-                    "displaylogo": False,
-                })
-            except Exception as e:
-                st.error(f"Error al generar el mapa: {str(e)}")
-
-        with col_ranking:
-            nivel_label = NIVELES[nivel_seleccionado]["label"]
-            st.markdown(
-                f'<div class="section-header">'
-                f'<div class="icon-box" style="background:#f0e8ff;">🏆</div>'
-                f'<h3>Ranking {nivel_label}</h3></div>',
-                unsafe_allow_html=True,
-            )
-            try:
-                df_ranking = get_ranking_table(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)
-                if len(df_ranking) > 0:
-                    st.dataframe(
-                        df_ranking,
+                with col_dl1:
+                    st.download_button(
+                        label="📋 Descargar .txt",
+                        data=prose,
+                        file_name=f"SAC_consulta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                        mime="text/plain",
+                        key="dl_txt",
                         use_container_width=True,
-                        hide_index=False,
-                        height=520,
                     )
-                else:
-                    st.info("Sin datos para los filtros seleccionados.")
-            except Exception as e:
-                st.error(f"Error al generar ranking: {str(e)}")
 
-    # ═══ TAB 1: Ayuda Memoria Nacional ═══
-    with tab1:
-        st.markdown(f"""
-        <div class="tab-intro">
-            <div class="title">Ayuda Memoria Nacional · Corte {datos['fecha_corte']}</div>
-            <div class="desc">Resumen de operatividad SAC a nivel nacional: datos generales, primas y cobertura,
-            indemnizaciones y eventos asociados a lluvias intensas.</div>
-        </div>
-        """, unsafe_allow_html=True)
+                with col_dl2:
+                    st.download_button(
+                        label="📄 Descargar .docx (texto)",
+                        data=prose.encode("utf-8"),
+                        file_name=f"SAC_consulta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                        mime="text/plain",
+                        key="dl_docx_txt",
+                        use_container_width=True,
+                    )
 
-        col_gen, col_dl = st.columns([1, 1])
-        with col_gen:
-            if st.button("⚡ Generar documento", type="primary", key="gen_nac", use_container_width=True):
-                with st.spinner("Generando Ayuda Memoria Nacional..."):
-                    try:
-                        doc_bytes = generate_nacional_docx(datos)
-                        fecha_str = datetime.now().strftime("%d_%m_%Y")
-                        filename = f"Ayuda_Memoria_Resumen_SAC_2025-2026_{fecha_str}.docx"
-                        st.session_state["doc_nacional"] = doc_bytes
-                        st.session_state["doc_nacional_name"] = filename
-                        st.success("✅ Documento generado")
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
+                # SQL y datos (expandible)
+                if st.session_state.get("last_query_sql"):
+                    with st.expander("🔧 Ver consulta SQL generada"):
+                        st.code(st.session_state["last_query_sql"], language="sql")
 
-        with col_dl:
-            if st.session_state.get("doc_nacional"):
-                st.download_button(
-                    label="⬇️ Descargar Ayuda Memoria Nacional",
-                    data=st.session_state["doc_nacional"],
-                    file_name=st.session_state["doc_nacional_name"],
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
+                if st.session_state.get("last_query_data") is not None:
+                    df_result = st.session_state["last_query_data"]
+                    if len(df_result) > 0:
+                        with st.expander(f"📊 Ver datos ({len(df_result)} filas)"):
+                            st.dataframe(df_result, use_container_width=True, hide_index=True)
+
+        # ─── Sub-tab: Mapa de Calor ───
+        with sub_mapa:
+            st.markdown(f"""
+            <div class="tab-intro">
+                <div class="title">Mapa de Calor SAC · Corte {datos['fecha_corte']}</div>
+                <div class="desc">Visualización geográfica interactiva de los indicadores del SAC.
+                Seleccione nivel geográfico, métrica y filtre por departamento.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # ─── Controles: Nivel + Departamento + Métrica ───
+            col_ctrl1, col_ctrl2 = st.columns([1, 2])
+
+            with col_ctrl1:
+                nivel_seleccionado = st.radio(
+                    "Nivel geográfico:",
+                    options=list(NIVELES.keys()),
+                    horizontal=True,
+                    key="nivel_mapa",
                 )
 
-        with st.expander("📋 Vista previa: Cuadro 1 — Primas y Cobertura"):
-            st.dataframe(datos["cuadro1"], use_container_width=True, hide_index=True)
-        with st.expander("📋 Vista previa: Cuadro 2 — Indemnizaciones y Desembolsos"):
-            st.dataframe(datos["cuadro2"], use_container_width=True, hide_index=True)
-        with st.expander("📋 Vista previa: Cuadro 3 — Lluvias Intensas"):
-            st.dataframe(datos["cuadro3"], use_container_width=True, hide_index=True)
+            with col_ctrl2:
+                # Filtro de departamento (para Provincial y Distrital)
+                depto_filter = None
+                if nivel_seleccionado in ("Provincial", "Distrital"):
+                    depto_options = ["Todos"] + datos.get("departamentos_list", [])
+                    depto_sel = st.selectbox(
+                        "Filtrar por departamento:",
+                        options=depto_options,
+                        format_func=lambda x: x.title() if x != "Todos" else "Todos los departamentos",
+                        key="depto_filter_mapa",
+                    )
+                    if depto_sel != "Todos":
+                        depto_filter = [depto_sel]
 
-    # ═══ TAB 2: Ayuda Memoria Departamental ═══
-    with tab2:
-        depto_seleccionado = st.selectbox(
-            "Seleccione el departamento:",
-            options=datos["departamentos_list"],
-            format_func=lambda x: x.title(),
-        )
-
-        if depto_seleccionado:
-            depto_data = get_departamento_data(datos, depto_seleccionado)
-
-            # Métricas departamentales
-            col_d1, col_d2, col_d3, col_d4 = st.columns(4)
-            with col_d1:
-                st.markdown(render_metric("Avisos", str(depto_data["total_avisos"]), None, "blue"), unsafe_allow_html=True)
-            with col_d2:
-                st.markdown(render_metric("Indemnización", f"S/ {depto_data['monto_indemnizado']:,.0f}", None, "amber"), unsafe_allow_html=True)
-            with col_d3:
-                st.markdown(render_metric("Ha Indemnizadas", f"{depto_data['ha_indemnizadas']:,.0f}", None, "green"), unsafe_allow_html=True)
-            with col_d4:
-                st.markdown(render_metric("Desembolso", f"S/ {depto_data['monto_desembolsado']:,.0f}", None, "purple"), unsafe_allow_html=True)
-
-            st.markdown(
-                f"**Aseguradora:** {depto_data['empresa']} · "
-                f"**Prima neta:** S/ {depto_data['prima_neta']:,.2f} · "
-                f"**Superficie asegurada:** {depto_data['sup_asegurada']:,.0f} ha"
+            # Métricas disponibles según nivel
+            metricas_nivel = get_metricas_for_nivel(nivel_seleccionado)
+            metrica_seleccionada = st.radio(
+                "Métrica a visualizar:",
+                options=list(metricas_nivel.keys()),
+                horizontal=True,
+                key="metrica_mapa",
             )
+
+            # Descripción
+            meta_info = metricas_nivel[metrica_seleccionada]
+            st.markdown(
+                f'<div style="background:#f0f7ff; padding:0.5rem 1rem; border-radius:10px; '
+                f'color:#1a5276; font-size:0.83rem; margin-bottom:0.8rem;">'
+                f'ℹ️ {meta_info["description"]}</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ─── Tarjetas de contexto ───
+            try:
+                cards = get_summary_cards(datos, nivel_seleccionado, depto_filter)
+                if cards:
+                    lbl = cards.get("label", "Unidad")
+                    cc1, cc2, cc3, cc4 = st.columns(4)
+                    with cc1:
+                        st.markdown(render_metric(
+                            f"Mayor N° Avisos",
+                            f"{cards['top_avisos']}",
+                            f"{cards['top_avisos_n']:,} avisos",
+                            "blue"
+                        ), unsafe_allow_html=True)
+                    with cc2:
+                        st.markdown(render_metric(
+                            "Mayor Indemnización",
+                            f"{cards['top_indemn']}",
+                            f"S/ {cards['top_indemn_val']:,.0f}",
+                            "amber"
+                        ), unsafe_allow_html=True)
+                    with cc3:
+                        st.markdown(render_metric(
+                            "Mayor Avance Desemb.",
+                            f"{cards['top_desemb_pct']}",
+                            f"{cards['top_desemb_pct_val']:.1f}%",
+                            "green"
+                        ), unsafe_allow_html=True)
+                    with cc4:
+                        st.markdown(render_metric(
+                            f"{cards['units_con_avisos']} {lbl}s",
+                            f"con avisos",
+                            f"de {cards['total_units']} total",
+                            "purple"
+                        ), unsafe_allow_html=True)
+            except Exception:
+                pass
+
+            st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
+
+            # ─── Mapa y ranking lado a lado ───
+            col_mapa, col_ranking = st.columns([3, 2])
+
+            with col_mapa:
+                try:
+                    fig = generate_map(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)
+                    st.plotly_chart(fig, use_container_width=True, config={
+                        "displayModeBar": True,
+                        "modeBarButtonsToRemove": ["select2d", "lasso2d"],
+                        "displaylogo": False,
+                    })
+                except Exception as e:
+                    st.error(f"Error al generar el mapa: {str(e)}")
+
+            with col_ranking:
+                nivel_label = NIVELES[nivel_seleccionado]["label"]
+                st.markdown(
+                    f'<div class="section-header">'
+                    f'<div class="icon-box" style="background:#f0e8ff;">🏆</div>'
+                    f'<h3>Ranking {nivel_label}</h3></div>',
+                    unsafe_allow_html=True,
+                )
+                try:
+                    df_ranking = get_ranking_table(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)
+                    if len(df_ranking) > 0:
+                        st.dataframe(
+                            df_ranking,
+                            use_container_width=True,
+                            hide_index=False,
+                            height=520,
+                        )
+                    else:
+                        st.info("Sin datos para los filtros seleccionados.")
+                except Exception as e:
+                    st.error(f"Error al generar ranking: {str(e)}")
+
+        # ─── Sub-tab: Explorar Datos ───
+        with sub_explorar:
+            sub_exp1, sub_exp2 = st.tabs(["MIDAGRI (La Positiva)", "Siniestros (Rímac)"])
+
+            with sub_exp1:
+                st.markdown(f"**Registros:** {len(datos['midagri']):,}")
+                st.dataframe(datos["midagri"].head(200), use_container_width=True, hide_index=True)
+
+            with sub_exp2:
+                st.markdown(f"**Registros:** {len(datos['siniestros']):,}")
+                st.dataframe(datos["siniestros"].head(200), use_container_width=True, hide_index=True)
+
+            st.markdown("---")
+            st.markdown("### Distribución de Siniestros por Tipo")
+            if len(datos["siniestros_por_tipo"]) > 0:
+                chart_data = datos["siniestros_por_tipo"].reset_index()
+                chart_data.columns = ["Tipo Siniestro", "Cantidad"]
+                st.bar_chart(chart_data.set_index("Tipo Siniestro").head(10))
+
+    # ═══════════════════════════════════════════════════════════════════
+    # SECCIÓN 2: GENERAR REPORTES
+    # ═══════════════════════════════════════════════════════════════════
+    with tab_reportes:
+        sub_nac, sub_depto, sub_oper, sub_eme = st.tabs([
+            "📄 Ayuda Memoria Nacional",
+            "🏔️ Ayuda Memoria Departamental",
+            "📋 Operatividad SAC",
+            "📊 Reporte EME",
+        ])
+
+        # ─── Sub-tab: Ayuda Memoria Nacional ───
+        with sub_nac:
+            st.markdown(f"""
+            <div class="tab-intro">
+                <div class="title">Ayuda Memoria Nacional · Corte {datos['fecha_corte']}</div>
+                <div class="desc">Resumen de operatividad SAC a nivel nacional: datos generales, primas y cobertura,
+                indemnizaciones y eventos asociados a lluvias intensas.</div>
+            </div>
+            """, unsafe_allow_html=True)
 
             col_gen, col_dl = st.columns([1, 1])
             with col_gen:
-                if st.button("⚡ Generar documento", type="primary", key="gen_depto", use_container_width=True):
-                    with st.spinner(f"Generando reporte de {depto_seleccionado.title()}..."):
+                if st.button("⚡ Generar documento", type="primary", key="gen_nac", use_container_width=True):
+                    with st.spinner("Generando Ayuda Memoria Nacional..."):
                         try:
-                            doc_bytes = generate_departamental_docx(depto_data)
+                            doc_bytes = generate_nacional_docx(datos)
                             fecha_str = datetime.now().strftime("%d_%m_%Y")
-                            filename = f"Ayuda_Memoria_SAC_{depto_seleccionado.title()}_2025-2026_{fecha_str}.docx"
-                            st.session_state["doc_depto"] = doc_bytes
-                            st.session_state["doc_depto_name"] = filename
-                            st.success(f"✅ Documento de {depto_seleccionado.title()} generado")
+                            filename = f"Ayuda_Memoria_Resumen_SAC_2025-2026_{fecha_str}.docx"
+                            st.session_state["doc_nacional"] = doc_bytes
+                            st.session_state["doc_nacional_name"] = filename
+                            st.success("✅ Documento generado")
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
 
             with col_dl:
-                if st.session_state.get("doc_depto"):
+                if st.session_state.get("doc_nacional"):
                     st.download_button(
-                        label=f"⬇️ Descargar {st.session_state.get('doc_depto_name', 'documento')}",
-                        data=st.session_state["doc_depto"],
-                        file_name=st.session_state["doc_depto_name"],
+                        label="⬇️ Descargar Ayuda Memoria Nacional",
+                        data=st.session_state["doc_nacional"],
+                        file_name=st.session_state["doc_nacional_name"],
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         use_container_width=True,
                     )
 
-            with st.expander("📋 Avisos por Tipo de Siniestro"):
-                if len(depto_data["avisos_tipo"]) > 0:
-                    st.dataframe(
-                        depto_data["avisos_tipo"].reset_index().rename(
-                            columns={"index": "Tipo Siniestro", "TIPO_SINIESTRO": "Tipo Siniestro", "count": "N° Avisos"}
-                        ),
-                        use_container_width=True, hide_index=True,
-                    )
-            with st.expander("📋 Distribución por Provincia"):
-                if len(depto_data["dist_provincia"]) > 0:
-                    st.dataframe(depto_data["dist_provincia"], use_container_width=True, hide_index=True)
+            with st.expander("📋 Vista previa: Cuadro 1 — Primas y Cobertura"):
+                st.dataframe(datos["cuadro1"], use_container_width=True, hide_index=True)
+            with st.expander("📋 Vista previa: Cuadro 2 — Indemnizaciones y Desembolsos"):
+                st.dataframe(datos["cuadro2"], use_container_width=True, hide_index=True)
+            with st.expander("📋 Vista previa: Cuadro 3 — Lluvias Intensas"):
+                st.dataframe(datos["cuadro3"], use_container_width=True, hide_index=True)
 
-    # ═══ TAB OPERATIVIDAD: Ayuda Memoria Operatividad SAC ═══
-    with tab_op:
-        st.markdown(f"""
-        <div class="tab-intro">
-            <div class="title">Operatividad SAC · Corte {datos['fecha_corte']}</div>
-            <div class="desc">Detalle de operatividad por empresa de seguros: avisos, ajustes, siniestralidad por
-            departamento, coberturas, cultivos priorizados y desembolsos.</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        col_gen_op, col_dl_op = st.columns([1, 1])
-        with col_gen_op:
-            if st.button("⚡ Generar Operatividad SAC", type="primary", key="gen_oper", use_container_width=True):
-                with st.spinner("Generando Ayuda Memoria Operatividad..."):
-                    try:
-                        doc_bytes = generate_operatividad_docx(datos)
-                        fecha_str = datetime.now().strftime("%d_%m_%Y")
-                        filename = f"AM_Operatividad_SAC_2025-2026_{fecha_str}.docx"
-                        st.session_state["doc_operatividad"] = doc_bytes
-                        st.session_state["doc_operatividad_name"] = filename
-                        st.success("✅ Documento generado")
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
-
-        with col_dl_op:
-            if st.session_state.get("doc_operatividad"):
-                st.download_button(
-                    label="⬇️ Descargar Operatividad SAC",
-                    data=st.session_state["doc_operatividad"],
-                    file_name=st.session_state["doc_operatividad_name"],
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
-                )
-
-        with st.expander("📋 Contenido del documento"):
-            st.markdown(
-                "El documento incluye: avisos de siniestros por empresa (La Positiva / Rímac), "
-                "top departamentos y tipos de siniestro, resultados de ajustes y evaluaciones, "
-                "tabla de siniestralidad por departamento/empresa, indemnizaciones por tipo de cobertura "
-                "(complementaria vs catastrófica), cultivos priorizados vs no priorizados, "
-                "y desembolsos con productores beneficiados por departamento."
+        # ─── Sub-tab: Ayuda Memoria Departamental ───
+        with sub_depto:
+            depto_seleccionado = st.selectbox(
+                "Seleccione el departamento:",
+                options=datos["departamentos_list"],
+                format_func=lambda x: x.title(),
             )
 
-    # ═══ TAB 3: Reporte EME ═══
-    with tab3:
-        st.markdown("""
-        <div class="tab-intro">
-            <div class="title">Reporte de Emergencia (EME)</div>
-            <div class="desc">Formato consolidado por región con acciones implementadas,
-            en implementación y por implementar.</div>
-        </div>
-        """, unsafe_allow_html=True)
+            if depto_seleccionado:
+                depto_data = get_departamento_data(datos, depto_seleccionado)
 
-        col_gen, col_dl = st.columns([1, 1])
-        with col_gen:
-            if st.button("⚡ Generar Reporte EME", type="primary", key="gen_eme", use_container_width=True):
-                with st.spinner("Generando reporte Excel..."):
-                    try:
-                        xls_bytes = generate_reporte_eme(datos)
-                        fecha_str = datetime.now().strftime("%d_%m_%Y")
-                        filename = f"formato_reporte_EME_{fecha_str}_actualizado.xlsx"
-                        st.session_state["xls_eme"] = xls_bytes
-                        st.session_state["xls_eme_name"] = filename
-                        st.success("✅ Reporte EME generado")
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
+                # Métricas departamentales
+                col_d1, col_d2, col_d3, col_d4 = st.columns(4)
+                with col_d1:
+                    st.markdown(render_metric("Avisos", str(depto_data["total_avisos"]), None, "blue"), unsafe_allow_html=True)
+                with col_d2:
+                    st.markdown(render_metric("Indemnización", f"S/ {depto_data['monto_indemnizado']:,.0f}", None, "amber"), unsafe_allow_html=True)
+                with col_d3:
+                    st.markdown(render_metric("Ha Indemnizadas", f"{depto_data['ha_indemnizadas']:,.0f}", None, "green"), unsafe_allow_html=True)
+                with col_d4:
+                    st.markdown(render_metric("Desembolso", f"S/ {depto_data['monto_desembolsado']:,.0f}", None, "purple"), unsafe_allow_html=True)
 
-        with col_dl:
-            if st.session_state.get("xls_eme"):
-                st.download_button(
-                    label="⬇️ Descargar Reporte EME",
-                    data=st.session_state["xls_eme"],
-                    file_name=st.session_state["xls_eme_name"],
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
+                st.markdown(
+                    f"**Aseguradora:** {depto_data['empresa']} · "
+                    f"**Prima neta:** S/ {depto_data['prima_neta']:,.2f} · "
+                    f"**Superficie asegurada:** {depto_data['sup_asegurada']:,.0f} ha"
                 )
 
-    # ═══ TAB 4: Explorar Datos ═══
-    with tab4:
-        sub_tab1, sub_tab2 = st.tabs(["MIDAGRI (La Positiva)", "Siniestros (Rímac)"])
+                col_gen, col_dl = st.columns([1, 1])
+                with col_gen:
+                    if st.button("⚡ Generar documento", type="primary", key="gen_depto", use_container_width=True):
+                        with st.spinner(f"Generando reporte de {depto_seleccionado.title()}..."):
+                            try:
+                                doc_bytes = generate_departamental_docx(depto_data)
+                                fecha_str = datetime.now().strftime("%d_%m_%Y")
+                                filename = f"Ayuda_Memoria_SAC_{depto_seleccionado.title()}_2025-2026_{fecha_str}.docx"
+                                st.session_state["doc_depto"] = doc_bytes
+                                st.session_state["doc_depto_name"] = filename
+                                st.success(f"✅ Documento de {depto_seleccionado.title()} generado")
+                            except Exception as e:
+                                st.error(f"Error: {str(e)}")
 
-        with sub_tab1:
-            st.markdown(f"**Registros:** {len(datos['midagri']):,}")
-            st.dataframe(datos["midagri"].head(200), use_container_width=True, hide_index=True)
+                with col_dl:
+                    if st.session_state.get("doc_depto"):
+                        st.download_button(
+                            label=f"⬇️ Descargar {st.session_state.get('doc_depto_name', 'documento')}",
+                            data=st.session_state["doc_depto"],
+                            file_name=st.session_state["doc_depto_name"],
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            use_container_width=True,
+                        )
 
-        with sub_tab2:
-            st.markdown(f"**Registros:** {len(datos['siniestros']):,}")
-            st.dataframe(datos["siniestros"].head(200), use_container_width=True, hide_index=True)
+                with st.expander("📋 Avisos por Tipo de Siniestro"):
+                    if len(depto_data["avisos_tipo"]) > 0:
+                        st.dataframe(
+                            depto_data["avisos_tipo"].reset_index().rename(
+                                columns={"index": "Tipo Siniestro", "TIPO_SINIESTRO": "Tipo Siniestro", "count": "N° Avisos"}
+                            ),
+                            use_container_width=True, hide_index=True,
+                        )
+                with st.expander("📋 Distribución por Provincia"):
+                    if len(depto_data["dist_provincia"]) > 0:
+                        st.dataframe(depto_data["dist_provincia"], use_container_width=True, hide_index=True)
 
-        st.markdown("---")
-        st.markdown("### Distribución de Siniestros por Tipo")
-        if len(datos["siniestros_por_tipo"]) > 0:
-            chart_data = datos["siniestros_por_tipo"].reset_index()
-            chart_data.columns = ["Tipo Siniestro", "Cantidad"]
-            st.bar_chart(chart_data.set_index("Tipo Siniestro").head(10))
+        # ─── Sub-tab: Operatividad SAC ───
+        with sub_oper:
+            st.markdown(f"""
+            <div class="tab-intro">
+                <div class="title">Operatividad SAC · Corte {datos['fecha_corte']}</div>
+                <div class="desc">Detalle de operatividad por empresa de seguros: avisos, ajustes, siniestralidad por
+                departamento, coberturas, cultivos priorizados y desembolsos.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_gen_op, col_dl_op = st.columns([1, 1])
+            with col_gen_op:
+                if st.button("⚡ Generar Operatividad SAC", type="primary", key="gen_oper", use_container_width=True):
+                    with st.spinner("Generando Ayuda Memoria Operatividad..."):
+                        try:
+                            doc_bytes = generate_operatividad_docx(datos)
+                            fecha_str = datetime.now().strftime("%d_%m_%Y")
+                            filename = f"AM_Operatividad_SAC_2025-2026_{fecha_str}.docx"
+                            st.session_state["doc_operatividad"] = doc_bytes
+                            st.session_state["doc_operatividad_name"] = filename
+                            st.success("✅ Documento generado")
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+
+            with col_dl_op:
+                if st.session_state.get("doc_operatividad"):
+                    st.download_button(
+                        label="⬇️ Descargar Operatividad SAC",
+                        data=st.session_state["doc_operatividad"],
+                        file_name=st.session_state["doc_operatividad_name"],
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True,
+                    )
+
+            with st.expander("📋 Contenido del documento"):
+                st.markdown(
+                    "El documento incluye: avisos de siniestros por empresa (La Positiva / Rímac), "
+                    "top departamentos y tipos de siniestro, resultados de ajustes y evaluaciones, "
+                    "tabla de siniestralidad por departamento/empresa, indemnizaciones por tipo de cobertura "
+                    "(complementaria vs catastrófica), cultivos priorizados vs no priorizados, "
+                    "y desembolsos con productores beneficiados por departamento."
+                )
+
+        # ─── Sub-tab: Reporte EME ───
+        with sub_eme:
+            st.markdown("""
+            <div class="tab-intro">
+                <div class="title">Reporte de Emergencia (EME)</div>
+                <div class="desc">Formato consolidado por región con acciones implementadas,
+                en implementación y por implementar.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_gen, col_dl = st.columns([1, 1])
+            with col_gen:
+                if st.button("⚡ Generar Reporte EME", type="primary", key="gen_eme", use_container_width=True):
+                    with st.spinner("Generando reporte Excel..."):
+                        try:
+                            xls_bytes = generate_reporte_eme(datos)
+                            fecha_str = datetime.now().strftime("%d_%m_%Y")
+                            filename = f"formato_reporte_EME_{fecha_str}_actualizado.xlsx"
+                            st.session_state["xls_eme"] = xls_bytes
+                            st.session_state["xls_eme_name"] = filename
+                            st.success("✅ Reporte EME generado")
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+
+            with col_dl:
+                if st.session_state.get("xls_eme"):
+                    st.download_button(
+                        label="⬇️ Descargar Reporte EME",
+                        data=st.session_state["xls_eme"],
+                        file_name=st.session_state["xls_eme_name"],
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True,
+                    )
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# FOOTER
-# ═══════════════════════════════════════════════════════════════════════
-st.markdown("""
-<div class="footer">
-    SAC 2025-2026 · Dirección de Seguro y Fomento del Financiamiento Agrario · MIDAGRI<br>
-    Sistema automatizado para la gestión de reportes del Seguro Agrícola Catastrófico
-</div>
-""", unsafe_allow_html=True)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # FOOTER
+    # ═══════════════════════════════════════════════════════════════════════
+    st.markdown("""
+    <div class="footer">
+        SAC 2025-2026 · Dirección de Seguro y Fomento del Financiamiento Agrario · MIDAGRI<br>
+        Sistema automatizado para la gestión de reportes del Seguro Agrícola Catastrófico
+    </div>
+    """, unsafe_allow_html=True)
