@@ -18,7 +18,7 @@ from gen_excel_eme import generate_reporte_eme
 from gen_word_operatividad import generate_operatividad_docx
 from query_engine import process_query, get_suggested_queries as get_suggested_basic
 from query_llm import process_query_llm, is_llm_available, get_suggested_queries as get_suggested_llm
-from gen_mapa_calor import generate_map, get_ranking_table, get_summary_cards, METRICAS
+from gen_mapa_calor import generate_map, get_ranking_table, get_summary_cards, NIVELES, get_metricas_for_nivel
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -1077,21 +1077,47 @@ else:
         st.markdown(f"""
         <div class="tab-intro">
             <div class="title">Mapa de Calor SAC · Corte {datos['fecha_corte']}</div>
-            <div class="desc">Visualización geográfica interactiva de los indicadores del SAC por departamento.
-            Seleccione una métrica para explorar la distribución territorial.</div>
+            <div class="desc">Visualización geográfica interactiva de los indicadores del SAC.
+            Seleccione nivel geográfico, métrica y filtre por departamento.</div>
         </div>
         """, unsafe_allow_html=True)
 
-        # Selector de métrica
+        # ─── Controles: Nivel + Departamento + Métrica ───
+        col_ctrl1, col_ctrl2 = st.columns([1, 2])
+
+        with col_ctrl1:
+            nivel_seleccionado = st.radio(
+                "Nivel geográfico:",
+                options=list(NIVELES.keys()),
+                horizontal=True,
+                key="nivel_mapa",
+            )
+
+        with col_ctrl2:
+            # Filtro de departamento (para Provincial y Distrital)
+            depto_filter = None
+            if nivel_seleccionado in ("Provincial", "Distrital"):
+                depto_options = ["Todos"] + datos.get("departamentos_list", [])
+                depto_sel = st.selectbox(
+                    "Filtrar por departamento:",
+                    options=depto_options,
+                    format_func=lambda x: x.title() if x != "Todos" else "Todos los departamentos",
+                    key="depto_filter_mapa",
+                )
+                if depto_sel != "Todos":
+                    depto_filter = [depto_sel]
+
+        # Métricas disponibles según nivel
+        metricas_nivel = get_metricas_for_nivel(nivel_seleccionado)
         metrica_seleccionada = st.radio(
-            "Seleccione la métrica a visualizar:",
-            options=list(METRICAS.keys()),
+            "Métrica a visualizar:",
+            options=list(metricas_nivel.keys()),
             horizontal=True,
             key="metrica_mapa",
         )
 
-        # Descripción de la métrica
-        meta_info = METRICAS[metrica_seleccionada]
+        # Descripción
+        meta_info = metricas_nivel[metrica_seleccionada]
         st.markdown(
             f'<div style="background:#f0f7ff; padding:0.5rem 1rem; border-radius:10px; '
             f'color:#1a5276; font-size:0.83rem; margin-bottom:0.8rem;">'
@@ -1099,14 +1125,15 @@ else:
             unsafe_allow_html=True,
         )
 
-        # Tarjetas de contexto
+        # ─── Tarjetas de contexto ───
         try:
-            cards = get_summary_cards(datos)
+            cards = get_summary_cards(datos, nivel_seleccionado, depto_filter)
             if cards:
+                lbl = cards.get("label", "Unidad")
                 cc1, cc2, cc3, cc4 = st.columns(4)
                 with cc1:
                     st.markdown(render_metric(
-                        "Mayor N° Avisos",
+                        f"Mayor N° Avisos",
                         f"{cards['top_avisos']}",
                         f"{cards['top_avisos_n']:,} avisos",
                         "blue"
@@ -1127,22 +1154,22 @@ else:
                     ), unsafe_allow_html=True)
                 with cc4:
                     st.markdown(render_metric(
-                        "Menor Avance Desemb.",
-                        f"{cards['min_desemb_pct']}",
-                        f"{cards['min_desemb_pct_val']:.1f}%",
-                        "red"
+                        f"{cards['units_con_avisos']} {lbl}s",
+                        f"con avisos",
+                        f"de {cards['total_units']} total",
+                        "purple"
                     ), unsafe_allow_html=True)
         except Exception:
             pass
 
         st.markdown('<div style="height:0.5rem;"></div>', unsafe_allow_html=True)
 
-        # Mapa y ranking lado a lado
+        # ─── Mapa y ranking lado a lado ───
         col_mapa, col_ranking = st.columns([3, 2])
 
         with col_mapa:
             try:
-                fig = generate_map(datos, metrica_seleccionada)
+                fig = generate_map(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)
                 st.plotly_chart(fig, use_container_width=True, config={
                     "displayModeBar": True,
                     "modeBarButtonsToRemove": ["select2d", "lasso2d"],
@@ -1152,14 +1179,15 @@ else:
                 st.error(f"Error al generar el mapa: {str(e)}")
 
         with col_ranking:
+            nivel_label = NIVELES[nivel_seleccionado]["label"]
             st.markdown(
                 f'<div class="section-header">'
                 f'<div class="icon-box" style="background:#f0e8ff;">🏆</div>'
-                f'<h3>Ranking Departamental</h3></div>',
+                f'<h3>Ranking {nivel_label}</h3></div>',
                 unsafe_allow_html=True,
             )
             try:
-                df_ranking = get_ranking_table(datos, metrica_seleccionada)
+                df_ranking = get_ranking_table(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)
                 if len(df_ranking) > 0:
                     st.dataframe(
                         df_ranking,
@@ -1167,6 +1195,8 @@ else:
                         hide_index=False,
                         height=520,
                     )
+                else:
+                    st.info("Sin datos para los filtros seleccionados.")
             except Exception as e:
                 st.error(f"Error al generar ranking: {str(e)}")
 
