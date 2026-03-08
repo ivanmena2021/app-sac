@@ -19,6 +19,10 @@ from gen_word_operatividad import generate_operatividad_docx
 from query_engine import process_query, get_suggested_queries as get_suggested_basic
 from query_llm import process_query_llm, is_llm_available, get_suggested_queries as get_suggested_llm
 from gen_mapa_calor import generate_map, get_ranking_table, get_summary_cards, NIVELES, get_metricas_for_nivel
+from comparativo_campanias import (
+    load_campania_anterior, generate_comparison_chart, get_comparison_table,
+    get_monthly_detail_table, METRICAS_COMPARACION,
+)
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -960,9 +964,10 @@ else:
     # SECCIÓN 1: ANÁLISIS INTERACTIVO
     # ═══════════════════════════════════════════════════════════════════
     with tab_analisis:
-        sub_chat, sub_mapa, sub_explorar = st.tabs([
+        sub_chat, sub_mapa, sub_compar, sub_explorar = st.tabs([
             "💬 Consultas",
             "🗺️ Mapa de Calor",
+            "📈 Comparativo Campañas",
             "🔍 Explorar Datos",
         ])
 
@@ -1233,6 +1238,87 @@ else:
                         st.info("Sin datos para los filtros seleccionados.")
                 except Exception as e:
                     st.error(f"Error al generar ranking: {str(e)}")
+
+        # ─── Sub-tab: Comparativo Campañas ───
+        with sub_compar:
+            df_anterior = load_campania_anterior()
+
+            if df_anterior is None:
+                st.warning("No se encontró el archivo consolidado de la campaña 2024-2025.")
+            else:
+                st.markdown(f"""
+                <div class="tab-intro">
+                    <div class="title">Comparativo entre Campañas SAC</div>
+                    <div class="desc">Evolución mensual de indicadores clave: campaña
+                    <strong style="color:{('#8e44ad')}">2024-2025</strong> ({len(df_anterior):,} avisos, 3 empresas)
+                    vs campaña <strong style="color:{('#2980b9')}">2025-2026</strong>
+                    ({len(datos['midagri']):,} avisos, 2 empresas).</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Selector de métrica
+                metrica_keys = list(METRICAS_COMPARACION.keys())
+                metrica_labels = [METRICAS_COMPARACION[k]["label"] for k in metrica_keys]
+
+                metrica_sel = st.radio(
+                    "Indicador a comparar:",
+                    options=metrica_keys,
+                    format_func=lambda k: METRICAS_COMPARACION[k]["label"],
+                    horizontal=True,
+                    key="metrica_comparativo",
+                )
+
+                # Descripción
+                meta_info = METRICAS_COMPARACION[metrica_sel]
+                st.markdown(
+                    f'<div style="background:#f5f0ff; padding:0.5rem 1rem; border-radius:10px; '
+                    f'color:#5b2c8e; font-size:0.83rem; margin-bottom:0.8rem;">'
+                    f'ℹ️ {meta_info["description"]}</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Gráfico
+                try:
+                    fig = generate_comparison_chart(datos["midagri"], df_anterior, metrica_sel)
+                    st.plotly_chart(fig, use_container_width=True, config={
+                        "displayModeBar": True,
+                        "modeBarButtonsToRemove": ["select2d", "lasso2d"],
+                        "displaylogo": False,
+                    })
+                except Exception as e:
+                    st.error(f"Error al generar gráfico: {str(e)}")
+
+                # Tabla resumen y detalle lado a lado
+                col_resumen, col_detalle = st.columns([1, 1])
+
+                with col_resumen:
+                    st.markdown(
+                        '<div class="section-header">'
+                        '<div class="icon-box" style="background:#f5f0ff;">📊</div>'
+                        '<h3>Resumen General</h3></div>',
+                        unsafe_allow_html=True,
+                    )
+                    try:
+                        df_table = get_comparison_table(datos["midagri"], df_anterior)
+                        st.dataframe(df_table, use_container_width=True, hide_index=True, height=310)
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+
+                with col_detalle:
+                    st.markdown(
+                        '<div class="section-header">'
+                        '<div class="icon-box" style="background:#e8f4f8;">📅</div>'
+                        '<h3>Detalle Mensual</h3></div>',
+                        unsafe_allow_html=True,
+                    )
+                    try:
+                        df_monthly = get_monthly_detail_table(datos["midagri"], df_anterior, metrica_sel)
+                        if df_monthly is not None and len(df_monthly) > 0:
+                            st.dataframe(df_monthly, use_container_width=True, hide_index=True, height=310)
+                        else:
+                            st.info("Seleccione una métrica con evolución mensual para ver el detalle.")
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
 
         # ─── Sub-tab: Explorar Datos ───
         with sub_explorar:
