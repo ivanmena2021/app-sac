@@ -1,15 +1,14 @@
 """
 gen_mapa_calor.py — Mapa de calor interactivo del SAC por departamento
 ======================================================================
-Genera un mapa de burbujas geográfico (scatter_geo) del Perú con métricas
-SAC coloreadas por intensidad, más una tabla ranking estilizada.
+Genera un mapa de burbujas geográfico del Perú con métricas SAC
+coloreadas por intensidad, más una tabla ranking estilizada.
 
-Usa plotly para el mapa interactivo (compatible con st.plotly_chart).
+Usa plotly scatter_mapbox (OpenStreetMap) para el mapa interactivo.
 """
 
 import pandas as pd
 import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
 
 
@@ -54,8 +53,7 @@ METRICAS = {
         "col_color": "pct_desembolso",
         "format": ".1f",
         "suffix": "%",
-        "color_scale": "RdYlGn",     # rojo → amarillo → verde
-        "reverse": False,
+        "color_scale": "RdYlGn",
         "description": "Porcentaje de indemnización reconocida que ya fue desembolsada",
     },
     "Avance de Evaluación (%)": {
@@ -63,15 +61,13 @@ METRICAS = {
         "format": ".1f",
         "suffix": "%",
         "color_scale": "RdYlGn",
-        "reverse": False,
         "description": "Porcentaje de avisos evaluados (cerrados) respecto al total",
     },
     "Hectáreas Indemnizadas": {
         "col_color": "ha_indemnizadas",
         "format": ",.0f",
         "suffix": " ha",
-        "color_scale": "YlOrRd",     # amarillo → naranja → rojo
-        "reverse": False,
+        "color_scale": "YlOrRd",
         "description": "Superficie total indemnizada por departamento",
     },
     "Monto Indemnizado (S/)": {
@@ -79,7 +75,6 @@ METRICAS = {
         "format": ",.0f",
         "suffix": "",
         "color_scale": "Blues",
-        "reverse": False,
         "description": "Valor total de indemnizaciones reconocidas",
     },
     "Avisos de Siniestro": {
@@ -87,15 +82,13 @@ METRICAS = {
         "format": ",",
         "suffix": "",
         "color_scale": "Purples",
-        "reverse": False,
         "description": "Cantidad total de avisos de siniestro reportados",
     },
     "Siniestralidad (%)": {
         "col_color": "siniestralidad",
         "format": ".1f",
         "suffix": "%",
-        "color_scale": "RdYlGn_r",   # verde → amarillo → rojo
-        "reverse": False,
+        "color_scale": "RdYlGn_r",
         "description": "Indemnización / Prima Neta × 100",
     },
 }
@@ -112,13 +105,22 @@ def _build_dept_metrics(datos):
         return pd.DataFrame()
 
     # Agregar por departamento desde midagri
-    agg = midagri.groupby("DEPARTAMENTO").agg(
-        avisos=("DEPARTAMENTO", "count"),
-        ha_indemnizadas=("SUP_INDEMNIZADA", "sum") if "SUP_INDEMNIZADA" in midagri.columns else ("DEPARTAMENTO", "count"),
-        monto_indemnizado=("INDEMNIZACION", "sum") if "INDEMNIZACION" in midagri.columns else ("DEPARTAMENTO", "count"),
-        monto_desembolsado=("MONTO_DESEMBOLSADO", "sum") if "MONTO_DESEMBOLSADO" in midagri.columns else ("DEPARTAMENTO", "count"),
-        productores=("N_PRODUCTORES", "sum") if "N_PRODUCTORES" in midagri.columns else ("DEPARTAMENTO", "count"),
-    ).reset_index()
+    agg_dict = {"avisos": ("DEPARTAMENTO", "count")}
+    if "SUP_INDEMNIZADA" in midagri.columns:
+        agg_dict["ha_indemnizadas"] = ("SUP_INDEMNIZADA", "sum")
+    if "INDEMNIZACION" in midagri.columns:
+        agg_dict["monto_indemnizado"] = ("INDEMNIZACION", "sum")
+    if "MONTO_DESEMBOLSADO" in midagri.columns:
+        agg_dict["monto_desembolsado"] = ("MONTO_DESEMBOLSADO", "sum")
+    if "N_PRODUCTORES" in midagri.columns:
+        agg_dict["productores"] = ("N_PRODUCTORES", "sum")
+
+    agg = midagri.groupby("DEPARTAMENTO").agg(**agg_dict).reset_index()
+
+    # Asegurar que todas las columnas existen
+    for c in ["ha_indemnizadas", "monto_indemnizado", "monto_desembolsado", "productores"]:
+        if c not in agg.columns:
+            agg[c] = 0
 
     # Avisos cerrados para % evaluación
     if "ESTADO_INSPECCION" in midagri.columns:
@@ -141,7 +143,7 @@ def _build_dept_metrics(datos):
         0
     )
 
-    # Siniestralidad (necesita prima neta del materia asegurada)
+    # Siniestralidad
     if "PRIMA_NETA" in materia.columns and "DEPARTAMENTO" in materia.columns:
         primas = materia[["DEPARTAMENTO", "PRIMA_NETA"]].copy()
         primas = primas.dropna(subset=["DEPARTAMENTO"])
@@ -176,10 +178,8 @@ def _build_dept_metrics(datos):
 
 def generate_map(datos, metrica_key="Avance de Desembolso (%)"):
     """
-    Genera un mapa interactivo de burbujas del Perú con la métrica seleccionada.
-
-    Returns:
-        plotly.graph_objects.Figure
+    Genera un mapa interactivo de burbujas del Perú usando scatter_mapbox
+    con tiles OpenStreetMap (no requiere token Mapbox).
     """
     df = _build_dept_metrics(datos)
     if len(df) == 0:
@@ -193,24 +193,32 @@ def generate_map(datos, metrica_key="Avance de Desembolso (%)"):
     min_val = df[col].min()
     range_val = max_val - min_val if max_val != min_val else 1
 
-    # Tamaño: mínimo 12, máximo 45
-    df["_size"] = 12 + (df[col] - min_val) / range_val * 33
+    # Tamaño: mínimo 15, máximo 50
+    df["_size"] = 15 + (df[col] - min_val) / range_val * 35
 
     # Hover text enriquecido
-    df["_hover"] = df.apply(lambda r: (
-        f"<b>{r['nombre']}</b><br>"
-        f"<b>{metrica_key}:</b> {r[col]:{meta['format']}}{meta['suffix']}<br>"
-        f"Avisos: {int(r['avisos']):,}<br>"
-        f"Indemnización: S/ {r['monto_indemnizado']:,.0f}<br>"
-        f"Desembolso: S/ {r['monto_desembolsado']:,.0f}<br>"
-        f"Ha indemnizadas: {r['ha_indemnizadas']:,.0f}<br>"
-        f"Productores: {int(r['productores']):,}<br>"
-        f"Empresa: {r['EMPRESA_ASEGURADORA']}"
-    ), axis=1)
+    def _hover(r):
+        try:
+            val_str = f"{r[col]:{meta['format']}}{meta['suffix']}"
+        except (ValueError, TypeError):
+            val_str = str(r[col])
+        return (
+            f"<b>{r['nombre']}</b><br>"
+            f"<b>{metrica_key}:</b> {val_str}<br>"
+            f"Avisos: {int(r['avisos']):,}<br>"
+            f"Indemnización: S/ {r['monto_indemnizado']:,.0f}<br>"
+            f"Desembolso: S/ {r['monto_desembolsado']:,.0f}<br>"
+            f"Ha indemnizadas: {r['ha_indemnizadas']:,.0f}<br>"
+            f"Productores: {int(r['productores']):,}<br>"
+            f"Empresa: {r['EMPRESA_ASEGURADORA']}"
+        )
+
+    df["_hover"] = df.apply(_hover, axis=1)
 
     fig = go.Figure()
 
-    fig.add_trace(go.Scattergeo(
+    # Burbujas del mapa
+    fig.add_trace(go.Scattermapbox(
         lat=df["lat"],
         lon=df["lon"],
         text=df["_hover"],
@@ -219,7 +227,6 @@ def generate_map(datos, metrica_key="Avance de Desembolso (%)"):
             size=df["_size"],
             color=df[col],
             colorscale=meta["color_scale"],
-            reversescale=meta["reverse"],
             colorbar=dict(
                 title=dict(
                     text=metrica_key,
@@ -228,62 +235,38 @@ def generate_map(datos, metrica_key="Avance de Desembolso (%)"):
                 thickness=14,
                 len=0.6,
                 tickfont=dict(size=10, color="#64748b"),
-                bgcolor="rgba(255,255,255,0.85)",
+                bgcolor="rgba(255,255,255,0.90)",
                 borderwidth=0,
                 x=1.02,
             ),
-            line=dict(width=1.2, color="rgba(255,255,255,0.8)"),
-            opacity=0.88,
+            opacity=0.82,
             sizemode="diameter",
         ),
         mode="markers+text",
-        textfont=dict(size=7.5, color="#1e293b", family="Arial"),
+        textfont=dict(size=8, color="#1e293b", family="Arial"),
         textposition="top center",
     ))
 
-    # Etiquetas de departamento (texto pequeño)
-    fig.add_trace(go.Scattergeo(
-        lat=df["lat"] + 0.15,
+    # Etiquetas de departamento
+    fig.add_trace(go.Scattermapbox(
+        lat=df["lat"] + 0.25,
         lon=df["lon"],
         text=df["nombre"],
         mode="text",
-        textfont=dict(size=7, color="#475569", family="Arial"),
+        textfont=dict(size=8, color="#334155", family="Arial"),
         hoverinfo="skip",
         showlegend=False,
     ))
 
-    fig.update_geos(
-        visible=True,
-        resolution=50,
-        scope="south america",
-        center=dict(lat=-9.5, lon=-75.5),
-        projection_scale=4.8,
-        showland=True,
-        landcolor="#f1f5f9",
-        showocean=True,
-        oceancolor="#e0f2fe",
-        showcountries=True,
-        countrycolor="#cbd5e1",
-        countrywidth=0.8,
-        showcoastlines=True,
-        coastlinecolor="#94a3b8",
-        coastlinewidth=0.6,
-        showlakes=True,
-        lakecolor="#bae6fd",
-        showrivers=True,
-        rivercolor="#bae6fd",
-        riverwidth=0.5,
-        showframe=False,
-        bgcolor="rgba(0,0,0,0)",
-        lonaxis=dict(range=[-82, -68]),
-        lataxis=dict(range=[-18.5, -0.5]),
-    )
-
     fig.update_layout(
-        margin=dict(l=0, r=0, t=30, b=0),
-        height=600,
+        mapbox=dict(
+            style="open-street-map",
+            center=dict(lat=-9.5, lon=-75.5),
+            zoom=4.3,
+        ),
+        margin=dict(l=0, r=0, t=35, b=0),
+        height=620,
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Segoe UI, Arial, sans-serif"),
         showlegend=False,
         title=dict(
@@ -300,6 +283,7 @@ def generate_map(datos, metrica_key="Avance de Desembolso (%)"):
 def get_ranking_table(datos, metrica_key="Avance de Desembolso (%)"):
     """
     Genera DataFrame con ranking de departamentos para la métrica seleccionada.
+    Evita columnas duplicadas seleccionando dinámicamente.
     """
     df = _build_dept_metrics(datos)
     if len(df) == 0:
@@ -311,16 +295,28 @@ def get_ranking_table(datos, metrica_key="Avance de Desembolso (%)"):
     ranking = df.sort_values(col, ascending=False).reset_index(drop=True)
     ranking.index = ranking.index + 1  # 1-based ranking
 
-    # Seleccionar columnas relevantes
-    result = ranking[["nombre", "avisos", col, "monto_indemnizado", "monto_desembolsado", "ha_indemnizadas"]].copy()
-    result = result.rename(columns={
-        "nombre": "Departamento",
+    # Construir columnas dinámicamente para evitar duplicados
+    # Siempre: Departamento + métrica seleccionada + columnas complementarias
+    columns_map = {}  # {nombre_original: nombre_display}
+    columns_map["nombre"] = "Departamento"
+    columns_map[col] = metrica_key
+
+    # Agregar columnas complementarias solo si NO son la métrica actual
+    extras = {
         "avisos": "Avisos",
-        col: metrica_key,
         "monto_indemnizado": "Indemnización (S/)",
         "monto_desembolsado": "Desembolso (S/)",
         "ha_indemnizadas": "Ha Indemn.",
-    })
+        "pct_desembolso": "% Desemb.",
+    }
+    for orig, display in extras.items():
+        if orig != col and orig in ranking.columns:
+            columns_map[orig] = display
+
+    # Seleccionar y renombrar
+    cols_to_select = list(columns_map.keys())
+    result = ranking[cols_to_select].copy()
+    result.columns = [columns_map[c] for c in cols_to_select]
 
     return result
 
@@ -333,15 +329,19 @@ def get_summary_cards(datos):
     if len(df) == 0:
         return {}
 
+    df_con_avisos = df[df["avisos"] > 0]
+    if len(df_con_avisos) == 0:
+        return {}
+
     return {
         "top_avisos": df.sort_values("avisos", ascending=False).iloc[0]["nombre"],
         "top_avisos_n": int(df["avisos"].max()),
         "top_indemn": df.sort_values("monto_indemnizado", ascending=False).iloc[0]["nombre"],
         "top_indemn_val": df["monto_indemnizado"].max(),
-        "top_desemb_pct": df.sort_values("pct_desembolso", ascending=False).iloc[0]["nombre"],
-        "top_desemb_pct_val": df["pct_desembolso"].max(),
-        "min_desemb_pct": df[df["avisos"] > 0].sort_values("pct_desembolso").iloc[0]["nombre"],
-        "min_desemb_pct_val": df[df["avisos"] > 0]["pct_desembolso"].min(),
+        "top_desemb_pct": df_con_avisos.sort_values("pct_desembolso", ascending=False).iloc[0]["nombre"],
+        "top_desemb_pct_val": df_con_avisos["pct_desembolso"].max(),
+        "min_desemb_pct": df_con_avisos.sort_values("pct_desembolso").iloc[0]["nombre"],
+        "min_desemb_pct_val": df_con_avisos["pct_desembolso"].min(),
         "total_deptos": len(df),
-        "deptos_con_avisos": len(df[df["avisos"] > 0]),
+        "deptos_con_avisos": len(df_con_avisos),
     }
