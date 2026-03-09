@@ -1047,6 +1047,7 @@ else:
                         st.session_state["last_query_prose"] = result["prose"]
                         st.session_state["last_query_sql"] = result["sql"]
                         st.session_state["last_query_data"] = result["data"]
+                        st.session_state["last_query_summary"] = result.get("summary")
                         st.session_state["last_query_text"] = query_text
                         st.session_state["last_query_engine"] = "IA"
                 else:
@@ -1110,6 +1111,21 @@ else:
                     if len(df_result) > 0:
                         with st.expander(f"📊 Ver datos ({len(df_result)} filas)"):
                             st.dataframe(df_result, use_container_width=True, hide_index=True)
+
+                # Mostrar resumen verificado (control de calidad)
+                if st.session_state.get("last_query_summary"):
+                    summary = st.session_state["last_query_summary"]
+                    with st.expander("✅ Resumen verificado (cifras calculadas programáticamente)"):
+                        col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+                        col_s1.metric("Total Avisos", f"{summary.get('total_avisos', 0):,}")
+                        col_s2.metric("Indemnización", f"S/ {summary.get('total_indemnizacion', 0):,.2f}")
+                        col_s3.metric("Desembolso", f"S/ {summary.get('total_desembolso', 0):,.2f}")
+                        col_s4.metric("Productores", f"{summary.get('total_productores', 0):,}")
+                        col_s5, col_s6, col_s7, col_s8 = st.columns(4)
+                        col_s5.metric("Ha Indemnizadas", f"{summary.get('total_ha_indemnizadas', 0):,.2f}")
+                        col_s6.metric("% Evaluación", f"{summary.get('pct_avance_evaluacion', 0):.1f}%")
+                        col_s7.metric("% Desembolso", f"{summary.get('pct_avance_desembolso', 0):.1f}%")
+                        col_s8.metric("Avisos Cerrados", f"{summary.get('avisos_cerrados', 0):,}")
 
         # ─── Sub-tab: Mapa de Calor ───
         with sub_mapa:

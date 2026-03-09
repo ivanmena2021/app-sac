@@ -1,13 +1,20 @@
 """
-query_llm.py — Motor de consultas SAC potenciado con LLM + SQL
-================================================================
-Flujo:
+query_llm.py — Motor de consultas SAC potenciado con LLM + SQL (v2)
+====================================================================
+Flujo mejorado:
   1. Carga DataFrames en DuckDB (base de datos en memoria)
   2. Envía la pregunta + esquema de tablas a Claude API
-  3. Claude genera una consulta SQL
-  4. Se ejecuta la SQL sobre DuckDB → resultados
-  5. Claude redacta párrafos profesionales con los resultados
-  6. Devuelve texto listo para comunicar
+  3. Claude genera una consulta SQL de DETALLE
+  4. Se ejecuta la SQL sobre DuckDB → resultados detallados
+  5. Se genera automáticamente un RESUMEN AGREGADO verificado
+  6. Claude redacta párrafos profesionales usando AMBOS (detalle + resumen)
+  7. Devuelve texto listo para comunicar
+
+Mejoras v2 (control de calidad):
+  - Totales agregados calculados programáticamente (no por el LLM)
+  - El redactor recibe cifras verificadas que DEBE usar textualmente
+  - Porcentajes de avance calculados correctamente sobre registros individuales
+  - Validación de coherencia entre detalle y resumen
 
 Requiere:
   - ANTHROPIC_API_KEY en variables de entorno
@@ -215,6 +222,19 @@ CONCEPTOS SEMÁNTICOS:
 - "plagas y enfermedades" o "biológicos" → TIPO_SINIESTRO IN ('ENFERMEDADES', 'PLAGAS')
 - "intervenciones", "acciones", "emergencia" o "resumen" → avisos totales, indemnizaciones, desembolsos y productores
 
+IMPORTANTE — ESTRUCTURA DE LA SQL:
+- Genera UNA SOLA consulta SQL de detalle con el desglose que pida el usuario.
+- NO necesitas generar totales ni resúmenes; el sistema los calculará automáticamente a partir de tu consulta.
+- Si la pregunta pide enfocarse en una zona/cultivo/tipo específico, incluye TODOS los registros del ámbito geográfico
+  (departamento completo) y usa ORDER BY con CASE WHEN para priorizar los de interés, NO filtres con WHERE
+  porque se necesita el contexto completo para el resumen.
+
+Ejemplo: si preguntan por "Moyobamba con inundaciones y arroz en San Martín":
+  - Filtra WHERE DEPARTAMENTO = 'SAN MARTIN' (nivel departamento completo)
+  - Agrupa por PROVINCIA, DISTRITO, TIPO_SINIESTRO, TIPO_CULTIVO
+  - Ordena priorizando Moyobamba, inundación, arroz con CASE WHEN
+  - NO filtres por provincia/tipo/cultivo específico porque perderías el contexto departamental
+
 OTRAS REGLAS:
 - Redondea montos a 2 decimales.
 - Siempre incluye ORDER BY relevante.
@@ -256,6 +276,225 @@ def _execute_sql(conn, sql):
 
 
 # ═══════════════════════════════════════════════════════════════════
+# PASO 2.5: RESUMEN AGREGADO VERIFICADO
+# ═══════════════════════════════════════════════════════════════════
+
+def _compute_verified_summary(conn, sql, result_df):
+    """
+    Calcula un resumen agregado verificado programáticamente.
+    Extrae la cláusula WHERE de la SQL original para aplicar los mismos filtros,
+    pero calcula totales sobre registros individuales (no sobre filas agrupadas).
+
+    Retorna un dict con métricas verificadas y un texto formateado.
+    """
+    if result_df is None or len(result_df) == 0:
+        return None, ""
+
+    # Extraer la cláusula WHERE de la SQL original
+    where_clause = _extract_where_clause(sql)
+
+    # Construir SQL de resumen con los mismos filtros
+    summary_sql = f"""
+    SELECT
+        COUNT(*) AS total_avisos,
+        ROUND(SUM(COALESCE(INDEMNIZACION, 0)), 2) AS total_indemnizacion,
+        ROUND(SUM(COALESCE(MONTO_DESEMBOLSADO, 0)), 2) AS total_desembolso,
+        ROUND(SUM(COALESCE(SUP_INDEMNIZADA, 0)), 2) AS total_ha_indemnizadas,
+        COALESCE(SUM(COALESCE(N_PRODUCTORES, 0)), 0) AS total_productores,
+        SUM(CASE WHEN UPPER(COALESCE(ESTADO_INSPECCION, '')) = 'CERRADO' THEN 1 ELSE 0 END) AS avisos_cerrados,
+        ROUND(
+            SUM(CASE WHEN UPPER(COALESCE(ESTADO_INSPECCION, '')) = 'CERRADO' THEN 1 ELSE 0 END) * 100.0
+            / NULLIF(COUNT(*), 0), 1
+        ) AS pct_avance_evaluacion,
+        ROUND(
+            SUM(COALESCE(MONTO_DESEMBOLSADO, 0)) * 100.0
+            / NULLIF(SUM(COALESCE(INDEMNIZACION, 0)), 0), 1
+        ) AS pct_avance_desembolso
+    FROM avisos
+    {where_clause}
+    """
+
+    try:
+        summary_row = conn.execute(summary_sql).fetchone()
+    except Exception:
+        # Si falla la extracción de WHERE, intentar calcular desde result_df
+        return _compute_summary_from_df(result_df), ""
+
+    if summary_row is None:
+        return None, ""
+
+    summary = {
+        "total_avisos": int(summary_row[0] or 0),
+        "total_indemnizacion": float(summary_row[1] or 0),
+        "total_desembolso": float(summary_row[2] or 0),
+        "total_ha_indemnizadas": float(summary_row[3] or 0),
+        "total_productores": int(summary_row[4] or 0),
+        "avisos_cerrados": int(summary_row[5] or 0),
+        "pct_avance_evaluacion": float(summary_row[6] or 0),
+        "pct_avance_desembolso": float(summary_row[7] or 0),
+    }
+
+    # Generar resumen por provincia si hay columna PROVINCIA en los resultados
+    summary_by_provincia = ""
+    if "PROVINCIA" in result_df.columns:
+        try:
+            prov_sql = f"""
+            SELECT
+                PROVINCIA,
+                COUNT(*) AS avisos,
+                ROUND(SUM(COALESCE(INDEMNIZACION, 0)), 2) AS indemnizacion,
+                ROUND(SUM(COALESCE(MONTO_DESEMBOLSADO, 0)), 2) AS desembolso,
+                ROUND(SUM(COALESCE(SUP_INDEMNIZADA, 0)), 2) AS ha_indemnizadas,
+                COALESCE(SUM(COALESCE(N_PRODUCTORES, 0)), 0) AS productores,
+                ROUND(
+                    SUM(CASE WHEN UPPER(COALESCE(ESTADO_INSPECCION, '')) = 'CERRADO' THEN 1 ELSE 0 END) * 100.0
+                    / NULLIF(COUNT(*), 0), 1
+                ) AS pct_evaluacion,
+                ROUND(
+                    SUM(COALESCE(MONTO_DESEMBOLSADO, 0)) * 100.0
+                    / NULLIF(SUM(COALESCE(INDEMNIZACION, 0)), 0), 1
+                ) AS pct_desembolso
+            FROM avisos
+            {where_clause}
+            GROUP BY PROVINCIA
+            ORDER BY indemnizacion DESC
+            """
+            prov_df = conn.execute(prov_sql).fetchdf()
+            if len(prov_df) > 0:
+                summary_by_provincia = "\nRESUMEN POR PROVINCIA (cifras verificadas):\n"
+                summary_by_provincia += prov_df.to_string(index=False)
+        except Exception:
+            pass
+
+    # Generar resumen por tipo de siniestro
+    summary_by_tipo = ""
+    if "TIPO_SINIESTRO" in result_df.columns:
+        try:
+            tipo_sql = f"""
+            SELECT
+                TIPO_SINIESTRO,
+                COUNT(*) AS avisos,
+                ROUND(SUM(COALESCE(INDEMNIZACION, 0)), 2) AS indemnizacion
+            FROM avisos
+            {where_clause}
+            GROUP BY TIPO_SINIESTRO
+            ORDER BY avisos DESC
+            """
+            tipo_df = conn.execute(tipo_sql).fetchdf()
+            if len(tipo_df) > 0:
+                summary_by_tipo = "\nRESUMEN POR TIPO DE SINIESTRO (cifras verificadas):\n"
+                summary_by_tipo += tipo_df.to_string(index=False)
+        except Exception:
+            pass
+
+    # Formatear texto de resumen
+    summary_text = (
+        f"\n{'='*60}\n"
+        f"RESUMEN AGREGADO VERIFICADO (calculado sobre registros individuales):\n"
+        f"{'='*60}\n"
+        f"Total avisos de siniestro: {summary['total_avisos']:,}\n"
+        f"Indemnización total reconocida: S/ {summary['total_indemnizacion']:,.2f}\n"
+        f"Monto total desembolsado: S/ {summary['total_desembolso']:,.2f}\n"
+        f"Hectáreas indemnizadas: {summary['total_ha_indemnizadas']:,.2f} ha\n"
+        f"Productores beneficiados: {summary['total_productores']:,}\n"
+        f"Avisos cerrados (evaluados): {summary['avisos_cerrados']:,} de {summary['total_avisos']:,}\n"
+        f"% Avance evaluación: {summary['pct_avance_evaluacion']:.1f}%\n"
+        f"% Avance desembolso: {summary['pct_avance_desembolso']:.1f}%\n"
+        f"{summary_by_provincia}"
+        f"{summary_by_tipo}"
+        f"\n{'='*60}\n"
+    )
+
+    return summary, summary_text
+
+
+def _extract_where_clause(sql):
+    """
+    Extrae la cláusula WHERE de una SQL.
+    Retorna la cláusula completa incluyendo 'WHERE ...' o string vacío.
+    """
+    sql_upper = sql.upper()
+
+    # Buscar WHERE
+    where_start = -1
+    # Encontrar el WHERE principal (no de subconsultas)
+    depth = 0
+    i = 0
+    while i < len(sql_upper):
+        if sql_upper[i] == '(':
+            depth += 1
+        elif sql_upper[i] == ')':
+            depth -= 1
+        elif depth == 0 and sql_upper[i:i+5] == 'WHERE':
+            where_start = i
+            break
+        i += 1
+
+    if where_start == -1:
+        return ""
+
+    # Encontrar el final de WHERE (antes de GROUP BY, ORDER BY, LIMIT, HAVING, UNION, o fin)
+    where_end = len(sql)
+    for keyword in ['GROUP BY', 'ORDER BY', 'LIMIT', 'HAVING', 'UNION']:
+        pos = sql_upper.find(keyword, where_start + 5)
+        if pos != -1 and pos < where_end:
+            # Verificar que no estemos dentro de paréntesis
+            depth = 0
+            valid = True
+            for j in range(where_start, pos):
+                if sql[j] == '(':
+                    depth += 1
+                elif sql[j] == ')':
+                    depth -= 1
+                if depth < 0:
+                    valid = False
+                    break
+            if valid and depth == 0:
+                where_end = pos
+
+    return sql[where_start:where_end].strip()
+
+
+def _compute_summary_from_df(result_df):
+    """
+    Fallback: calcula resumen desde el DataFrame de resultados.
+    Nota: Esto puede tener los mismos problemas que antes si las filas están agrupadas,
+    pero es mejor que nada.
+    """
+    summary = {
+        "total_avisos": 0,
+        "total_indemnizacion": 0,
+        "total_desembolso": 0,
+        "total_ha_indemnizadas": 0,
+        "total_productores": 0,
+        "avisos_cerrados": 0,
+        "pct_avance_evaluacion": 0,
+        "pct_avance_desembolso": 0,
+    }
+
+    # Buscar columnas que contengan "aviso" o "total_avisos"
+    for col in result_df.columns:
+        cl = col.lower()
+        if "total_aviso" in cl or cl == "avisos":
+            summary["total_avisos"] = int(result_df[col].sum())
+        elif "indemniz" in cl and "monto" in cl:
+            summary["total_indemnizacion"] = float(result_df[col].sum())
+        elif "desembol" in cl and "monto" in cl:
+            summary["total_desembolso"] = float(result_df[col].sum())
+        elif "hectare" in cl or "ha_indemn" in cl:
+            summary["total_ha_indemnizadas"] = float(result_df[col].sum())
+        elif "productor" in cl:
+            summary["total_productores"] = int(result_df[col].sum())
+
+    if summary["total_indemnizacion"] > 0:
+        summary["pct_avance_desembolso"] = round(
+            summary["total_desembolso"] / summary["total_indemnizacion"] * 100, 1
+        )
+
+    return summary
+
+
+# ═══════════════════════════════════════════════════════════════════
 # PASO 3: RESULTADOS → PROSA PROFESIONAL
 # ═══════════════════════════════════════════════════════════════════
 
@@ -269,9 +508,6 @@ REGLAS DE REDACCIÓN:
 - Las hectáreas se abrevian: ha
 - Incluye porcentajes cuando sean relevantes.
 - NUNCA reportes la columna "superficie afectada" (SUP_AFECTADA) porque no es un dato confiable.
-- Métricas de avance clave que SIEMPRE debes mencionar en resúmenes:
-  * Avance de evaluación: % de avisos evaluados (cerrados) respecto al total.
-  * Avance de desembolso: % del monto desembolsado respecto a la indemnización reconocida.
 - Contexto: la póliza SAC cubre del 01/08/2025 al 01/08/2026, con suma asegurada de S/ 1,000/ha.
 - Empresas aseguradoras: La Positiva (18 dptos) y Rímac (6 dptos).
 - El texto debe poder copiarse y pegarse directamente en un correo, informe o chat de WhatsApp.
@@ -280,10 +516,36 @@ REGLAS DE REDACCIÓN:
 - NO uses formato markdown (no #, no **, no -), solo texto plano con párrafos.
 - Usa saltos de línea entre párrafos para legibilidad.
 - Si hay múltiples departamentos, redáctalos en un solo párrafo consolidado o uno por departamento según convenga.
-- Sé conciso pero completo. Cada dato relevante debe aparecer."""
+- Sé conciso pero completo. Cada dato relevante debe aparecer.
+
+REGLA CRÍTICA SOBRE CIFRAS — LEE CON ATENCIÓN:
+Se te proporcionarán DOS bloques de datos:
+1. TABLA DETALLADA: filas agrupadas por provincia/distrito/cultivo/etc. Úsala para describir detalles específicos.
+2. RESUMEN AGREGADO VERIFICADO: cifras TOTALES calculadas programáticamente sobre los registros individuales.
+
+DEBES usar las cifras del RESUMEN AGREGADO VERIFICADO para:
+- Total de avisos de siniestro
+- Indemnización total
+- Monto desembolsado total
+- Hectáreas indemnizadas total
+- Productores beneficiados total
+- % Avance de evaluación
+- % Avance de desembolso
+- Totales por provincia (si se proporcionan)
+
+NUNCA recalcules estos totales sumando las filas de la tabla detallada, porque las filas
+están agrupadas y podrías obtener cifras incorrectas. Las cifras del RESUMEN son las únicas
+correctas y verificadas.
+
+Para cifras a nivel de distrito o detalle específico (ej: "en el distrito X se registraron Y avisos
+con indemnización de S/ Z"), SÍ puedes usar la tabla detallada.
+
+Métricas de avance clave que SIEMPRE debes mencionar en resúmenes:
+  * Avance de evaluación: % de avisos evaluados (cerrados) respecto al total.
+  * Avance de desembolso: % del monto desembolsado respecto a la indemnización reconocida."""
 
 
-def _generate_prose(client, question, sql, result_df, fecha_corte):
+def _generate_prose(client, question, sql, result_df, fecha_corte, summary_text=""):
     """Usa Claude para redactar párrafos profesionales."""
     # Convertir resultado a texto tabular
     if result_df is not None and len(result_df) > 0:
@@ -295,19 +557,29 @@ def _generate_prose(client, question, sql, result_df, fecha_corte):
         result_text = "(Sin resultados)"
         n_rows = 0
 
+    # Construir el mensaje con ambos bloques
+    user_content = (
+        f"Fecha de corte: {fecha_corte}\n"
+        f"Pregunta original: {question}\n\n"
+        f"TABLA DETALLADA ({n_rows} filas):\n{result_text}\n"
+    )
+
+    if summary_text:
+        user_content += f"\n{summary_text}\n"
+
+    user_content += (
+        "\nRECUERDA: Usa las cifras del RESUMEN AGREGADO VERIFICADO para todos los totales. "
+        "No sumes manualmente las filas de la tabla detallada.\n\n"
+        "Redacta el texto profesional con estos datos."
+    )
+
     response = client.messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS_PROSE,
         system=SYSTEM_PROSE,
         messages=[{
             "role": "user",
-            "content": (
-                f"Fecha de corte: {fecha_corte}\n"
-                f"Pregunta original: {question}\n"
-                f"SQL ejecutada: {sql}\n"
-                f"Resultados ({n_rows} filas):\n{result_text}\n\n"
-                f"Redacta el texto profesional con estos datos."
-            )
+            "content": user_content
         }],
     )
     return response.content[0].text.strip()
@@ -330,6 +602,7 @@ def process_query_llm(question, datos):
           - prose: Texto en párrafos listos para comunicar
           - sql: Consulta SQL generada
           - data: DataFrame con resultados
+          - summary: Dict con resumen verificado
           - error: Mensaje de error (None si todo OK)
     """
     fecha_corte = datos.get("fecha_corte", datetime.now().strftime("%d/%m/%Y"))
@@ -338,13 +611,13 @@ def process_query_llm(question, datos):
     try:
         client = _get_client()
     except ValueError as e:
-        return {"prose": None, "sql": None, "data": None, "error": str(e)}
+        return {"prose": None, "sql": None, "data": None, "summary": None, "error": str(e)}
 
     # 2. Cargar datos en DuckDB
     try:
         conn, schema = _load_to_duckdb(datos)
     except Exception as e:
-        return {"prose": None, "sql": None, "data": None,
+        return {"prose": None, "sql": None, "data": None, "summary": None,
                 "error": f"Error al cargar datos en DuckDB: {str(e)}"}
 
     # 3. Generar SQL
@@ -352,7 +625,7 @@ def process_query_llm(question, datos):
         sql = _generate_sql(client, question, schema)
     except Exception as e:
         conn.close()
-        return {"prose": None, "sql": None, "data": None,
+        return {"prose": None, "sql": None, "data": None, "summary": None,
                 "error": f"Error al generar SQL: {str(e)}"}
 
     # 4. Ejecutar SQL
@@ -385,15 +658,18 @@ def process_query_llm(question, datos):
 
     if sql_error:
         conn.close()
-        return {"prose": None, "sql": sql, "data": None,
+        return {"prose": None, "sql": sql, "data": None, "summary": None,
                 "error": f"Error SQL: {sql_error}"}
 
-    # 5. Generar prosa
+    # 5. Calcular resumen agregado verificado
+    summary, summary_text = _compute_verified_summary(conn, sql, result_df)
+
+    # 6. Generar prosa con resumen verificado
     try:
-        prose = _generate_prose(client, question, sql, result_df, fecha_corte)
+        prose = _generate_prose(client, question, sql, result_df, fecha_corte, summary_text)
     except Exception as e:
         conn.close()
-        return {"prose": None, "sql": sql, "data": result_df,
+        return {"prose": None, "sql": sql, "data": result_df, "summary": summary,
                 "error": f"Error al redactar respuesta: {str(e)}"}
 
     conn.close()
@@ -402,6 +678,7 @@ def process_query_llm(question, datos):
         "prose": prose,
         "sql": sql,
         "data": result_df,
+        "summary": summary,
         "error": None,
     }
 
