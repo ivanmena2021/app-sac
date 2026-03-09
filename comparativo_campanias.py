@@ -166,6 +166,8 @@ def _build_monthly_series(df, meta, campania_label):
     if col_fecha not in df_work.columns:
         return pd.DataFrame(columns=["pos", "mes_label", "valor"])
 
+    # Asegurar que la columna de fecha sea datetime
+    df_work[col_fecha] = pd.to_datetime(df_work[col_fecha], errors="coerce")
     df_work = df_work[df_work[col_fecha].notna()].copy()
     if len(df_work) == 0:
         return pd.DataFrame(columns=["pos", "mes_label", "valor"])
