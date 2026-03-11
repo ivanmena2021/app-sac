@@ -905,8 +905,32 @@ else:
         unsafe_allow_html=True,
     )
 
-    # ─── Botón para nueva actualización ───
-    col_refresh = st.columns([3, 1])[1]
+    # ─── Botones: descargar consolidado + nueva actualización ───
+    col_spacer, col_download, col_refresh = st.columns([2, 1, 1])
+    with col_download:
+        # Generar Excel consolidado (La Positiva + Rímac) para descarga
+        @st.cache_data(show_spinner=False)
+        def _build_consolidated_excel(midagri_df):
+            """Genera un archivo Excel en memoria con la base consolidada."""
+            import io
+            buf = io.BytesIO()
+            midagri_df.to_excel(buf, index=False, sheet_name="Consolidado SAC")
+            buf.seek(0)
+            return buf.getvalue()
+
+        try:
+            excel_bytes = _build_consolidated_excel(datos["midagri"])
+            st.download_button(
+                label="📥 Descargar consolidado",
+                data=excel_bytes,
+                file_name=f"Consolidado_SAC_2025-2026_{datos['fecha_corte'].replace('/', '-')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_consolidado",
+                use_container_width=True,
+            )
+        except Exception:
+            pass
+
     with col_refresh:
         if st.button("🔄 Nueva actualización", key="refresh_data"):
             st.session_state["processed"] = False
