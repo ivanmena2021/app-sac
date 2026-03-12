@@ -159,6 +159,118 @@ def _dictamen_breakdown(df):
     return {}
 
 
+LLUVIA_TYPES = {"INUNDACION", "INUNDACIÓN", "HUAYCO", "HUAICO",
+                "LLUVIAS EXCESIVAS", "DESLIZAMIENTO", "DESLIZAMIENTOS"}
+
+
+def _generar_insights(df, metricas, tipos, provincias_o_distritos=None,
+                      col_geo="PROVINCIA", provs_seleccionadas=None):
+    """Genera insights automáticos basados en los datos."""
+    insights = []
+    m = metricas
+    n = m["avisos"]
+    if n == 0:
+        return insights
+
+    # 1. Tipo siniestro predominante
+    if tipos and len(tipos) > 0:
+        top = tipos[0]
+        pct = (top["avisos"] / n * 100) if n > 0 else 0
+        indem_txt = f" y {_fmt_money_py(top.get('indem', 0))} en indemnización" if top.get("indem") else ""
+        insights.append({
+            "title": f"{top['tipo']} es el siniestro predominante",
+            "text": f"con {top['avisos']:,} avisos ({pct:.1f}% del total){indem_txt}.",
+            "type": "predominance"
+        })
+
+    # 2. Eventos de lluvia
+    if tipos:
+        lluvia = [t for t in tipos if t["tipo"].upper() in LLUVIA_TYPES]
+        if lluvia:
+            lluvia_avisos = sum(t["avisos"] for t in lluvia)
+            lluvia_indem = sum(t.get("indem", 0) for t in lluvia)
+            lluvia_nombres = ", ".join(t["tipo"].lower() for t in lluvia[:3])
+            insights.append({
+                "title": "Eventos asociados a lluvias",
+                "text": f"({lluvia_nombres}) suman {lluvia_avisos:,} avisos y {_fmt_money_py(lluvia_indem)}.",
+                "type": "lluvia"
+            })
+
+    # 3. Rezago en evaluación (low evaluation rate)
+    if provincias_o_distritos:
+        rezago = [p for p in provincias_o_distritos
+                  if p["avisos"] >= 5 and p.get("indem", 0) == 0]
+        if not rezago:
+            # Check for very low eval rates
+            for p in provincias_o_distritos:
+                if p["avisos"] >= 10:
+                    # We can't calculate pct_eval from breakdown, but flag high-count low-indem
+                    pass
+        if rezago:
+            top_rez = rezago[0]
+            insights.append({
+                "title": f"{top_rez['name']} presenta rezago en evaluación",
+                "text": f"con {top_rez['avisos']} avisos sin indemnización registrada.",
+                "type": "rezago"
+            })
+
+    # 4. Desembolso alert
+    if m["pct_desembolso"] > 0:
+        if m["pct_desembolso"] < 30:
+            insights.append({
+                "title": "Bajo nivel de desembolso",
+                "text": f"Solo {m['pct_desembolso']:.1f}% de la indemnización ha sido desembolsada ({_fmt_money_py(m['desembolso'])}).",
+                "type": "alert"
+            })
+        elif m["pct_desembolso"] >= 90:
+            insights.append({
+                "title": "Alto nivel de desembolso",
+                "text": f"{m['pct_desembolso']:.1f}% de la indemnización ya fue desembolsada.",
+                "type": "positive"
+            })
+
+    # 5. Highlight provincias seleccionadas
+    if provs_seleccionadas and provincias_o_distritos:
+        sel = [p for p in provincias_o_distritos if p["name"] in provs_seleccionadas]
+        if sel:
+            combined_avisos = sum(p["avisos"] for p in sel)
+            combined_indem = sum(p.get("indem", 0) for p in sel)
+            combined_ha = sum(p.get("ha", 0) for p in sel)
+            combined_prod = sum(p.get("prod", 0) for p in sel)
+            nombres = " + ".join(p["name"] for p in sel)
+            insights.append({
+                "title": f"{nombres}: foco seleccionado",
+                "text": f"{combined_avisos:,} avisos combinados, {_fmt_money_py(combined_indem)} indemnización, {combined_ha:,.1f} ha, {combined_prod:,} productores.",
+                "type": "highlight"
+            })
+
+    return insights[:4]  # Max 4 insights per section
+
+
+def _empresa_composition(df):
+    """Describe composición de empresa."""
+    if not _safe_col(df, "EMPRESA"):
+        return ""
+    counts = df["EMPRESA"].value_counts()
+    total = counts.sum()
+    if len(counts) == 1:
+        return f"Opera exclusivamente con {counts.index[0]}"
+    parts = []
+    for emp, cnt in counts.items():
+        pct = cnt / total * 100
+        parts.append(f"{emp}: {pct:.0f}%")
+    return " · ".join(parts)
+
+
+def _fmt_money_py(n):
+    """Format money in Python."""
+    if n is None or n == 0:
+        return "S/ 0"
+    if abs(n) >= 1_000_000:
+        return f"S/ {n/1_000_000:,.2f} M"
+    return f"S/ {n:,.0f}"
+
+
 # ══════════════════════════════════════════════════════════════════
 # PREPARAR DATA PARA NODE.JS
 # ══════════════════════════════════════════════════════════════════
@@ -191,14 +303,19 @@ def _prepare_data(df, filtros, fecha_corte):
     # ── Nacional ──
     if scope == "nacional" or not deptos:
         m = _calcular_metricas(df_base)
+        tipos_nac = _tipo_breakdown(df_base)
+        top_deptos_nac = _top_breakdown(df_base, "DEPARTAMENTO", 10)
+        n_deptos = df_base["DEPARTAMENTO"].nunique() if _safe_col(df_base, "DEPARTAMENTO") else 0
         data["sections"].append({
             "type": "nacional",
             "metricas": m,
             "pipeline": _calcular_pipeline(df_base),
             "dictamen": _dictamen_breakdown(df_base),
             "empresas": _empresa_breakdown(df_base),
-            "top_deptos": _top_breakdown(df_base, "DEPARTAMENTO", 10),
-            "tipos": _tipo_breakdown(df_base),
+            "top_deptos": top_deptos_nac,
+            "tipos": tipos_nac,
+            "n_deptos": n_deptos,
+            "insights": _generar_insights(df_base, m, tipos_nac, top_deptos_nac, "DEPARTAMENTO"),
         })
 
     # ── Departamentales ──
@@ -208,14 +325,22 @@ def _prepare_data(df, filtros, fecha_corte):
             if len(df_d) == 0:
                 continue
             m = _calcular_metricas(df_d)
+            tipos_d = _tipo_breakdown(df_d)
+            provs_d = _top_breakdown(df_d, "PROVINCIA", 20)
+            emp_comp = _empresa_composition(df_d)
+            n_provs = df_d["PROVINCIA"].nunique() if _safe_col(df_d, "PROVINCIA") else 0
             data["sections"].append({
                 "type": "departamental",
                 "name": depto,
                 "metricas": m,
                 "pipeline": _calcular_pipeline(df_d),
                 "dictamen": _dictamen_breakdown(df_d),
-                "provincias": _top_breakdown(df_d, "PROVINCIA", 20),
-                "tipos": _tipo_breakdown(df_d),
+                "provincias": provs_d,
+                "tipos": tipos_d,
+                "empresa_comp": emp_comp,
+                "n_provincias": n_provs,
+                "insights": _generar_insights(df_d, m, tipos_d, provs_d, "PROVINCIA", provs),
+                "provs_seleccionadas": provs,
             })
 
     # ── Provinciales ──
@@ -226,6 +351,9 @@ def _prepare_data(df, filtros, fecha_corte):
                 continue
             m = _calcular_metricas(df_p)
             depto_name = str(df_p["DEPARTAMENTO"].iloc[0]) if _safe_col(df_p, "DEPARTAMENTO") and len(df_p) > 0 else ""
+            tipos_p = _tipo_breakdown(df_p)
+            dists_p = _top_breakdown(df_p, "DISTRITO", 20)
+            emp_comp = _empresa_composition(df_p)
             data["sections"].append({
                 "type": "provincial",
                 "name": prov,
@@ -233,8 +361,10 @@ def _prepare_data(df, filtros, fecha_corte):
                 "metricas": m,
                 "pipeline": _calcular_pipeline(df_p),
                 "dictamen": _dictamen_breakdown(df_p),
-                "distritos": _top_breakdown(df_p, "DISTRITO", 20),
-                "tipos": _tipo_breakdown(df_p),
+                "distritos": dists_p,
+                "tipos": tipos_p,
+                "empresa_comp": emp_comp,
+                "insights": _generar_insights(df_p, m, tipos_p, dists_p, "DISTRITO"),
             })
 
     # ── Distritales ──
@@ -468,6 +598,46 @@ const DATA = %%DATA_JSON%%;
   }
 
   // ════════════════════════════════════════════════════════════════
+  //  HELPER: Add insight box with dynamic insights
+  // ════════════════════════════════════════════════════════════════
+  function addInsightBox(slide, insights, x, y, w, h) {
+    if (!insights || insights.length === 0) return;
+    slide.addShape(pres.shapes.RECTANGLE, {
+      x, y, w, h, fill: { color: C.white }, shadow: makeShadow()
+    });
+    slide.addShape(pres.shapes.RECTANGLE, {
+      x, y, w, h: 0.06, fill: { color: C.gold }
+    });
+    slide.addText("Observaciones", {
+      x: x + 0.2, y: y + 0.15, w: w - 0.4, h: 0.35,
+      fontSize: 13, fontFace: "Georgia", color: C.navy, bold: true, margin: 0
+    });
+
+    const textRuns = [];
+    insights.forEach((ins, i) => {
+      if (i > 0) textRuns.push({ text: "\n", options: { breakLine: true, fontSize: 5 } });
+      textRuns.push({ text: ins.title, options: { bold: true, breakLine: true, fontSize: 10, color: C.dark } });
+      textRuns.push({ text: ins.text, options: { breakLine: true, fontSize: 10, color: C.gray } });
+    });
+    slide.addText(textRuns, { x: x + 0.2, y: y + 0.55, w: w - 0.4, h: h - 0.7, valign: "top", margin: 0 });
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  //  HELPER: Add highlight box for selected items
+  // ════════════════════════════════════════════════════════════════
+  function addHighlightBox(slide, text, x, y, w) {
+    slide.addShape(pres.shapes.RECTANGLE, {
+      x, y, w, h: 0.65,
+      fill: { color: C.mint, transparency: 60 },
+      line: { color: C.green, width: 1.5 }
+    });
+    slide.addText(text, {
+      x: x + 0.2, y: y + 0.08, w: w - 0.4, h: 0.45,
+      fontSize: 11, fontFace: "Calibri", color: C.forest, bold: true, margin: 0
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════════
   //  PORTADA
   // ════════════════════════════════════════════════════════════════
   const s1 = pres.addSlide();
@@ -597,6 +767,9 @@ const DATA = %%DATA_JSON%%;
         const tipoHeaders = ["Tipo", "Avisos", "Indemnización"];
         const tipoRows = section.tipos.slice(0, 10).map(t => [t.tipo, fmtNum(t.avisos), fmtMoney(t.indem || 0)]);
         addDataTable(st, tipoHeaders, tipoRows, { x: 5.0, y: 1.2, w: 4.6, colW: [1.8, 1.1, 1.7] });
+
+        // Nacional insights box below table
+        addInsightBox(st, section.insights || [], 5.0, 1.2 + (Math.min(section.tipos.length, 10) + 1) * 0.35 + 0.25, 4.6, 1.8);
       }
     }
 
@@ -615,7 +788,9 @@ const DATA = %%DATA_JSON%%;
         x: 1, y: 3.3, w: 8, h: 0.5, fontSize: 16, fontFace: "Calibri",
         color: C.cream, align: "center", margin: 0
       });
-      sep.addText(`${fmtNum(section.metricas.avisos)} avisos \u00B7 ${fmtMoney(section.metricas.indemnizacion)} indemnización`, {
+      const sepInfo = [`${fmtNum(section.metricas.avisos)} avisos`, `${section.n_provincias || ""} provincias`];
+      if (section.empresa_comp) sepInfo.push(section.empresa_comp);
+      sep.addText(sepInfo.filter(Boolean).join(" \u00B7 "), {
         x: 1, y: 3.9, w: 8, h: 0.4, fontSize: 13, fontFace: "Calibri",
         color: C.sage, align: "center", italic: true, margin: 0
       });
@@ -651,6 +826,19 @@ const DATA = %%DATA_JSON%%;
             p.ha ? String(p.ha) : "—", p.prod ? fmtNum(p.prod) : "—"];
         });
         addDataTable(sp, headers, rows, { colW: [1.4, 0.7, 0.8, 0.7, 1.2, 1.2, 0.7, 0.7] });
+
+        // Highlight box for selected provinces
+        if (section.provs_seleccionadas && section.provs_seleccionadas.length > 0) {
+          const selProvs = section.provincias.filter(p => section.provs_seleccionadas.includes(p.name));
+          if (selProvs.length > 0) {
+            const combined = selProvs.map(p => p.name).join(" y ");
+            const combAvisos = selProvs.reduce((s, p) => s + p.avisos, 0);
+            const combIndem = selProvs.reduce((s, p) => s + (p.indem || 0), 0);
+            const hlText = `Foco: ${combined} — ${fmtNum(combAvisos)} avisos, ${fmtMoney(combIndem)} indemnización`;
+            const hlY = 1.1 + (Math.min(rows.length, 15) + 1) * 0.35 + 0.25;
+            addHighlightBox(sp, hlText, 0.25, Math.min(hlY, 4.8), 9.5);
+          }
+        }
       }
 
       // ── Tipo siniestro chart ──
@@ -676,29 +864,8 @@ const DATA = %%DATA_JSON%%;
           showLegend: false
         });
 
-        // Insight box
-        const topTipo = section.tipos[0];
-        stc.addShape(pres.shapes.RECTANGLE, {
-          x: 6.1, y: 1.3, w: 3.6, h: 2.8,
-          fill: { color: C.white }, shadow: makeShadow()
-        });
-        stc.addShape(pres.shapes.RECTANGLE, {
-          x: 6.1, y: 1.3, w: 3.6, h: 0.06, fill: { color: C.gold }
-        });
-        stc.addText("Observaciones", {
-          x: 6.3, y: 1.5, w: 3.2, h: 0.35,
-          fontSize: 13, fontFace: "Georgia", color: C.navy, bold: true, margin: 0
-        });
-
-        const totalAvisos = section.metricas.avisos;
-        const topPct = totalAvisos > 0 ? ((topTipo.avisos / totalAvisos) * 100).toFixed(1) : 0;
-        stc.addText([
-          { text: `${topTipo.tipo} es el siniestro predominante`, options: { bold: true, breakLine: true, fontSize: 10, color: C.dark } },
-          { text: `con ${fmtNum(topTipo.avisos)} avisos (${topPct}% del total) y ${fmtMoney(topTipo.indem || 0)} en indemnización.`, options: { breakLine: true, fontSize: 10, color: C.gray } },
-          { text: "\n", options: { breakLine: true, fontSize: 6 } },
-          { text: `Total de tipos: ${section.tipos.length}`, options: { bold: true, breakLine: true, fontSize: 10, color: C.dark } },
-          { text: `con ${fmtNum(totalAvisos)} avisos en total para ${section.name}.`, options: { fontSize: 10, color: C.gray } },
-        ], { x: 6.3, y: 1.95, w: 3.2, h: 2.0, valign: "top", margin: 0 });
+        // Insight box from dynamic insights
+        addInsightBox(stc, section.insights || [], 6.1, 1.3, 3.6, 3.5);
       }
     }
 
@@ -717,7 +884,9 @@ const DATA = %%DATA_JSON%%;
         x: 1, y: 3.3, w: 8, h: 0.5, fontSize: 16, fontFace: "Calibri",
         color: C.cream, align: "center", margin: 0
       });
-      sep.addText(`${fmtNum(section.metricas.avisos)} avisos \u00B7 ${fmtMoney(section.metricas.indemnizacion)}`, {
+      const provSepInfo = [`${fmtNum(section.metricas.avisos)} avisos`, fmtMoney(section.metricas.indemnizacion)];
+      if (section.empresa_comp) provSepInfo.push(section.empresa_comp);
+      sep.addText(provSepInfo.join(" \u00B7 "), {
         x: 1, y: 3.9, w: 8, h: 0.4, fontSize: 13, fontFace: "Calibri",
         color: C.mint, align: "center", italic: true, margin: 0
       });
@@ -799,7 +968,10 @@ const DATA = %%DATA_JSON%%;
         { text: `${fmtNum(mp.cerrados)} evaluaciones cerradas (${fmtPct(mp.pct_eval)})`, options: { breakLine: true, fontSize: 11, color: C.gray } },
         { text: `${fmtMoney(mp.indemnizacion)} indemnizaci\u00F3n reconocida`, options: { breakLine: true, fontSize: 11, color: C.gray } },
         { text: `${fmtMoney(mp.desembolso)} desembolsado (${fmtPct(mp.pct_desembolso)})`, options: { fontSize: 11, color: C.gray } },
-      ], { x: 0.7, y: 3.5, w: 8.5, h: 1.0, valign: "top", margin: 0 });
+      ], { x: 0.7, y: 3.5, w: 4.3, h: 1.0, valign: "top", margin: 0 });
+
+      // Provincial insights box
+      addInsightBox(sPipe, section.insights || [], 5.2, 3.0, 4.3, 1.6);
     }
 
     if (section.type === "distrital") {
