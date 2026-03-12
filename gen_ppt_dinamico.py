@@ -1054,14 +1054,36 @@ def _find_node():
     import shutil
     node_exe = shutil.which("node")
     if not node_exe:
-        # Intenta rutas comunes en Windows
+        # Intenta rutas comunes en Windows y Linux
         common = [
             r"C:\Program Files\nodejs\node.exe",
             r"C:\Program Files (x86)\nodejs\node.exe",
+        ]
+        # Agregar rutas de usuario en Windows (nvm-windows, Chocolatey, etc.)
+        appdata = os.environ.get("APPDATA", "")
+        localappdata = os.environ.get("LOCALAPPDATA", "")
+        userprofile = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+        if appdata:
+            common.append(os.path.join(appdata, "nvm", "current", "node.exe"))
+            common.append(os.path.join(appdata, "npm", "node.exe"))
+        if localappdata:
+            common.append(os.path.join(localappdata, "Programs", "node", "node.exe"))
+        if userprofile:
+            # nvm-windows instala en %APPDATA%\nvm\<version>\node.exe
+            nvm_dir = os.path.join(appdata or userprofile, "nvm")
+            if os.path.isdir(nvm_dir):
+                # Buscar la versión más reciente
+                versions = [d for d in os.listdir(nvm_dir) if d.startswith("v")]
+                if versions:
+                    versions.sort(reverse=True)
+                    common.append(os.path.join(nvm_dir, versions[0], "node.exe"))
+        # Linux/Mac
+        common.extend([
             os.path.expanduser("~/.nvm/current/bin/node"),
             "/usr/local/bin/node",
             "/usr/bin/node",
-        ]
+        ])
+
         for p in common:
             if os.path.isfile(p):
                 node_exe = p
@@ -1070,31 +1092,40 @@ def _find_node():
     if not node_exe:
         raise FileNotFoundError(
             "Node.js no encontrado. Instálalo desde https://nodejs.org/ "
-            "y asegúrate de que 'node' esté en el PATH del sistema."
+            "y asegúrate de que 'node' esté en el PATH del sistema. "
+            "Después de instalar, REINICIA la terminal y Streamlit."
         )
 
     # Detectar node_modules: priorizar local, luego global
     node_paths = []
-    # 1. node_modules junto al script
+    # 1. node_modules junto al script (donde hicimos npm install)
     local_nm = os.path.join(os.path.dirname(os.path.abspath(__file__)), "node_modules")
     if os.path.isdir(local_nm):
         node_paths.append(local_nm)
-    # 2. Global npm
+    # 2. Global npm paths (usando os.pathsep para Windows compatibilidad)
     try:
-        res = subprocess.run([node_exe, "-e", "console.log(require('module').globalPaths.join(':'))"],
-                             capture_output=True, text=True, timeout=10)
-        if res.returncode == 0:
-            node_paths.extend(res.stdout.strip().split(":"))
+        sep = os.pathsep  # ';' en Windows, ':' en Linux/Mac
+        res = subprocess.run(
+            [node_exe, "-e", f"console.log(require('module').globalPaths.join('{sep}'))"],
+            capture_output=True, text=True, timeout=10
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            node_paths.extend(res.stdout.strip().split(sep))
     except Exception:
         pass
     # 3. Fallback conocidos
-    for p in [
+    fallbacks = []
+    if appdata:
+        fallbacks.append(os.path.join(appdata, "npm", "node_modules"))
+    if userprofile:
+        fallbacks.append(os.path.join(userprofile, "node_modules"))
+    fallbacks.extend([
         "/sessions/serene-nice-archimedes/.npm-global/lib/node_modules",
-        os.path.expanduser("~/AppData/Roaming/npm/node_modules"),
         os.path.expanduser("~/.npm-global/lib/node_modules"),
         "/usr/local/lib/node_modules",
         "/usr/lib/node_modules",
-    ]:
+    ])
+    for p in fallbacks:
         if os.path.isdir(p) and p not in node_paths:
             node_paths.append(p)
 
