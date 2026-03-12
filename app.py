@@ -1586,52 +1586,77 @@ else:
 
             df_ppt = datos["midagri"]
 
-            # ── Fila 1: Alcance geográfico ──
+            # ── Fila 1: Alcance geográfico (cascada acumulativa) ──
             st.markdown("##### 🗺️ Alcance geográfico")
-            col_scope, col_depto, col_prov = st.columns([1, 1.5, 1.5])
-
-            with col_scope:
-                scope_ppt = st.radio(
-                    "Alcance",
-                    ["Nacional", "Departamental", "Provincial", "Distrital"],
-                    key="ppt_scope",
-                    horizontal=False,
-                )
+            st.caption("Construya su presentación nivel por nivel. Cada nivel agrega secciones adicionales.")
 
             deptos_sel_ppt = []
             provs_sel_ppt = []
             dists_sel_ppt = []
 
-            with col_depto:
-                if scope_ppt != "Nacional":
-                    deptos_disponibles = sorted(df_ppt["DEPARTAMENTO"].dropna().unique()) if "DEPARTAMENTO" in df_ppt.columns else []
-                    deptos_sel_ppt = st.multiselect(
-                        "Departamento(s)",
-                        deptos_disponibles,
-                        key="ppt_deptos",
-                    )
+            # Checkbox para incluir resumen nacional
+            incluir_nacional = st.checkbox("🌎 Incluir Resumen Nacional", value=True, key="ppt_incluir_nac")
 
+            # Departamentos
+            col_depto, col_prov = st.columns([1, 1])
+            with col_depto:
+                deptos_disponibles = sorted(df_ppt["DEPARTAMENTO"].dropna().unique()) if "DEPARTAMENTO" in df_ppt.columns else []
+                deptos_sel_ppt = st.multiselect(
+                    "📍 Departamento(s) — sección departamental",
+                    deptos_disponibles,
+                    key="ppt_deptos",
+                    help="Seleccione uno o más departamentos para generar secciones departamentales.",
+                )
+
+            # Provincias (filtradas por departamentos seleccionados)
             with col_prov:
-                if scope_ppt in ("Provincial", "Distrital") and deptos_sel_ppt:
+                if deptos_sel_ppt:
                     provs_disponibles = sorted(
                         df_ppt[df_ppt["DEPARTAMENTO"].isin(deptos_sel_ppt)]["PROVINCIA"].dropna().unique()
                     ) if "PROVINCIA" in df_ppt.columns else []
                     provs_sel_ppt = st.multiselect(
-                        "Provincia(s)",
+                        "📍 Provincia(s) — sección provincial",
                         provs_disponibles,
                         key="ppt_provs",
+                        help="Seleccione provincias para generar detalle provincial con distritos.",
                     )
 
-            if scope_ppt == "Distrital" and provs_sel_ppt:
+            # Distritos (filtrados por provincias seleccionadas)
+            if provs_sel_ppt:
                 dists_disponibles = sorted(
                     df_ppt[df_ppt["PROVINCIA"].isin(provs_sel_ppt)]["DISTRITO"].dropna().unique()
                 ) if "DISTRITO" in df_ppt.columns else []
                 dists_sel_ppt = st.multiselect(
-                    "Distrito(s) — máximo 5",
+                    "📍 Distrito(s) — sección distrital (máx. 5)",
                     dists_disponibles,
                     max_selections=5,
                     key="ppt_dists",
+                    help="Opcional: seleccione distritos para generar tarjetas individuales.",
                 )
+
+            # Inferir scope basado en las selecciones
+            scope_ppt = "nacional"
+            if dists_sel_ppt:
+                scope_ppt = "distrital"
+            elif provs_sel_ppt:
+                scope_ppt = "provincial"
+            elif deptos_sel_ppt:
+                scope_ppt = "departamental"
+
+            # Mostrar resumen de lo que se generará
+            secciones_previas = []
+            if incluir_nacional:
+                secciones_previas.append("Resumen Nacional")
+            if deptos_sel_ppt:
+                secciones_previas.append(f"Departamental: {', '.join(deptos_sel_ppt)}")
+            if provs_sel_ppt:
+                secciones_previas.append(f"Provincial: {', '.join(provs_sel_ppt)}")
+            if dists_sel_ppt:
+                secciones_previas.append(f"Distrital: {', '.join(dists_sel_ppt[:5])}")
+            if secciones_previas:
+                st.markdown(f"**Secciones a generar:** {' → '.join(secciones_previas)}")
+            else:
+                st.warning("Seleccione al menos un nivel geográfico.")
 
             # ── Fila 2: Filtros adicionales ──
             st.markdown("##### 🔧 Filtros adicionales")
@@ -1667,7 +1692,8 @@ else:
 
             # Construir filtros
             filtros_ppt = {
-                "scope": scope_ppt.lower(),
+                "scope": scope_ppt,
+                "incluir_nacional": incluir_nacional,
                 "departamentos": deptos_sel_ppt,
                 "provincias": provs_sel_ppt,
                 "distritos": dists_sel_ppt,
@@ -1704,11 +1730,12 @@ else:
                             try:
                                 ppt_bytes = generar_ppt_dinamico(df_ppt, filtros_ppt, datos["fecha_corte"])
                                 fecha_str = datetime.now().strftime("%d_%m_%Y")
-                                scope_str = scope_ppt.lower()
                                 geo_str = ""
                                 if deptos_sel_ppt:
                                     geo_str = f"_{'_'.join(deptos_sel_ppt[:2])}"
-                                filename = f"SAC_{scope_str}{geo_str}_{fecha_str}.pptx"
+                                if provs_sel_ppt:
+                                    geo_str += f"_{'_'.join(provs_sel_ppt[:2])}"
+                                filename = f"SAC_{scope_ppt}{geo_str}_{fecha_str}.pptx"
                                 st.session_state["ppt_dinamico"] = ppt_bytes
                                 st.session_state["ppt_dinamico_name"] = filename
                                 st.success(f"✅ Presentación generada ({len(ppt_bytes) / 1024:.0f} KB)")
@@ -1727,13 +1754,17 @@ else:
 
             with st.expander("ℹ️ ¿Qué incluye la presentación?"):
                 st.markdown(
-                    "La presentación se construye dinámicamente según sus selecciones:\n\n"
-                    "- **Nacional**: Métricas generales, top departamentos (gráfico), distribución por tipo de siniestro\n"
-                    "- **Departamental**: Sección por cada departamento seleccionado con métricas, provincias y tipos\n"
-                    "- **Provincial**: Detalle por provincia con distritos y tipos de siniestro\n"
-                    "- **Distrital**: Tarjetas de métricas por cada distrito seleccionado (máx. 5)\n\n"
-                    "Todos los niveles se pueden combinar. Por ejemplo, un resumen nacional + detalle de Cajamarca "
-                    "+ foco en Jaén y San Ignacio."
+                    "La presentación se construye **acumulativamente** según sus selecciones:\n\n"
+                    "- **Nacional** (checkbox): Métricas generales, top departamentos (gráfico), "
+                    "distribución por tipo de siniestro, observaciones automáticas\n"
+                    "- **Departamental** (multiselect): Sección por cada departamento con métricas, "
+                    "provincias, pipeline SAC y observaciones\n"
+                    "- **Provincial** (multiselect): Detalle por provincia con distritos, tipos de siniestro, "
+                    "pipeline y observaciones contextuales\n"
+                    "- **Distrital** (multiselect, máx. 5): Tarjetas de métricas por cada distrito\n\n"
+                    "**Ejemplo**: Marque Nacional + seleccione Cajamarca + seleccione Jaén y San Ignacio → "
+                    "obtendrá una PPT con resumen nacional, detalle de Cajamarca con highlight en las "
+                    "provincias seleccionadas, y secciones detalladas de Jaén y San Ignacio."
                 )
 
     # ═══════════════════════════════════════════════════════════════════════

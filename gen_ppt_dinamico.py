@@ -276,15 +276,19 @@ def _fmt_money_py(n):
 # ══════════════════════════════════════════════════════════════════
 
 def _prepare_data(df, filtros, fecha_corte):
-    """Prepara toda la data en un dict JSON-serializable para Node."""
+    """Prepara toda la data en un dict JSON-serializable para Node.
+    Soporta modelo acumulativo: Nacional + Departamental + Provincial + Distrital
+    se pueden combinar libremente.
+    """
     scope = filtros.get("scope", "nacional")
+    incluir_nacional = filtros.get("incluir_nacional", True)
     deptos = filtros.get("departamentos", [])
     provs = filtros.get("provincias", [])
     dists = filtros.get("distritos", [])
 
     # Aplicar filtros NO geográficos
     filtros_base = {k: v for k, v in filtros.items()
-                    if k not in ("departamentos", "provincias", "distritos", "scope")}
+                    if k not in ("departamentos", "provincias", "distritos", "scope", "incluir_nacional")}
     df_base = _aplicar_filtros(df, filtros_base)
 
     data = {
@@ -300,8 +304,8 @@ def _prepare_data(df, filtros, fecha_corte):
         "sections": [],
     }
 
-    # ── Nacional ──
-    if scope == "nacional" or not deptos:
+    # ── Nacional (si está marcado o si no hay deptos seleccionados) ──
+    if incluir_nacional or not deptos:
         m = _calcular_metricas(df_base)
         tipos_nac = _tipo_breakdown(df_base)
         top_deptos_nac = _top_breakdown(df_base, "DEPARTAMENTO", 10)
@@ -318,8 +322,8 @@ def _prepare_data(df, filtros, fecha_corte):
             "insights": _generar_insights(df_base, m, tipos_nac, top_deptos_nac, "DEPARTAMENTO"),
         })
 
-    # ── Departamentales ──
-    if scope in ("departamental", "provincial", "distrital") and deptos:
+    # ── Departamentales (siempre que haya deptos seleccionados) ──
+    if deptos:
         for depto in deptos:
             df_d = df_base[df_base["DEPARTAMENTO"] == depto] if _safe_col(df_base, "DEPARTAMENTO") else pd.DataFrame()
             if len(df_d) == 0:
@@ -343,8 +347,8 @@ def _prepare_data(df, filtros, fecha_corte):
                 "provs_seleccionadas": provs,
             })
 
-    # ── Provinciales ──
-    if scope in ("provincial", "distrital") and provs:
+    # ── Provinciales (siempre que haya provs seleccionadas) ──
+    if provs:
         for prov in provs:
             df_p = df_base[df_base["PROVINCIA"] == prov] if _safe_col(df_base, "PROVINCIA") else pd.DataFrame()
             if len(df_p) == 0:
@@ -367,8 +371,8 @@ def _prepare_data(df, filtros, fecha_corte):
                 "insights": _generar_insights(df_p, m, tipos_p, dists_p, "DISTRITO"),
             })
 
-    # ── Distritales ──
-    if scope == "distrital" and dists:
+    # ── Distritales (siempre que haya dists seleccionados) ──
+    if dists:
         for dist in dists[:5]:
             df_dist = df_base[df_base["DISTRITO"] == dist] if _safe_col(df_base, "DISTRITO") else pd.DataFrame()
             if len(df_dist) == 0:
@@ -1045,7 +1049,93 @@ const DATA = %%DATA_JSON%%;
 # FUNCIÓN PRINCIPAL
 # ══════════════════════════════════════════════════════════════════
 
-NODE_PATH = "/sessions/serene-nice-archimedes/.npm-global/lib/node_modules"
+def _find_node():
+    """Busca el ejecutable de Node.js y el NODE_PATH adecuado."""
+    import shutil
+    node_exe = shutil.which("node")
+    if not node_exe:
+        # Intenta rutas comunes en Windows
+        common = [
+            r"C:\Program Files\nodejs\node.exe",
+            r"C:\Program Files (x86)\nodejs\node.exe",
+            os.path.expanduser("~/.nvm/current/bin/node"),
+            "/usr/local/bin/node",
+            "/usr/bin/node",
+        ]
+        for p in common:
+            if os.path.isfile(p):
+                node_exe = p
+                break
+
+    if not node_exe:
+        raise FileNotFoundError(
+            "Node.js no encontrado. Instálalo desde https://nodejs.org/ "
+            "y asegúrate de que 'node' esté en el PATH del sistema."
+        )
+
+    # Detectar node_modules: priorizar local, luego global
+    node_paths = []
+    # 1. node_modules junto al script
+    local_nm = os.path.join(os.path.dirname(os.path.abspath(__file__)), "node_modules")
+    if os.path.isdir(local_nm):
+        node_paths.append(local_nm)
+    # 2. Global npm
+    try:
+        res = subprocess.run([node_exe, "-e", "console.log(require('module').globalPaths.join(':'))"],
+                             capture_output=True, text=True, timeout=10)
+        if res.returncode == 0:
+            node_paths.extend(res.stdout.strip().split(":"))
+    except Exception:
+        pass
+    # 3. Fallback conocidos
+    for p in [
+        "/sessions/serene-nice-archimedes/.npm-global/lib/node_modules",
+        os.path.expanduser("~/AppData/Roaming/npm/node_modules"),
+        os.path.expanduser("~/.npm-global/lib/node_modules"),
+        "/usr/local/lib/node_modules",
+        "/usr/lib/node_modules",
+    ]:
+        if os.path.isdir(p) and p not in node_paths:
+            node_paths.append(p)
+
+    return node_exe, os.pathsep.join(node_paths)
+
+
+def _check_node_deps(node_exe, node_path_env):
+    """Verifica que las dependencias npm estén instaladas, si no, instala."""
+    required = ["pptxgenjs", "react", "react-dom", "sharp", "react-icons"]
+    env = os.environ.copy()
+    env["NODE_PATH"] = node_path_env
+
+    missing = []
+    for pkg in required:
+        res = subprocess.run(
+            [node_exe, "-e", f"require('{pkg}')"],
+            capture_output=True, text=True, timeout=10, env=env
+        )
+        if res.returncode != 0:
+            missing.append(pkg)
+
+    if missing:
+        # Intentar instalar globalmente
+        install_dir = os.path.dirname(os.path.abspath(__file__))
+        npm_exe = os.path.join(os.path.dirname(node_exe), "npm")
+        if os.name == "nt":
+            npm_exe = os.path.join(os.path.dirname(node_exe), "npm.cmd")
+        if not os.path.isfile(npm_exe):
+            import shutil
+            npm_exe = shutil.which("npm") or shutil.which("npm.cmd") or "npm"
+
+        try:
+            subprocess.run(
+                [npm_exe, "install", "--save"] + missing,
+                cwd=install_dir, capture_output=True, text=True, timeout=120
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Faltan dependencias npm: {', '.join(missing)}. "
+                f"Ejecuta: cd {install_dir} && npm install {' '.join(missing)}"
+            ) from e
 
 
 def generar_ppt_dinamico(df, filtros, fecha_corte):
@@ -1060,6 +1150,10 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
     Returns:
         bytes del archivo .pptx
     """
+    # 0. Find Node.js
+    node_exe, node_path_env = _find_node()
+    _check_node_deps(node_exe, node_path_env)
+
     # 1. Prepare data
     data = _prepare_data(df, filtros, fecha_corte)
 
@@ -1078,10 +1172,10 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
 
     # 4. Run Node.js
     env = os.environ.copy()
-    env["NODE_PATH"] = NODE_PATH
+    env["NODE_PATH"] = node_path_env
 
     result = subprocess.run(
-        ["node", js_path],
+        [node_exe, js_path],
         capture_output=True, text=True, timeout=60, env=env
     )
 
@@ -1097,7 +1191,7 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
         os.remove(js_path)
         os.remove(out_path)
         os.rmdir(tmp_dir)
-    except:
+    except Exception:
         pass
 
     return ppt_bytes
