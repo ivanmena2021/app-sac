@@ -16,6 +16,7 @@ from data_processor import process_dynamic_data, get_departamento_data
 from gen_word_bridge_py import generate_nacional_docx, generate_departamental_docx
 from gen_excel_eme import generate_reporte_eme
 from gen_word_operatividad import generate_operatividad_docx
+from gen_ppt_dinamico import generar_ppt_dinamico
 from query_engine import process_query, get_suggested_queries as get_suggested_basic
 from query_llm import process_query_llm, is_llm_available, get_suggested_queries as get_suggested_llm
 from gen_mapa_calor import generate_map, get_ranking_table, get_summary_cards, NIVELES, get_metricas_for_nivel
@@ -1383,11 +1384,12 @@ else:
     # SECCIÓN 2: GENERAR REPORTES
     # ═══════════════════════════════════════════════════════════════════
     with tab_reportes:
-        sub_nac, sub_depto, sub_oper, sub_eme = st.tabs([
+        sub_nac, sub_depto, sub_oper, sub_eme, sub_ppt = st.tabs([
             "📄 Ayuda Memoria Nacional",
             "🏔️ Ayuda Memoria Departamental",
             "📋 Operatividad SAC",
             "📊 Reporte EME",
+            "📊 Presentación Dinámica",
         ])
 
         # ─── Sub-tab: Ayuda Memoria Nacional ───
@@ -1572,7 +1574,167 @@ else:
                         use_container_width=True,
                     )
 
+        # ─── Sub-tab: Presentación Dinámica ───
+        with sub_ppt:
+            st.markdown(f"""
+            <div class="tab-intro">
+                <div class="title">Presentación Dinámica · Corte {datos['fecha_corte']}</div>
+                <div class="desc">Configure el alcance geográfico, tipo de siniestro, empresa y período
+                para generar una presentación PowerPoint personalizada.</div>
+            </div>
+            """, unsafe_allow_html=True)
 
+            df_ppt = datos["midagri"]
+
+            # ── Fila 1: Alcance geográfico ──
+            st.markdown("##### 🗺️ Alcance geográfico")
+            col_scope, col_depto, col_prov = st.columns([1, 1.5, 1.5])
+
+            with col_scope:
+                scope_ppt = st.radio(
+                    "Alcance",
+                    ["Nacional", "Departamental", "Provincial", "Distrital"],
+                    key="ppt_scope",
+                    horizontal=False,
+                )
+
+            deptos_sel_ppt = []
+            provs_sel_ppt = []
+            dists_sel_ppt = []
+
+            with col_depto:
+                if scope_ppt != "Nacional":
+                    deptos_disponibles = sorted(df_ppt["DEPARTAMENTO"].dropna().unique()) if "DEPARTAMENTO" in df_ppt.columns else []
+                    deptos_sel_ppt = st.multiselect(
+                        "Departamento(s)",
+                        deptos_disponibles,
+                        key="ppt_deptos",
+                    )
+
+            with col_prov:
+                if scope_ppt in ("Provincial", "Distrital") and deptos_sel_ppt:
+                    provs_disponibles = sorted(
+                        df_ppt[df_ppt["DEPARTAMENTO"].isin(deptos_sel_ppt)]["PROVINCIA"].dropna().unique()
+                    ) if "PROVINCIA" in df_ppt.columns else []
+                    provs_sel_ppt = st.multiselect(
+                        "Provincia(s)",
+                        provs_disponibles,
+                        key="ppt_provs",
+                    )
+
+            if scope_ppt == "Distrital" and provs_sel_ppt:
+                dists_disponibles = sorted(
+                    df_ppt[df_ppt["PROVINCIA"].isin(provs_sel_ppt)]["DISTRITO"].dropna().unique()
+                ) if "DISTRITO" in df_ppt.columns else []
+                dists_sel_ppt = st.multiselect(
+                    "Distrito(s) — máximo 5",
+                    dists_disponibles,
+                    max_selections=5,
+                    key="ppt_dists",
+                )
+
+            # ── Fila 2: Filtros adicionales ──
+            st.markdown("##### 🔧 Filtros adicionales")
+            col_tipo, col_emp, col_fecha = st.columns([1.5, 1, 1.5])
+
+            with col_tipo:
+                tipos_disponibles = sorted(df_ppt["TIPO_SINIESTRO"].dropna().unique()) if "TIPO_SINIESTRO" in df_ppt.columns else []
+                tipos_sel_ppt = st.multiselect(
+                    "Tipo(s) de siniestro",
+                    tipos_disponibles,
+                    key="ppt_tipos",
+                    help="Dejar vacío para incluir todos",
+                )
+
+            with col_emp:
+                empresa_ppt = st.radio(
+                    "Aseguradora",
+                    ["Ambas", "LA POSITIVA", "RIMAC"],
+                    key="ppt_empresa",
+                    horizontal=False,
+                )
+
+            with col_fecha:
+                filtrar_fecha = st.checkbox("Filtrar por período", key="ppt_filtrar_fecha")
+                fecha_inicio_ppt = None
+                fecha_fin_ppt = None
+                if filtrar_fecha:
+                    col_fi, col_ff = st.columns(2)
+                    with col_fi:
+                        fecha_inicio_ppt = st.date_input("Desde", key="ppt_fecha_ini")
+                    with col_ff:
+                        fecha_fin_ppt = st.date_input("Hasta", key="ppt_fecha_fin")
+
+            # Construir filtros
+            filtros_ppt = {
+                "scope": scope_ppt.lower(),
+                "departamentos": deptos_sel_ppt,
+                "provincias": provs_sel_ppt,
+                "distritos": dists_sel_ppt,
+                "tipos_siniestro": tipos_sel_ppt,
+                "empresa": empresa_ppt.lower() if empresa_ppt != "Ambas" else "ambas",
+                "fecha_inicio": fecha_inicio_ppt,
+                "fecha_fin": fecha_fin_ppt,
+                "col_fecha": "FECHA_AVISO",
+            }
+
+            # ── Fila 3: Preview ──
+            from gen_ppt_dinamico import _aplicar_filtros, _calcular_metricas
+            filtros_preview = {k: v for k, v in filtros_ppt.items()
+                               if k not in ("scope",)}
+            # Para preview, aplicar filtros geográficos también
+            df_preview = _aplicar_filtros(df_ppt, filtros_ppt)
+            m_prev = _calcular_metricas(df_preview)
+
+            st.info(
+                f"📊 **{m_prev['avisos']:,}** avisos · "
+                f"**{m_prev['cerrados']:,}** cerrados ({m_prev['pct_eval']:.1f}%) · "
+                f"**S/ {m_prev['indemnizacion']:,.0f}** indemnización · "
+                f"**S/ {m_prev['desembolso']:,.0f}** desembolso"
+            )
+
+            # ── Fila 4: Generar + Descargar ──
+            col_gen_ppt, col_dl_ppt = st.columns([1, 1])
+            with col_gen_ppt:
+                if st.button("⚡ Generar Presentación", type="primary", key="gen_ppt_din", use_container_width=True):
+                    if m_prev["avisos"] == 0:
+                        st.warning("⚠️ No hay datos con los filtros seleccionados. Ajuste los criterios.")
+                    else:
+                        with st.spinner("Generando presentación PowerPoint..."):
+                            try:
+                                ppt_bytes = generar_ppt_dinamico(df_ppt, filtros_ppt, datos["fecha_corte"])
+                                fecha_str = datetime.now().strftime("%d_%m_%Y")
+                                scope_str = scope_ppt.lower()
+                                geo_str = ""
+                                if deptos_sel_ppt:
+                                    geo_str = f"_{'_'.join(deptos_sel_ppt[:2])}"
+                                filename = f"SAC_{scope_str}{geo_str}_{fecha_str}.pptx"
+                                st.session_state["ppt_dinamico"] = ppt_bytes
+                                st.session_state["ppt_dinamico_name"] = filename
+                                st.success(f"✅ Presentación generada ({len(ppt_bytes) / 1024:.0f} KB)")
+                            except Exception as e:
+                                st.error(f"Error al generar PPT: {str(e)}")
+
+            with col_dl_ppt:
+                if st.session_state.get("ppt_dinamico"):
+                    st.download_button(
+                        label="⬇️ Descargar Presentación",
+                        data=st.session_state["ppt_dinamico"],
+                        file_name=st.session_state.get("ppt_dinamico_name", "SAC_presentacion.pptx"),
+                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        use_container_width=True,
+                    )
+
+            with st.expander("ℹ️ ¿Qué incluye la presentación?"):
+                st.markdown(
+                    "La presentación se construye dinámicamente según sus selecciones:\n\n"
+                    "- **Nacional**: Métricas generales, top departamentos (gráfico), distribución por tipo de siniestro\n"
+                    "- **Departamental**: Sección por cada departamento seleccionado con métricas, provincias y tipos\n"
+                    "- **Provincial**: Detalle por provincia con distritos y tipos de siniestro\n"
+                    "- **Distrital**: Tarjetas de métricas por cada distrito seleccionado (máx. 5)\n\n"
+                    "Todos los niveles se pueden combinar. Por ejemplo, un resumen nacional + detalle de Cajamarca "
+                    "+ foco en Jaén y San Ignacio."
+                )
 
     # ═══════════════════════════════════════════════════════════════════════
     # FOOTER
