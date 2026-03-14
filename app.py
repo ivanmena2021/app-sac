@@ -913,6 +913,7 @@ else:
         def _build_consolidated_excel(midagri_df):
             """Genera un archivo Excel con base consolidada + hojas por empresa."""
             import io
+            import pandas as pd
             buf = io.BytesIO()
             # Limpiar columnas datetime para evitar errores de serialización
             df_clean = midagri_df.copy()
