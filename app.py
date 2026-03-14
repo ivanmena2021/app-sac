@@ -910,19 +910,23 @@ else:
     col_spacer, col_download, col_refresh = st.columns([2, 1, 1])
     with col_download:
         # Generar Excel consolidado (La Positiva + Rímac) para descarga
-        @st.cache_data(show_spinner=False)
         def _build_consolidated_excel(midagri_df):
             """Genera un archivo Excel con base consolidada + hojas por empresa."""
             import io
             buf = io.BytesIO()
+            # Limpiar columnas datetime para evitar errores de serialización
+            df_clean = midagri_df.copy()
+            for col in df_clean.columns:
+                if df_clean[col].dtype == "object":
+                    df_clean[col] = df_clean[col].astype(str).replace("nan", "")
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-                # Hoja 1: Consolidado completo
-                midagri_df.to_excel(writer, index=False, sheet_name="Consolidado SAC")
-                # Hojas por empresa (si existe la columna)
-                if "EMPRESA" in midagri_df.columns:
-                    for emp in sorted(midagri_df["EMPRESA"].dropna().unique()):
-                        df_emp = midagri_df[midagri_df["EMPRESA"] == emp]
-                        sheet_name = emp[:31]  # Excel limita a 31 chars
+                df_clean.to_excel(writer, index=False, sheet_name="Consolidado SAC")
+                if "EMPRESA" in df_clean.columns:
+                    for emp in sorted(df_clean["EMPRESA"].dropna().unique()):
+                        if str(emp).strip() in ("", "nan"):
+                            continue
+                        df_emp = df_clean[df_clean["EMPRESA"] == emp]
+                        sheet_name = str(emp)[:31]
                         df_emp.to_excel(writer, index=False, sheet_name=sheet_name)
             buf.seek(0)
             return buf.getvalue()
@@ -937,8 +941,8 @@ else:
                 key="dl_consolidado",
                 use_container_width=True,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            st.error(f"Error generando Excel: {e}")
 
     with col_refresh:
         if st.button("🔄 Nueva actualización", key="refresh_data"):
