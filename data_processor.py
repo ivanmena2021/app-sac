@@ -387,11 +387,22 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
         siniestros["TIPO_SINIESTRO"] = siniestros["TIPO_SINIESTRO"].apply(_normalize_tipo_siniestro)
 
     # ═══ COMBINAR ambos datasets en uno solo ═══
-    # Usar las columnas comunes
-    common_cols = list(set(midagri.columns) & set(siniestros.columns))
-    combined = pd.concat([midagri[common_cols], siniestros[common_cols]], ignore_index=True)
-    # Usar combined como el dataset principal (era "midagri" antes)
+    # Guardar originales para devolver por separado
+    midagri_orig = midagri.copy()
+    siniestros_orig = siniestros.copy()
+
+    # Marcar la empresa de origen ANTES de combinar
+    midagri["EMPRESA"] = "LA POSITIVA"
+    siniestros["EMPRESA"] = "RIMAC"
+    # Usar TODAS las columnas (unión), no solo las comunes
+    all_cols = sorted(set(midagri.columns) | set(siniestros.columns))
+    combined = pd.concat([
+        midagri.reindex(columns=all_cols),
+        siniestros.reindex(columns=all_cols)
+    ], ignore_index=True)
+    # Usar combined como el dataset principal
     midagri = combined
+    siniestros = siniestros_orig
 
     fecha_corte = datetime.now().strftime("%d/%m/%Y")
 
@@ -420,8 +431,14 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
     sup_asegurada = materia["SUPERFICIE_ASEGURADA"].sum() if "SUPERFICIE_ASEGURADA" in materia.columns else 0
     prod_asegurados = materia["PRODUCTORES_ASEGURADOS"].sum() if "PRODUCTORES_ASEGURADOS" in materia.columns else 0
 
-    # Empresas aseguradoras
-    if "EMPRESA_ASEGURADORA" in materia.columns:
+    # Empresas aseguradoras — ahora desde los siniestros consolidados
+    if "EMPRESA" in midagri.columns:
+        empresas = midagri.groupby("EMPRESA").agg(
+            avisos=("EMPRESA", "count"),
+            indemnizacion=("INDEMNIZACION", "sum") if "INDEMNIZACION" in midagri.columns else ("EMPRESA", "count"),
+            desembolso=("MONTO_DESEMBOLSADO", "sum") if "MONTO_DESEMBOLSADO" in midagri.columns else ("EMPRESA", "count"),
+        )
+    elif "EMPRESA_ASEGURADORA" in materia.columns:
         empresas = materia.groupby("EMPRESA_ASEGURADORA")["DEPARTAMENTO"].count()
     else:
         empresas = pd.Series()

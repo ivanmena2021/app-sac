@@ -912,10 +912,18 @@ else:
         # Generar Excel consolidado (La Positiva + Rímac) para descarga
         @st.cache_data(show_spinner=False)
         def _build_consolidated_excel(midagri_df):
-            """Genera un archivo Excel en memoria con la base consolidada."""
+            """Genera un archivo Excel con base consolidada + hojas por empresa."""
             import io
             buf = io.BytesIO()
-            midagri_df.to_excel(buf, index=False, sheet_name="Consolidado SAC")
+            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                # Hoja 1: Consolidado completo
+                midagri_df.to_excel(writer, index=False, sheet_name="Consolidado SAC")
+                # Hojas por empresa (si existe la columna)
+                if "EMPRESA" in midagri_df.columns:
+                    for emp in sorted(midagri_df["EMPRESA"].dropna().unique()):
+                        df_emp = midagri_df[midagri_df["EMPRESA"] == emp]
+                        sheet_name = emp[:31]  # Excel limita a 31 chars
+                        df_emp.to_excel(writer, index=False, sheet_name=sheet_name)
             buf.seek(0)
             return buf.getvalue()
 
