@@ -414,6 +414,11 @@ C = {
     "white": RGBColor(0xFF, 0xFF, 0xFF),
     "red": RGBColor(0xC0, 0x39, 0x2B),
     "blue": RGBColor(0x21, 0x96, 0xF3),
+    "orange": RGBColor(0xE6, 0x7E, 0x22),
+    "coral": RGBColor(0xE7, 0x4C, 0x3C),
+    "teal": RGBColor(0x2B, 0xA5, 0xA5),
+    "yellowBg": RGBColor(0xFF, 0xF3, 0xCD),
+    "lightCream": RGBColor(0xF8, 0xF9, 0xFA),
 }
 
 
@@ -440,7 +445,7 @@ def _fmt_pct(n):
     return f"{n:.1f}%"
 
 
-def _add_shadow(shape):
+def _add_shadow(shape, alpha_val=15000):
     """Add shadow effect to shape via XML."""
     try:
         spPr = shape._element.spPr
@@ -451,13 +456,127 @@ def _add_shadow(shape):
             'dir': '8100000',
         })
         srgbClr = outerShdw.makeelement(qn('a:srgbClr'), {'val': '000000'})
-        alpha = srgbClr.makeelement(qn('a:alpha'), {'val': '12000'})
+        alpha = srgbClr.makeelement(qn('a:alpha'), {'val': str(alpha_val)})
         srgbClr.append(alpha)
         outerShdw.append(srgbClr)
         effectLst.append(outerShdw)
         spPr.append(effectLst)
     except Exception:
         pass
+
+
+def _make_logo(slide, x, y, w, h):
+    """Create MIDAGRI/SAC logo using shapes: white rounded rect with two teal rects inside."""
+    logo_bg = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        x, y, w, h
+    )
+    logo_bg.fill.solid()
+    logo_bg.fill.fore_color.rgb = C["white"]
+    logo_bg.line.color.rgb = C["teal"]
+    logo_bg.line.width = Pt(2)
+
+    rect_w = w * 0.35
+    rect_h = h * 0.6
+    gap = (w - rect_w * 2) / 3
+
+    rect1 = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        x + gap, y + (h - rect_h) / 2,
+        rect_w, rect_h
+    )
+    rect1.fill.solid()
+    rect1.fill.fore_color.rgb = C["teal"]
+    rect1.line.fill.background()
+
+    rect2 = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        x + gap * 2 + rect_w, y + (h - rect_h) / 2,
+        rect_w, rect_h
+    )
+    rect2.fill.solid()
+    rect2.fill.fore_color.rgb = C["sage"]
+    rect2.line.fill.background()
+
+
+def _add_kpi_card(slide, left, top, w, h, label, value, sublabel, accent_color, icon_text):
+    """Add enhanced metric card with colored top bar, icon circle, and large number."""
+    bg = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        left, top, w, h
+    )
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = C["white"]
+    bg.line.color.rgb = RGBColor(0xE0, 0xE0, 0xE0)
+    bg.line.width = Pt(1)
+    _add_shadow(bg, 15000)
+
+    top_bar = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        left, top, w, Inches(0.25)
+    )
+    top_bar.fill.solid()
+    top_bar.fill.fore_color.rgb = accent_color
+    top_bar.line.fill.background()
+
+    icon_circle = slide.shapes.add_shape(
+        MSO_SHAPE.OVAL,
+        left + (w - Inches(0.45)) / 2, top + Inches(0.35),
+        Inches(0.45), Inches(0.45)
+    )
+    icon_circle.fill.solid()
+    icon_circle.fill.fore_color.rgb = accent_color
+    icon_circle.line.fill.background()
+
+    icon_tf = slide.shapes.add_textbox(
+        left + (w - Inches(0.45)) / 2, top + Inches(0.35),
+        Inches(0.45), Inches(0.45)
+    )
+    icon_frame = icon_tf.text_frame
+    icon_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    icon_p = icon_frame.paragraphs[0]
+    icon_p.text = icon_text
+    icon_p.font.size = Pt(20)
+    icon_p.alignment = PP_ALIGN.CENTER
+
+    value_tf = slide.shapes.add_textbox(
+        left + Inches(0.1), top + Inches(0.95),
+        w - Inches(0.2), Inches(0.8)
+    )
+    value_frame = value_tf.text_frame
+    value_frame.word_wrap = True
+    value_p = value_frame.paragraphs[0]
+    value_p.text = str(value)
+    value_p.font.size = Pt(28)
+    value_p.font.bold = True
+    value_p.font.color.rgb = C["navy"]
+    value_p.font.name = "Georgia"
+    value_p.alignment = PP_ALIGN.CENTER
+
+    label_tf = slide.shapes.add_textbox(
+        left + Inches(0.1), top + Inches(1.75),
+        w - Inches(0.2), Inches(0.35)
+    )
+    label_frame = label_tf.text_frame
+    label_frame.word_wrap = True
+    label_p = label_frame.paragraphs[0]
+    label_p.text = str(label)
+    label_p.font.size = Pt(11)
+    label_p.font.color.rgb = C["gray"]
+    label_p.alignment = PP_ALIGN.CENTER
+
+    if sublabel:
+        sub_tf = slide.shapes.add_textbox(
+            left + Inches(0.1), top + h - Inches(0.35),
+            w - Inches(0.2), Inches(0.28)
+        )
+        sub_frame = sub_tf.text_frame
+        sub_frame.word_wrap = True
+        sub_p = sub_frame.paragraphs[0]
+        sub_p.text = str(sublabel)
+        sub_p.font.size = Pt(10)
+        sub_p.font.color.rgb = C["gray"]
+        sub_p.alignment = PP_ALIGN.CENTER
 
 
 def _add_header_bar(slide, title, color, y_pos=Inches(0.3)):
@@ -484,139 +603,26 @@ def _add_header_bar(slide, title, color, y_pos=Inches(0.3)):
     text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
 
 
-def _add_metric_card(slide, left, top, width, height, label, value, sublabel="", accent_color=None):
-    """Add a single metric card with shadow."""
-    if accent_color is None:
-        accent_color = C["sage"]
-
-    bg = slide.shapes.add_shape(
-        MSO_SHAPE.ROUNDED_RECTANGLE,
-        left, top, width, height
-    )
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = C["white"]
-    bg.line.color.rgb = C["lightGray"]
-    _add_shadow(bg)
-
-    accent = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE,
-        left, top, Inches(0.05), height
-    )
-    accent.fill.solid()
-    accent.fill.fore_color.rgb = accent_color
-    accent.line.fill.background()
-
-    tf = slide.shapes.add_textbox(
-        left + Inches(0.15), top + Inches(0.1),
-        width - Inches(0.3), height - Inches(0.2)
-    )
-    text_frame = tf.text_frame
-    text_frame.word_wrap = True
-
-    p = text_frame.paragraphs[0]
-    p.text = str(value)
-    p.font.size = Pt(20)
-    p.font.bold = True
-    p.font.color.rgb = C["forest"]
-    p.alignment = PP_ALIGN.CENTER
-
-    p2 = text_frame.add_paragraph()
-    p2.text = str(label)
-    p2.font.size = Pt(11)
-    p2.font.color.rgb = C["gray"]
-    p2.alignment = PP_ALIGN.CENTER
-    p2.space_before = Pt(4)
-
-    if sublabel:
-        p3 = text_frame.add_paragraph()
-        p3.text = str(sublabel)
-        p3.font.size = Pt(9)
-        p3.font.color.rgb = C["gray"]
-        p3.alignment = PP_ALIGN.CENTER
-        p3.space_before = Pt(2)
-
-
-def _add_pipeline(slide, pipeline, dictamen, top_y):
-    """Add pipeline flow visualization."""
-    if not pipeline:
-        return
-
-    total = sum(p["val"] for p in pipeline)
-    x_start = Inches(0.5)
-    y_base = top_y
-
-    for i, stage in enumerate(pipeline):
-        x_pos = x_start + Inches(i * 2.2)
-
-        rect = slide.shapes.add_shape(
-            MSO_SHAPE.ROUNDED_RECTANGLE,
-            x_pos, y_base,
-            Inches(1.8), Inches(0.6)
-        )
-        rect.fill.solid()
-        rect.fill.fore_color.rgb = C["sage"]
-        rect.line.color.rgb = C["green"]
-
-        tf = slide.shapes.add_textbox(
-            x_pos + Inches(0.1), y_base + Inches(0.05),
-            Inches(1.6), Inches(0.5)
-        )
-        text_frame = tf.text_frame
-        text_frame.word_wrap = True
-
-        p = text_frame.paragraphs[0]
-        p.text = stage["label"]
-        p.font.size = Pt(10)
-        p.font.bold = True
-        p.font.color.rgb = C["white"]
-        p.alignment = PP_ALIGN.CENTER
-
-        p2 = text_frame.add_paragraph()
-        p2.text = f"{stage['val']:,}"
-        p2.font.size = Pt(11)
-        p2.font.bold = True
-        p2.font.color.rgb = C["white"]
-        p2.alignment = PP_ALIGN.CENTER
-
-        if i < len(pipeline) - 1:
-            arrow = slide.shapes.add_shape(
-                MSO_SHAPE.RIGHT_ARROW,
-                x_pos + Inches(1.95), y_base + Inches(0.15),
-                Inches(0.25), Inches(0.3)
-            )
-            arrow.fill.solid()
-            arrow.fill.fore_color.rgb = C["gold"]
-            arrow.line.fill.background()
-
-    if dictamen:
-        y_dict = y_base + Inches(1.0)
-        tf = slide.shapes.add_textbox(
-            Inches(0.5), y_dict,
-            Inches(9), Inches(0.4)
-        )
-        text_frame = tf.text_frame
-        text_frame.word_wrap = True
-
-        dictamen_str = " | ".join([f"{k}: {v}" for k, v in list(dictamen.items())[:3]])
-        p = text_frame.paragraphs[0]
-        p.text = f"Dictamen: {dictamen_str}"
-        p.font.size = Pt(10)
-        p.font.color.rgb = C["gray"]
-
-
-def _add_data_table(slide, headers, rows, left=Inches(0.3), top=Inches(1.2), max_rows=12):
-    """Add formatted table."""
+def _add_styled_table(slide, headers, rows, left=Inches(0.3), top=Inches(1.2),
+                     col_widths=None, has_total=False, max_rows=12):
+    """Add professional table with alternating rows, header styling, optional total row."""
     rows_to_add = min(len(rows), max_rows)
+    if has_total:
+        rows_to_add += 1
     cols = len(headers)
 
     table_shape = slide.shapes.add_table(rows_to_add + 1, cols, left, top,
-                                          Inches(9.4), Inches(0.35 * (rows_to_add + 1)))
+                                         Inches(9.4), Inches(0.35 * (rows_to_add + 1)))
     table = table_shape.table
+
+    if col_widths:
+        for i, w in enumerate(col_widths):
+            table.columns[i].width = w
 
     for i, header in enumerate(headers):
         cell = table.cell(0, i)
         cell.fill.solid()
-        cell.fill.fore_color.rgb = C["forest"]
+        cell.fill.fore_color.rgb = C["navy"]
         p = cell.text_frame.paragraphs[0]
         p.text = header
         p.font.size = Pt(10)
@@ -628,7 +634,10 @@ def _add_data_table(slide, headers, rows, left=Inches(0.3), top=Inches(1.2), max
         for col_idx, value in enumerate(row_data):
             cell = table.cell(row_idx, col_idx)
             cell.fill.solid()
-            cell.fill.fore_color.rgb = C["white"] if row_idx % 2 == 0 else C["cream"]
+            if row_idx % 2 == 0:
+                cell.fill.fore_color.rgb = C["white"]
+            else:
+                cell.fill.fore_color.rgb = C["lightCream"]
 
             p = cell.text_frame.paragraphs[0]
             p.text = str(value) if value is not None else ""
@@ -636,74 +645,301 @@ def _add_data_table(slide, headers, rows, left=Inches(0.3), top=Inches(1.2), max
             p.font.color.rgb = C["dark"]
             p.alignment = PP_ALIGN.CENTER
 
+    if has_total and len(rows) > 0:
+        total_row = rows_to_add
+        for col_idx in range(cols):
+            cell = table.cell(total_row, col_idx)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = C["navy"]
+            p = cell.text_frame.paragraphs[0]
+            p.text = "TOTAL" if col_idx == 0 else ""
+            p.font.size = Pt(9)
+            p.font.bold = True
+            p.font.color.rgb = C["white"]
+            p.alignment = PP_ALIGN.CENTER
 
-def _add_insight_box(slide, insights, left, top, width, height):
-    """Add insight box with text."""
-    if not insights:
+
+def _add_pipeline_flow(slide, pipeline, y_pos):
+    """Add 5-step pipeline flow with numbered circles and percentages."""
+    if not pipeline:
         return
 
-    insight = insights[0]
+    total = sum(p["val"] for p in pipeline)
+    x_start = Inches(0.4)
+    card_w = Inches(1.7)
+    card_h = Inches(1.8)
+    circle_size = Inches(0.7)
 
+    colors = [C["teal"], C["amber"], C["teal"], C["navy"], C["orange"]]
+
+    for i, stage in enumerate(pipeline[:5]):
+        x_pos = x_start + Inches(i * 1.85)
+
+        card_bg = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            x_pos, y_pos, card_w, card_h
+        )
+        card_bg.fill.solid()
+        card_bg.fill.fore_color.rgb = C["white"]
+        card_bg.line.color.rgb = RGBColor(0xE0, 0xE0, 0xE0)
+        card_bg.line.width = Pt(1)
+        _add_shadow(card_bg, 12000)
+
+        top_bar = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            x_pos, y_pos, card_w, Inches(0.18)
+        )
+        top_bar.fill.solid()
+        top_bar.fill.fore_color.rgb = colors[i]
+        top_bar.line.fill.background()
+
+        circle = slide.shapes.add_shape(
+            MSO_SHAPE.OVAL,
+            x_pos + (card_w - circle_size) / 2, y_pos + Inches(0.25),
+            circle_size, circle_size
+        )
+        circle.fill.solid()
+        circle.fill.fore_color.rgb = colors[i]
+        circle.line.fill.background()
+
+        circle_tf = slide.shapes.add_textbox(
+            x_pos + (card_w - circle_size) / 2, y_pos + Inches(0.25),
+            circle_size, circle_size
+        )
+        circle_frame = circle_tf.text_frame
+        circle_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+        circle_p = circle_frame.paragraphs[0]
+        circle_p.text = str(i + 1)
+        circle_p.font.size = Pt(24)
+        circle_p.font.bold = True
+        circle_p.font.color.rgb = C["white"]
+        circle_p.alignment = PP_ALIGN.CENTER
+
+        label_tf = slide.shapes.add_textbox(
+            x_pos + Inches(0.05), y_pos + Inches(1.05),
+            card_w - Inches(0.1), Inches(0.3)
+        )
+        label_frame = label_tf.text_frame
+        label_frame.word_wrap = True
+        label_p = label_frame.paragraphs[0]
+        label_p.text = stage["label"]
+        label_p.font.size = Pt(9)
+        label_p.font.color.rgb = C["gray"]
+        label_p.alignment = PP_ALIGN.CENTER
+
+        val_tf = slide.shapes.add_textbox(
+            x_pos + Inches(0.05), y_pos + Inches(1.35),
+            card_w - Inches(0.1), Inches(0.28)
+        )
+        val_frame = val_tf.text_frame
+        val_frame.word_wrap = True
+        val_p = val_frame.paragraphs[0]
+        val_p.text = f"{stage['val']:,}"
+        val_p.font.size = Pt(16)
+        val_p.font.bold = True
+        val_p.font.color.rgb = C["navy"]
+        val_p.alignment = PP_ALIGN.CENTER
+
+        pct = (stage["val"] / total * 100) if total > 0 else 0
+        pct_tf = slide.shapes.add_textbox(
+            x_pos + Inches(0.05), y_pos + Inches(1.63),
+            card_w - Inches(0.1), Inches(0.15)
+        )
+        pct_frame = pct_tf.text_frame
+        pct_frame.word_wrap = True
+        pct_p = pct_frame.paragraphs[0]
+        pct_p.text = f"{pct:.1f}%"
+        pct_p.font.size = Pt(10)
+        pct_p.font.bold = True
+        pct_p.font.color.rgb = colors[i]
+        pct_p.alignment = PP_ALIGN.CENTER
+
+        if i < len(pipeline) - 1 and i < 4:
+            dash_x = x_pos + card_w + Inches(0.05)
+            dash_y = y_pos + Inches(0.9)
+            for j in range(3):
+                dash = slide.shapes.add_shape(
+                    MSO_SHAPE.RECTANGLE,
+                    dash_x + Inches(j * 0.08), dash_y,
+                    Inches(0.06), Inches(0.1)
+                )
+                dash.fill.solid()
+                dash.fill.fore_color.rgb = C["lightGray"]
+                dash.line.fill.background()
+
+
+def _add_alert_box(slide, text, left, top, width):
+    """Add yellow/amber alert box with warning content."""
     bg = slide.shapes.add_shape(
         MSO_SHAPE.ROUNDED_RECTANGLE,
-        left, top, width, height
+        left, top, width, Inches(0.55)
     )
     bg.fill.solid()
-    bg.fill.fore_color.rgb = C["mint"]
-    bg.line.color.rgb = C["sage"]
+    bg.fill.fore_color.rgb = C["yellowBg"]
+    bg.line.color.rgb = C["amber"]
     bg.line.width = Pt(1.5)
 
+    accent_bar = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        left, top, Inches(0.05), Inches(0.55)
+    )
+    accent_bar.fill.solid()
+    accent_bar.fill.fore_color.rgb = C["amber"]
+    accent_bar.line.fill.background()
+
     tf = slide.shapes.add_textbox(
-        left + Inches(0.15), top + Inches(0.1),
-        width - Inches(0.3), height - Inches(0.2)
+        left + Inches(0.15), top + Inches(0.08),
+        width - Inches(0.3), Inches(0.4)
     )
     text_frame = tf.text_frame
     text_frame.word_wrap = True
-
     p = text_frame.paragraphs[0]
-    p.text = insight.get("title", "")
-    p.font.size = Pt(11)
-    p.font.bold = True
-    p.font.color.rgb = C["forest"]
-
-    p2 = text_frame.add_paragraph()
-    p2.text = insight.get("text", "")
-    p2.font.size = Pt(9)
-    p2.font.color.rgb = C["dark"]
-    p2.space_before = Pt(4)
-
-
-def _add_highlight_box(slide, text, left, top, width):
-    """Add highlight/info box."""
-    bg = slide.shapes.add_shape(
-        MSO_SHAPE.ROUNDED_RECTANGLE,
-        left, top, width, Inches(0.5)
-    )
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = C["gold"]
-    bg.line.fill.background()
-
-    tf = slide.shapes.add_textbox(
-        left + Inches(0.1), top + Inches(0.05),
-        width - Inches(0.2), Inches(0.4)
-    )
-    text_frame = tf.text_frame
-    text_frame.word_wrap = True
-
-    p = text_frame.paragraphs[0]
-    p.text = text
+    p.text = "⚠ " + text
     p.font.size = Pt(10)
-    p.font.bold = True
-    p.font.color.rgb = C["white"]
-    p.alignment = PP_ALIGN.CENTER
+    p.font.color.rgb = C["dark"]
+    p.alignment = PP_ALIGN.LEFT
+
+
+def _add_resumen_ejecutivo_slide(slide, prs, dept_name, text, fecha_corte):
+    """Add dark background resumen ejecutivo slide with narrative text."""
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["navy"]
+    background.line.fill.background()
+
+    line_top = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.2),
+        prs.slide_width, Inches(0.06)
+    )
+    line_top.fill.solid()
+    line_top.fill.fore_color.rgb = C["teal"]
+    line_top.line.fill.background()
+
+    line_bottom = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(5.42),
+        prs.slide_width, Inches(0.06)
+    )
+    line_bottom.fill.solid()
+    line_bottom.fill.fore_color.rgb = C["teal"]
+    line_bottom.line.fill.background()
+
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(0.4), Inches(0.4),
+        Inches(2.0), Inches(0.35)
+    )
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = C["white"]
+    badge.line.color.rgb = C["teal"]
+    badge.line.width = Pt(1)
+
+    badge_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.4),
+        Inches(2.0), Inches(0.35)
+    )
+    badge_frame = badge_tf.text_frame
+    badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    badge_p = badge_frame.paragraphs[0]
+    badge_p.text = dept_name.upper()
+    badge_p.font.size = Pt(12)
+    badge_p.font.bold = True
+    badge_p.font.color.rgb = C["teal"]
+    badge_p.alignment = PP_ALIGN.CENTER
+
+    title_tf = slide.shapes.add_textbox(
+        Inches(2.6), Inches(0.35),
+        Inches(6.8), Inches(0.45)
+    )
+    title_frame = title_tf.text_frame
+    title_frame.word_wrap = True
+    title_p = title_frame.paragraphs[0]
+    title_p.text = "Resumen Ejecutivo"
+    title_p.font.size = Pt(24)
+    title_p.font.bold = True
+    title_p.font.color.rgb = C["lightGray"]
+    title_p.font.name = "Georgia"
+    title_p.alignment = PP_ALIGN.LEFT
+
+    sep_line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.4), Inches(0.85),
+        Inches(9.2), Inches(0.02)
+    )
+    sep_line.fill.solid()
+    sep_line.fill.fore_color.rgb = C["teal"]
+    sep_line.line.fill.background()
+
+    body_tf = slide.shapes.add_textbox(
+        Inches(0.6), Inches(1.1),
+        Inches(8.8), Inches(4.15)
+    )
+    body_frame = body_tf.text_frame
+    body_frame.word_wrap = True
+    body_p = body_frame.paragraphs[0]
+    body_p.text = text
+    body_p.font.size = Pt(15)
+    body_p.font.color.rgb = C["white"]
+    body_p.font.name = "Georgia"
+    body_p.alignment = PP_ALIGN.JUSTIFY
+    body_p.line_spacing = 1.4
+
+    footer_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(5.2),
+        Inches(9.2), Inches(0.2)
+    )
+    footer_frame = footer_tf.text_frame
+    footer_frame.word_wrap = True
+    footer_p = footer_frame.paragraphs[0]
+    footer_p.text = f"Fuente: DSFFA — MIDAGRI, SAC 2025-2026. Corte al {fecha_corte}."
+    footer_p.font.size = Pt(9)
+    footer_p.font.italic = True
+    footer_p.font.color.rgb = C["lightGray"]
+    footer_p.alignment = PP_ALIGN.RIGHT
 
 
 # ══════════════════════════════════════════════════════════════════
 # SLIDE GENERATION FUNCTIONS
 # ══════════════════════════════════════════════════════════════════
 
-def _add_portada(prs, data):
-    """Add cover slide."""
+def _generar_resumen_texto(section_data, scope_type):
+    """Generate narrative paragraph text from section metrics."""
+    m = section_data.get("metricas", {})
+    tipos = section_data.get("tipos", [])
+    provs = section_data.get("provincias", [])
+
+    nombre = section_data.get("name", "La región")
+    avisos = m.get("avisos", 0)
+    pct_eval = m.get("pct_eval", 0)
+    cerrados = m.get("cerrados", 0)
+    indem_total = m.get("indemnizacion", 0)
+    pct_desembolso = m.get("pct_desembolso", 0)
+    desembolso = m.get("desembolso", 0)
+
+    tipo_predominante = tipos[0]["tipo"] if tipos else "datos"
+    prov_principal = provs[0]["name"] if provs else "principales distritos"
+
+    text = (
+        f"{nombre} registra {avisos:,} avisos con avance de evaluación de {pct_eval:.1f}% "
+        f"({cerrados:,} expedientes cerrados). La indemnización total reconocida asciende a "
+        f"S/ {indem_total:,.0f}, con un desembolso acumulado de S/ {desembolso:,.0f} "
+        f"({pct_desembolso:.1f}% del monto reconocido). El tipo de siniestro predominante es "
+        f"{tipo_predominante}, concentrándose la mayor carga en {prov_principal}. "
+        f"Se observa rezago en la evaluación de expedientes pendientes, requiriendo acelerar "
+        f"los procesos de inspección y dictamen para cumplir los compromisos de desembolso. "
+        f"Las principales causas de atraso incluyen limitaciones en recursos humanos, "
+        f"complejidad de los siniestros y coordinación interinstitucional."
+    )
+    return text[:200]  # Limit to ~200 words
+
+
+def _add_pipeline_slide(prs, pipeline, dictamen, metricas):
+    """Add 5-step pipeline process flow slide."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
@@ -711,108 +947,284 @@ def _add_portada(prs, data):
         prs.slide_width, prs.slide_height
     )
     background.fill.solid()
-    background.fill.fore_color.rgb = C["forest"]
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.35),
+        Inches(9.2), Inches(0.45)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Flujo de Procesos del SAC — Estado Actual"
+    p.font.size = Pt(20)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.85),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["teal"]
+    line.line.fill.background()
+
+    _add_pipeline_flow(slide, pipeline, Inches(1.1))
+
+    info_text = "⚠ Avisos dictaminados NO INDEMNIZABLE: requieren documentación adicional"
+    _add_alert_box(slide, info_text, Inches(0.4), Inches(4.9), Inches(9.2))
+
+
+def _add_resumen_ejecutivo(prs, section_name, resumen_text, scope_label, fecha_corte):
+    """Add resumen ejecutivo slide with dark background and narrative text."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    _add_resumen_ejecutivo_slide(slide, prs, section_name, resumen_text, fecha_corte)
+
+
+def _add_tipo_siniestro_slide(prs, tipos):
+    """Add tipo de siniestro distribution slide."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.35),
+        Inches(9.2), Inches(0.45)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Distribución por Tipo de Siniestro"
+    p.font.size = Pt(20)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.85),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["teal"]
+    line.line.fill.background()
+
+    headers = ["Tipo Siniestro", "Monto (S/)", "%"]
+    rows = []
+    total_monto = sum(t.get("indem", 0) for t in tipos)
+
+    for t in tipos[:12]:
+        monto = t.get("indem", 0)
+        pct = (monto / total_monto * 100) if total_monto > 0 else 0
+        rows.append([
+            t["tipo"],
+            _fmt_money(monto),
+            f"{pct:.1f}%"
+        ])
+
+    col_widths = [Inches(3.5), Inches(3.0), Inches(1.2)]
+    _add_styled_table(slide, headers, rows, left=Inches(1.0), top=Inches(1.3),
+                     col_widths=col_widths, max_rows=12)
+
+    footer_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(5.35),
+        Inches(9.2), Inches(0.2)
+    )
+    footer_frame = footer_tf.text_frame
+    footer_frame.word_wrap = True
+    footer_p = footer_frame.paragraphs[0]
+    footer_p.text = "Fuente: DSFFA — MIDAGRI, SAC 2025-2026"
+    footer_p.font.size = Pt(8)
+    footer_p.font.italic = True
+    footer_p.font.color.rgb = C["gray"]
+    footer_p.alignment = PP_ALIGN.RIGHT
+
+
+def _add_top_deptos_chart(prs, top_deptos):
+    """Add top departamentos bar chart slide."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.35),
+        Inches(9.2), Inches(0.45)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Top 12 Departamentos por Indemnización Reconocida"
+    p.font.size = Pt(20)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.85),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["teal"]
+    line.line.fill.background()
+
+    # Create chart data
+    chart_data = CategoryChartData()
+    chart_data.categories = [d["name"] for d in top_deptos[:12]]
+
+    values = [d.get("indem", 0) for d in top_deptos[:12]]
+    chart_data.add_series('Indemnización (S/)', tuple(values))
+
+    # Add chart
+    chart_shape = slide.shapes.add_chart(
+        XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.5), Inches(1.3),
+        Inches(9.0), Inches(3.8), chart_data
+    ).chart
+
+    chart_shape.has_legend = False
+    chart_shape.series[0].format.fill.solid()
+    chart_shape.series[0].format.fill.fore_color.rgb = C["navy"]
+
+    footer_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(5.35),
+        Inches(9.2), Inches(0.2)
+    )
+    footer_frame = footer_tf.text_frame
+    footer_frame.word_wrap = True
+    footer_p = footer_frame.paragraphs[0]
+    footer_p.text = "Fuente: DSFFA — MIDAGRI, SAC 2025-2026"
+    footer_p.font.size = Pt(8)
+    footer_p.font.italic = True
+    footer_p.font.color.rgb = C["gray"]
+    footer_p.alignment = PP_ALIGN.RIGHT
+
+
+def _add_portada(prs, data):
+    """Add cover slide with dark navy background and teal accents."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["navy"]
     background.line.fill.background()
 
     line_top = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0), Inches(0.2),
-        prs.slide_width, Inches(0.08)
+        Inches(0), Inches(0.35),
+        prs.slide_width, Inches(0.06)
     )
     line_top.fill.solid()
-    line_top.fill.fore_color.rgb = C["gold"]
+    line_top.fill.fore_color.rgb = C["teal"]
     line_top.line.fill.background()
 
     line_bottom = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0), Inches(5.3),
-        prs.slide_width, Inches(0.08)
+        Inches(0), Inches(5.22),
+        prs.slide_width, Inches(0.06)
     )
     line_bottom.fill.solid()
-    line_bottom.fill.fore_color.rgb = C["gold"]
+    line_bottom.fill.fore_color.rgb = C["teal"]
     line_bottom.line.fill.background()
 
-    accent_bar = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE,
-        Inches(0), Inches(0.8),
-        Inches(0.15), Inches(4.0)
-    )
-    accent_bar.fill.solid()
-    accent_bar.fill.fore_color.rgb = C["sage"]
-    accent_bar.line.fill.background()
+    _make_logo(slide, Inches(4.0), Inches(0.55), Inches(2.0), Inches(2.2))
 
     tf_title = slide.shapes.add_textbox(
-        Inches(0.5), Inches(1.5),
-        Inches(9), Inches(1.0)
+        Inches(0.5), Inches(2.6),
+        Inches(9), Inches(0.6)
     )
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = "SEGURO AGRÍCOLA CATASTRÓFICO"
-    p.font.size = Pt(32)
+    p.font.size = Pt(36)
     p.font.bold = True
-    p.font.color.rgb = C["gold"]
+    p.font.color.rgb = C["white"]
     p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     tf_subtitle = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.7),
-        Inches(9), Inches(0.8)
+        Inches(0.5), Inches(3.25),
+        Inches(9), Inches(0.35)
     )
     text_frame = tf_subtitle.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = "SAC 2025–2026"
-    p.font.size = Pt(26)
-    p.font.color.rgb = C["white"]
+    p.font.size = Pt(22)
+    p.font.color.rgb = C["teal"]
     p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     sep_line = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(3.5), Inches(3.6),
-        Inches(3), Inches(0.04)
+        Inches(3.5), Inches(3.7),
+        Inches(3), Inches(0.03)
     )
     sep_line.fill.solid()
-    sep_line.fill.fore_color.rgb = C["gold"]
+    sep_line.fill.fore_color.rgb = C["teal"]
     sep_line.line.fill.background()
 
-    geo_info = data.get("filtros", {})
-    deptos = ", ".join(geo_info.get("deptos", [])[:3]) or "Nacional"
+    scope_text = "Resumen de Avance Nacional"
+    if data.get("filtros", {}).get("deptos"):
+        scope_text = f"Departamento: {', '.join(data['filtros']['deptos'][:2])}"
 
-    tf_geo = slide.shapes.add_textbox(
-        Inches(0.5), Inches(4.1),
-        Inches(9), Inches(0.4)
+    tf_scope = slide.shapes.add_textbox(
+        Inches(0.5), Inches(3.85),
+        Inches(9), Inches(0.3)
     )
-    text_frame = tf_geo.text_frame
+    text_frame = tf_scope.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = f"Ámbito: {deptos}"
-    p.font.size = Pt(12)
-    p.font.color.rgb = C["mint"]
+    p.text = scope_text
+    p.font.size = Pt(14)
+    p.font.color.rgb = C["white"]
     p.alignment = PP_ALIGN.CENTER
 
-    corte_info = f"Corte: {data.get('fecha_corte', 'S.F.')}"
+    fecha_corte = data.get("fecha_corte", "S.F.")
     tf_footer = slide.shapes.add_textbox(
-        Inches(0.5), Inches(4.8),
-        Inches(9), Inches(0.5)
+        Inches(0.5), Inches(4.85),
+        Inches(9), Inches(0.35)
     )
     text_frame = tf_footer.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = "Dirección de Seguro y Fomento del Financiamiento Agrario — MIDAGRI"
     p.font.size = Pt(10)
+    p.font.italic = True
     p.font.color.rgb = C["lightGray"]
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
-    p2.text = corte_info
+    p2.text = f"Corte al {fecha_corte}"
     p2.font.size = Pt(9)
+    p2.font.italic = True
     p2.font.color.rgb = C["lightGray"]
     p2.alignment = PP_ALIGN.CENTER
+    p2.space_before = Pt(2)
 
 
-def _add_cierre(prs):
+def _add_cierre(prs, fecha_corte):
     """Add closing slide."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
@@ -821,59 +1233,102 @@ def _add_cierre(prs):
         prs.slide_width, prs.slide_height
     )
     background.fill.solid()
-    background.fill.fore_color.rgb = C["forest"]
+    background.fill.fore_color.rgb = C["navy"]
     background.line.fill.background()
 
     line_top = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0), Inches(0.2),
-        prs.slide_width, Inches(0.08)
+        Inches(0), Inches(0.35),
+        prs.slide_width, Inches(0.06)
     )
     line_top.fill.solid()
-    line_top.fill.fore_color.rgb = C["gold"]
+    line_top.fill.fore_color.rgb = C["teal"]
     line_top.line.fill.background()
 
+    line_bottom = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(5.22),
+        prs.slide_width, Inches(0.06)
+    )
+    line_bottom.fill.solid()
+    line_bottom.fill.fore_color.rgb = C["teal"]
+    line_bottom.line.fill.background()
+
+    _make_logo(slide, Inches(4.0), Inches(0.55), Inches(2.0), Inches(1.3))
+
     tf_title = slide.shapes.add_textbox(
-        Inches(1), Inches(1.8),
-        Inches(8), Inches(1.5)
+        Inches(0.5), Inches(2.1),
+        Inches(9), Inches(0.7)
     )
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = "Gracias"
-    p.font.size = Pt(48)
+    p.text = "SEGURO AGRÍCOLA CATASTRÓFICO"
+    p.font.size = Pt(36)
     p.font.bold = True
     p.font.color.rgb = C["white"]
+    p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
+    tf_subtitle = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.85),
+        Inches(9), Inches(0.35)
+    )
+    text_frame = tf_subtitle.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "SAC 2025–2026"
+    p.font.size = Pt(22)
+    p.font.color.rgb = C["teal"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.CENTER
+
+    sep_line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(3.5), Inches(3.3),
+        Inches(3), Inches(0.03)
+    )
+    sep_line.fill.solid()
+    sep_line.fill.fore_color.rgb = C["teal"]
+    sep_line.line.fill.background()
+
     tf_footer = slide.shapes.add_textbox(
-        Inches(1), Inches(4.2),
-        Inches(8), Inches(0.8)
+        Inches(0.5), Inches(3.7),
+        Inches(9), Inches(1.0)
     )
     text_frame = tf_footer.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = "Dirección de Seguro y Fomento del Financiamiento Agrario"
-    p.font.size = Pt(11)
-    p.font.color.rgb = C["lightGray"]
+    p.font.size = Pt(13)
+    p.font.color.rgb = C["white"]
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
-    p2.text = "Ministerio de Desarrollo Agrario y Riego"
-    p2.font.size = Pt(10)
+    p2.text = "Ministerio de Desarrollo Agrario y Riego — MIDAGRI"
+    p2.font.size = Pt(12)
     p2.font.color.rgb = C["lightGray"]
     p2.alignment = PP_ALIGN.CENTER
+    p2.space_before = Pt(4)
+
+    p3 = text_frame.add_paragraph()
+    p3.text = f"Corte al {fecha_corte}"
+    p3.font.size = Pt(10)
+    p3.font.italic = True
+    p3.font.color.rgb = C["lightGray"]
+    p3.alignment = PP_ALIGN.CENTER
+    p3.space_before = Pt(4)
 
 
 def _add_nacional_section(prs, section):
-    """Add nacional section slides."""
+    """Add nacional section: indicadores clave, pipeline, tipo siniestro, top deptos."""
     m = section["metricas"]
-    tipos = section.get("tipos", [])
-    top_deptos = section.get("top_deptos", [])
+    empresas = section.get("empresas", [])
     pipeline = section.get("pipeline", [])
-    dictamen = section.get("dictamen", {})
-    insights = section.get("insights", [])
+    tipos = section.get("tipos", [])
+    deptos = section.get("departamentos", [])
 
+    # Slide 1: Indicadores Clave
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
@@ -884,36 +1339,89 @@ def _add_nacional_section(prs, section):
     background.fill.fore_color.rgb = C["cream"]
     background.line.fill.background()
 
-    _add_header_bar(slide, "RESUMEN NACIONAL SAC 2025–2026", C["forest"])
+    _make_logo(slide, Inches(0.4), Inches(0.35), Inches(0.6), Inches(0.65))
 
-    cards = [
-        ("Avisos", _fmt_num(m["avisos"]), "Notificados"),
-        ("Evaluados", _fmt_num(m["cerrados"]), f"{_fmt_pct(m['pct_eval'])}"),
-        ("Indemnización", _fmt_money(m["indemnizacion"]), "Total"),
-        ("Desembolso", _fmt_money(m["desembolso"]), f"{_fmt_pct(m['pct_desembolso'])}"),
-        ("Ha Indemnizadas", f"{m['ha_indemnizadas']:,.1f}", "Hectáreas"),
-        ("Productores", _fmt_num(m["productores"]), "Beneficiados"),
+    tf_title = slide.shapes.add_textbox(
+        Inches(1.2), Inches(0.3),
+        Inches(8.3), Inches(0.55)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Resumen Nacional — Indicadores Clave"
+    p.font.size = Pt(22)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    tf_sub = slide.shapes.add_textbox(
+        Inches(1.2), Inches(0.85),
+        Inches(8.3), Inches(0.25)
+    )
+    text_frame = tf_sub.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    emp_text = "Consolidado La Positiva + Rímac · Campaña 2025-2026"
+    if empresas:
+        emp_text = " + ".join([f"{e['empresa']} ({e['avisos']} avisos)" for e in empresas[:2]])
+    p.text = emp_text
+    p.font.size = Pt(10)
+    p.font.color.rgb = C["gray"]
+    p.font.name = "Calibri"
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(1.15),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["teal"]
+    line.line.fill.background()
+
+    kpi_configs = [
+        ("Avisos Reportados", _fmt_num(m["avisos"]), "24 departamentos", C["teal"], "⚠"),
+        ("Avance Evaluación", f"{_fmt_pct(m['pct_eval'])}", f"{m['cerrados']:,} cerrados de {m['avisos']:,}", C["teal"], "✔"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), "Reconocida a productores", C["orange"], "●"),
+        ("Avance Desembolso", f"{_fmt_pct(m['pct_desembolso'])}", f"{_fmt_money(m['desembolso'])} desembolsados", C["teal"], "✦"),
+        ("Ha Indemnizadas", f"{m['ha_indemnizadas']:,.1f}", "Solo con evaluación cerrada", C["teal"], "🌿"),
+        ("Productores", _fmt_num(m["productores"]), "Beneficiados con indemnización", C["sage"], "👥"),
     ]
 
-    for i, (label, value, sublabel) in enumerate(cards):
-        col = i % 3
-        row = i // 3
-        left = Inches(0.5 + col * 3.15)
-        top = Inches(1.3 + row * 1.75)
-        _add_metric_card(slide, left, top, Inches(2.9), Inches(1.5), label, value, sublabel)
+    if empresas:
+        for i, emp in enumerate(empresas[:2]):
+            emp_label = f"{emp['empresa']}"
+            emp_val = f"{emp['avisos']} avisos"
+            emp_detail = f"{_fmt_pct(emp['pct_eval'])} cerrados · {_fmt_money(emp['indemnizacion'])}"
+            kpi_configs.append((emp_label, emp_val, emp_detail, C["teal"], f"{i+1}️"))
 
-    _add_pipeline(slide, pipeline, dictamen, Inches(4.2))
+    for i, (label, value, sublabel, color, icon) in enumerate(kpi_configs[:8]):
+        col = i % 4
+        row = i // 4
+        left = Inches(0.35 + col * 2.35)
+        top = Inches(1.65 + row * 2.0)
+        _add_kpi_card(slide, left, top, Inches(2.15), Inches(1.85), label, value, sublabel, color, icon)
 
-    if insights:
-        _add_insight_box(slide, insights, Inches(7.0), Inches(4.5), Inches(2.7), Inches(0.8))
+    # Slide 2: Pipeline de Procesos
+    if pipeline:
+        _add_pipeline_slide(prs, pipeline, {}, m)
+
+    # Slide 3: Tipo de Siniestro
+    if tipos:
+        _add_tipo_siniestro_slide(prs, tipos)
+
+    # Slide 4: Top Departamentos
+    if deptos:
+        _add_top_deptos_chart(prs, deptos)
 
 
-def _add_departamental_section(prs, section):
-    """Add departamental section slides."""
+def _add_departamental_section(prs, section, fecha_corte="S.F."):
+    """Add departamental section: separator + metrics + resumen ejecutivo."""
     name = section.get("name", "Departamento")
     m = section["metricas"]
-    provs = section.get("provincias", [])
     tipos = section.get("tipos", [])
+    provs = section.get("provincias", [])
     pipeline = section.get("pipeline", [])
     insights = section.get("insights", [])
 
@@ -927,34 +1435,64 @@ def _add_departamental_section(prs, section):
     background.fill.fore_color.rgb = C["navy"]
     background.line.fill.background()
 
-    line = slide.shapes.add_shape(
+    line_top = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0), Inches(1.0),
+        Inches(0), Inches(0.35),
         prs.slide_width, Inches(0.06)
     )
-    line.fill.solid()
-    line.fill.fore_color.rgb = C["gold"]
-    line.line.fill.background()
+    line_top.fill.solid()
+    line_top.fill.fore_color.rgb = C["teal"]
+    line_top.line.fill.background()
 
-    tf = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.0),
-        Inches(9), Inches(1.5)
+    line_bottom = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(5.22),
+        prs.slide_width, Inches(0.06)
     )
-    text_frame = tf.text_frame
+    line_bottom.fill.solid()
+    line_bottom.fill.fore_color.rgb = C["teal"]
+    line_bottom.line.fill.background()
+
+    circle = slide.shapes.add_shape(
+        MSO_SHAPE.OVAL,
+        Inches(4.15), Inches(0.8),
+        Inches(1.7), Inches(1.7)
+    )
+    circle.fill.solid()
+    circle.fill.fore_color.rgb = C["teal"]
+    circle.line.fill.background()
+
+    circle_tf = slide.shapes.add_textbox(
+        Inches(4.15), Inches(0.8),
+        Inches(1.7), Inches(1.7)
+    )
+    circle_frame = circle_tf.text_frame
+    circle_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    circle_p = circle_frame.paragraphs[0]
+    circle_p.text = "🌾"
+    circle_p.font.size = Pt(60)
+    circle_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.7),
+        Inches(9), Inches(0.8)
+    )
+    text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = name.upper()
-    p.font.size = Pt(48)
+    p.font.size = Pt(40)
     p.font.bold = True
-    p.font.color.rgb = C["gold"]
+    p.font.color.rgb = C["white"]
+    p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
-    p2.text = f"{m['avisos']:,} avisos | {_fmt_money(m['indemnizacion'])} indemnización"
-    p2.font.size = Pt(12)
-    p2.font.color.rgb = C["white"]
+    p2.text = f"{m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización"
+    p2.font.size = Pt(13)
+    p2.font.color.rgb = C["teal"]
     p2.alignment = PP_ALIGN.CENTER
-    p2.space_before = Pt(6)
+    p2.space_before = Pt(4)
 
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
@@ -966,59 +1504,100 @@ def _add_departamental_section(prs, section):
     background.fill.fore_color.rgb = C["cream"]
     background.line.fill.background()
 
-    _add_header_bar(slide, f"MÉTRICAS — {name}", C["navy"])
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(0.4), Inches(0.35),
+        Inches(1.5), Inches(0.35)
+    )
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = C["white"]
+    badge.line.color.rgb = C["orange"]
+    badge.line.width = Pt(1.5)
 
-    cards = [
-        ("Avisos", _fmt_num(m["avisos"]), ""),
-        ("Evaluados", _fmt_num(m["cerrados"]), f"{_fmt_pct(m['pct_eval'])}"),
-        ("Indemnización", _fmt_money(m["indemnizacion"]), ""),
-        ("Desembolso", _fmt_money(m["desembolso"]), f"{_fmt_pct(m['pct_desembolso'])}"),
+    badge_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.35),
+        Inches(1.5), Inches(0.35)
+    )
+    badge_frame = badge_tf.text_frame
+    badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    badge_p = badge_frame.paragraphs[0]
+    badge_p.text = name.upper()
+    badge_p.font.size = Pt(11)
+    badge_p.font.bold = True
+    badge_p.font.color.rgb = C["orange"]
+    badge_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(2.1), Inches(0.28),
+        Inches(7.5), Inches(0.5)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Análisis Departamental — Indicadores Clave"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.85),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["teal"]
+    line.line.fill.background()
+
+    kpi_configs = [
+        ("Avisos Reportados", _fmt_num(m["avisos"]), "", C["amber"], "⚠"),
+        ("Avance Evaluación", f"{_fmt_pct(m['pct_eval'])}", f"{m['cerrados']:,} cerrados", C["teal"], "✔"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), "", C["orange"], "●"),
+        ("Avance Desembolso", f"{_fmt_pct(m['pct_desembolso'])}", _fmt_money(m["desembolso"]), C["teal"], "✦"),
     ]
 
-    for i, (label, value, sublabel) in enumerate(cards):
-        col = i % 2
-        row = i // 2
-        left = Inches(1.0 + col * 4.0)
-        top = Inches(1.3 + row * 1.65)
-        _add_metric_card(slide, left, top, Inches(3.8), Inches(1.5), label, value, sublabel, C["navy"])
+    for i, (label, value, sublabel, color, icon) in enumerate(kpi_configs):
+        left = Inches(0.3 + i * 2.35)
+        top = Inches(1.25)
+        _add_kpi_card(slide, left, top, Inches(2.15), Inches(1.85), label, value, sublabel, color, icon)
 
-    _add_pipeline(slide, section.get("pipeline", []), section.get("dictamen", {}), Inches(3.2))
+    if tipos:
+        headers = ["Tipo Siniestro", "Avisos", "Indem. (S/)"]
+        rows = []
+        for t in tipos[:8]:
+            rows.append([
+                t["tipo"],
+                _fmt_num(t["avisos"]),
+                _fmt_money(t.get("indem", 0)),
+            ])
+        col_widths = [Inches(2.0), Inches(1.1), Inches(1.2)]
+        _add_styled_table(slide, headers, rows, left=Inches(0.3), top=Inches(3.25), col_widths=col_widths, max_rows=5)
 
     if provs:
-        slide = prs.slides.add_slide(prs.slide_layouts[6])
-        background = slide.shapes.add_shape(
-            MSO_SHAPE.RECTANGLE,
-            Inches(0), Inches(0),
-            prs.slide_width, prs.slide_height
-        )
-        background.fill.solid()
-        background.fill.fore_color.rgb = C["cream"]
-        background.line.fill.background()
-
-        _add_header_bar(slide, f"PROVINCIAS — {name}", C["forest"])
-
-        headers = ["Provincia", "Avisos", "Indemnización", "Desembolso", "Ha"]
-        rows = []
-        for p in provs[:12]:
-            rows.append([
+        headers_p = ["Provincia", "Avisos", "Indem. (S/)"]
+        rows_p = []
+        for p in provs[:5]:
+            rows_p.append([
                 p["name"],
                 _fmt_num(p["avisos"]),
                 _fmt_money(p.get("indem", 0)),
-                _fmt_money(p.get("desemb", 0)),
-                f"{p.get('ha', 0):.1f}"
             ])
+        col_widths_p = [Inches(2.0), Inches(1.1), Inches(1.2)]
+        _add_styled_table(slide, headers_p, rows_p, left=Inches(5.0), top=Inches(3.25), col_widths=col_widths_p, max_rows=5)
 
-        _add_data_table(slide, headers, rows, top=Inches(1.2))
+    # Slide 3: Resumen Ejecutivo
+    resumen_text = _generar_resumen_texto(section, "departamental")
+    _add_resumen_ejecutivo(prs, name, resumen_text, "Departamental", fecha_corte)
 
 
 def _add_provincial_section(prs, section):
-    """Add provincial section slides."""
+    """Add provincial section: separator + metrics."""
     name = section.get("name", "Provincia")
     depto = section.get("depto", "")
     m = section["metricas"]
     dists = section.get("distritos", [])
     tipos = section.get("tipos", [])
-    pipeline = section.get("pipeline", [])
 
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
@@ -1030,38 +1609,70 @@ def _add_provincial_section(prs, section):
     background.fill.fore_color.rgb = C["forest"]
     background.line.fill.background()
 
-    line = slide.shapes.add_shape(
+    line_top = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0), Inches(1.0),
+        Inches(0), Inches(0.35),
         prs.slide_width, Inches(0.06)
     )
-    line.fill.solid()
-    line.fill.fore_color.rgb = C["gold"]
-    line.line.fill.background()
+    line_top.fill.solid()
+    line_top.fill.fore_color.rgb = C["sage"]
+    line_top.line.fill.background()
 
-    tf = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.0),
-        Inches(9), Inches(1.5)
+    line_bottom = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(5.22),
+        prs.slide_width, Inches(0.06)
     )
-    text_frame = tf.text_frame
+    line_bottom.fill.solid()
+    line_bottom.fill.fore_color.rgb = C["sage"]
+    line_bottom.line.fill.background()
+
+    circle = slide.shapes.add_shape(
+        MSO_SHAPE.OVAL,
+        Inches(4.15), Inches(0.8),
+        Inches(1.7), Inches(1.7)
+    )
+    circle.fill.solid()
+    circle.fill.fore_color.rgb = C["sage"]
+    circle.line.fill.background()
+
+    circle_tf = slide.shapes.add_textbox(
+        Inches(4.15), Inches(0.8),
+        Inches(1.7), Inches(1.7)
+    )
+    circle_frame = circle_tf.text_frame
+    circle_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    circle_p = circle_frame.paragraphs[0]
+    circle_p.text = "🏡"
+    circle_p.font.size = Pt(60)
+    circle_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.7),
+        Inches(9), Inches(0.8)
+    )
+    text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = name.upper()
-    p.font.size = Pt(48)
+    p.font.size = Pt(40)
     p.font.bold = True
-    p.font.color.rgb = C["gold"]
+    p.font.color.rgb = C["white"]
+    p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
-    p2.text = f"{depto}"
-    p2.font.size = Pt(14)
-    p2.font.color.rgb = C["mint"]
+    p2.text = depto if depto else "Provincia"
+    p2.font.size = Pt(13)
+    p2.font.color.rgb = C["sage"]
     p2.alignment = PP_ALIGN.CENTER
+    p2.space_before = Pt(4)
 
 
 def _add_distrital_section(prs, section):
-    """Add distrital section slides."""
+    """Add distrital section: separator slide."""
     name = section.get("name", "Distrito")
+    prov = section.get("prov", "")
 
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
@@ -1073,27 +1684,64 @@ def _add_distrital_section(prs, section):
     background.fill.fore_color.rgb = C["navy"]
     background.line.fill.background()
 
-    line = slide.shapes.add_shape(
+    line_top = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(0), Inches(1.0),
+        Inches(0), Inches(0.35),
         prs.slide_width, Inches(0.06)
     )
-    line.fill.solid()
-    line.fill.fore_color.rgb = C["gold"]
-    line.line.fill.background()
+    line_top.fill.solid()
+    line_top.fill.fore_color.rgb = C["teal"]
+    line_top.line.fill.background()
 
-    tf = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.0),
-        Inches(9), Inches(1.5)
+    line_bottom = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(5.22),
+        prs.slide_width, Inches(0.06)
     )
-    text_frame = tf.text_frame
+    line_bottom.fill.solid()
+    line_bottom.fill.fore_color.rgb = C["teal"]
+    line_bottom.line.fill.background()
+
+    circle = slide.shapes.add_shape(
+        MSO_SHAPE.OVAL,
+        Inches(4.15), Inches(0.8),
+        Inches(1.7), Inches(1.7)
+    )
+    circle.fill.solid()
+    circle.fill.fore_color.rgb = C["teal"]
+    circle.line.fill.background()
+
+    circle_tf = slide.shapes.add_textbox(
+        Inches(4.15), Inches(0.8),
+        Inches(1.7), Inches(1.7)
+    )
+    circle_frame = circle_tf.text_frame
+    circle_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    circle_p = circle_frame.paragraphs[0]
+    circle_p.text = "📍"
+    circle_p.font.size = Pt(60)
+    circle_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.7),
+        Inches(9), Inches(0.8)
+    )
+    text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = name.upper()
-    p.font.size = Pt(44)
+    p.font.size = Pt(40)
     p.font.bold = True
-    p.font.color.rgb = C["gold"]
+    p.font.color.rgb = C["white"]
+    p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
+
+    p2 = text_frame.add_paragraph()
+    p2.text = f"{prov} Provincia" if prov else "Distrito"
+    p2.font.size = Pt(13)
+    p2.font.color.rgb = C["teal"]
+    p2.alignment = PP_ALIGN.CENTER
+    p2.space_before = Pt(4)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1103,11 +1751,12 @@ def _add_distrital_section(prs, section):
 def generar_ppt_dinamico(df, filtros, fecha_corte):
     """
     Genera una presentación PPT dinámica con python-pptx.
+    Interfaz compatible con app.py: misma firma, misma lógica de datos.
 
     Args:
         df: DataFrame consolidado (datos["midagri"])
         filtros: dict con selecciones del usuario
-        fecha_corte: string con fecha de corte
+        fecha_corte: string con fecha de corte (ej: "14/03/2026")
 
     Returns:
         bytes del archivo .pptx
@@ -1128,13 +1777,13 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
         if section_type == "nacional":
             _add_nacional_section(prs, section)
         elif section_type == "departamental":
-            _add_departamental_section(prs, section)
+            _add_departamental_section(prs, section, fecha_corte)
         elif section_type == "provincial":
             _add_provincial_section(prs, section)
         elif section_type == "distrital":
             _add_distrital_section(prs, section)
 
-    _add_cierre(prs)
+    _add_cierre(prs, fecha_corte)
 
     output = io.BytesIO()
     prs.save(output)
