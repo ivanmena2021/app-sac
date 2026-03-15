@@ -63,7 +63,15 @@ def _calcular_metricas(df):
     desemb = float(df["MONTO_DESEMBOLSADO"].sum()) if _safe_col(df, "MONTO_DESEMBOLSADO") else 0
     pct_desemb = (desemb / indem * 100) if indem > 0 else 0
     ha = float(df["SUP_INDEMNIZADA"].sum()) if _safe_col(df, "SUP_INDEMNIZADA") else 0
-    productores = int(df["N_PRODUCTORES"].sum()) if _safe_col(df, "N_PRODUCTORES") else 0
+    # Productores beneficiados: solo registros con indemnización > 0
+    if _safe_col(df, "N_PRODUCTORES") and _safe_col(df, "INDEMNIZACION"):
+        _indemn = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)
+        _prods = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
+        productores = int(_prods[_indemn > 0].sum())
+    elif _safe_col(df, "N_PRODUCTORES"):
+        productores = int(df["N_PRODUCTORES"].sum())
+    else:
+        productores = 0
     return {
         "avisos": n, "cerrados": cerrados, "pct_eval": round(pct_eval, 1),
         "indemnizacion": indem, "desembolso": desemb,
@@ -102,7 +110,13 @@ def _top_breakdown(df, col, n=10):
     if _safe_col(df, "SUP_INDEMNIZADA"):
         agg["Ha"] = ("SUP_INDEMNIZADA", "sum")
     if _safe_col(df, "N_PRODUCTORES"):
-        agg["Productores"] = ("N_PRODUCTORES", "sum")
+        # Solo contar productores donde hay indemnización > 0
+        df = df.copy()
+        df["_PROD_BENEF"] = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
+        if _safe_col(df, "INDEMNIZACION"):
+            _ind = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)
+            df["_PROD_BENEF"] = df["_PROD_BENEF"].where(_ind > 0, 0)
+        agg["Productores"] = ("_PROD_BENEF", "sum")
     result = df.groupby(col).agg(**agg).reset_index()
     result = result.sort_values("Avisos", ascending=False).head(n)
     rows = []

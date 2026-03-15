@@ -423,7 +423,14 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
     ha_indemnizadas = midagri["SUP_INDEMNIZADA"].sum() if "SUP_INDEMNIZADA" in midagri.columns else 0
     monto_indemnizado = midagri["INDEMNIZACION"].sum() if "INDEMNIZACION" in midagri.columns else 0
     monto_desembolsado = midagri["MONTO_DESEMBOLSADO"].sum() if "MONTO_DESEMBOLSADO" in midagri.columns else 0
-    productores_desembolso = midagri["N_PRODUCTORES"].sum() if "N_PRODUCTORES" in midagri.columns else 0
+    # Productores beneficiados: SOLO los de registros con indemnización > 0
+    if "N_PRODUCTORES" in midagri.columns and "INDEMNIZACION" in midagri.columns:
+        mask_indemn = pd.to_numeric(midagri["INDEMNIZACION"], errors="coerce").fillna(0) > 0
+        productores_desembolso = pd.to_numeric(midagri.loc[mask_indemn, "N_PRODUCTORES"], errors="coerce").fillna(0).sum()
+    elif "N_PRODUCTORES" in midagri.columns:
+        productores_desembolso = midagri["N_PRODUCTORES"].sum()
+    else:
+        productores_desembolso = 0
 
     # ═══ DATOS ESTÁTICOS ═══
     prima_total = materia["PRIMA_TOTAL"].sum() if "PRIMA_TOTAL" in materia.columns else 0
@@ -473,11 +480,17 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
 
     # ═══ CUADRO 2: Indemnizaciones y Desembolsos por Departamento ═══
     if "DEPARTAMENTO" in midagri.columns:
-        cuadro2 = midagri.groupby("DEPARTAMENTO").agg(
+        # Filtrar solo registros con indemnización para contar productores
+        midagri_c2 = midagri.copy()
+        midagri_c2["_INDEMN_NUM"] = pd.to_numeric(midagri_c2["INDEMNIZACION"], errors="coerce").fillna(0)
+        midagri_c2["_PROD_NUM"] = pd.to_numeric(midagri_c2["N_PRODUCTORES"], errors="coerce").fillna(0) if "N_PRODUCTORES" in midagri_c2.columns else 0
+        # Solo contar productores donde hay indemnización > 0
+        midagri_c2["_PROD_BENEF"] = midagri_c2["_PROD_NUM"].where(midagri_c2["_INDEMN_NUM"] > 0, 0)
+        cuadro2 = midagri_c2.groupby("DEPARTAMENTO").agg(
             ha_indemn=("SUP_INDEMNIZADA", "sum"),
             monto_indemn=("INDEMNIZACION", "sum"),
             monto_desemb=("MONTO_DESEMBOLSADO", "sum"),
-            productores=("N_PRODUCTORES", "sum")
+            productores=("_PROD_BENEF", "sum")
         ).reset_index()
         cuadro2 = cuadro2.rename(columns={
             "DEPARTAMENTO": "Departamento",
@@ -507,12 +520,17 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
         # Conteo por tipo
         lluvia_por_tipo = lluvia_df["TIPO_SINIESTRO"].value_counts()
 
-        cuadro3 = lluvia_df.groupby("DEPARTAMENTO").agg(
-            avisos=("CODIGO_AVISO", "count") if "CODIGO_AVISO" in lluvia_df.columns else ("DEPARTAMENTO", "count"),
+        # Productores solo de registros con indemnización > 0
+        lluvia_c3 = lluvia_df.copy()
+        lluvia_c3["_INDEMN_NUM"] = pd.to_numeric(lluvia_c3["INDEMNIZACION"], errors="coerce").fillna(0)
+        lluvia_c3["_PROD_NUM"] = pd.to_numeric(lluvia_c3["N_PRODUCTORES"], errors="coerce").fillna(0) if "N_PRODUCTORES" in lluvia_c3.columns else 0
+        lluvia_c3["_PROD_BENEF"] = lluvia_c3["_PROD_NUM"].where(lluvia_c3["_INDEMN_NUM"] > 0, 0)
+        cuadro3 = lluvia_c3.groupby("DEPARTAMENTO").agg(
+            avisos=("CODIGO_AVISO", "count") if "CODIGO_AVISO" in lluvia_c3.columns else ("DEPARTAMENTO", "count"),
             ha_indemn=("SUP_INDEMNIZADA", "sum"),
             monto_indemn=("INDEMNIZACION", "sum"),
             monto_desemb=("MONTO_DESEMBOLSADO", "sum"),
-            productores=("N_PRODUCTORES", "sum")
+            productores=("_PROD_BENEF", "sum")
         ).reset_index()
         cuadro3 = cuadro3.rename(columns={
             "DEPARTAMENTO": "Departamento",

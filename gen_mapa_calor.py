@@ -197,7 +197,13 @@ def _build_metrics(datos, nivel_key="Departamental", depto_filter=None):
     if "MONTO_DESEMBOLSADO" in df.columns:
         agg_dict["monto_desembolsado"] = ("MONTO_DESEMBOLSADO", "sum")
     if "N_PRODUCTORES" in df.columns:
-        agg_dict["productores"] = ("N_PRODUCTORES", "sum")
+        # Solo contar productores donde hay indemnización > 0
+        df = df.copy()
+        df["_PROD_BENEF"] = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
+        if "INDEMNIZACION" in df.columns:
+            _ind = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)
+            df["_PROD_BENEF"] = df["_PROD_BENEF"].where(_ind > 0, 0)
+        agg_dict["productores"] = ("_PROD_BENEF", "sum")
 
     # Para provincial/distrital, incluir departamento como contexto
     if nivel_key != "Departamental" and "DEPARTAMENTO" in df.columns:

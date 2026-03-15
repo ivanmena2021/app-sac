@@ -122,6 +122,7 @@ METRICAS_COMPARACION = {
         "col_fecha": "FECHA_DESEMBOLSO",
         "agg": "sum",
         "col_valor": "N_PRODUCTORES",
+        "filter": {"DICTAMEN": "INDEMNIZABLE"},
         "cumulative": True,
         "formato": "{:,.0f}",
         "suffix": "productores",
@@ -345,8 +346,14 @@ def get_comparison_table(df_actual, df_anterior):
     desemb_ant = safe_sum(df_anterior, "MONTO_DESEMBOLSADO")
     desemb_act = safe_sum(df_actual, "MONTO_DESEMBOLSADO")
 
-    prod_ant = safe_sum(df_anterior, "N_PRODUCTORES")
-    prod_act = safe_sum(df_actual, "N_PRODUCTORES")
+    # Productores beneficiados: solo registros con indemnización > 0
+    def safe_sum_prod_benef(df):
+        if "N_PRODUCTORES" not in df.columns:
+            return 0
+        mask = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0) > 0 if "INDEMNIZACION" in df.columns else pd.Series(True, index=df.index)
+        return pd.to_numeric(df.loc[mask, "N_PRODUCTORES"], errors="coerce").fillna(0).sum()
+    prod_ant = safe_sum_prod_benef(df_anterior)
+    prod_act = safe_sum_prod_benef(df_actual)
 
     cerr_ant = cerrados(df_anterior)
     cerr_act = cerrados(df_actual)
