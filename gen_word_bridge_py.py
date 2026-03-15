@@ -65,19 +65,41 @@ def generate_nacional_docx(datos):
     else:
         cuadro3 = datos.get("cuadro3", [])
 
+    def _safe_int(v):
+        """Safely convert value to int, handling Series and other types."""
+        try:
+            if hasattr(v, 'item'):
+                return int(v.item())
+            if hasattr(v, 'iloc'):
+                return int(v.iloc[0])
+            return int(v)
+        except (TypeError, ValueError, IndexError):
+            return 0
+
+    def _safe_float(v):
+        """Safely convert value to float."""
+        try:
+            if hasattr(v, 'item'):
+                return float(v.item())
+            if hasattr(v, 'iloc'):
+                return float(v.iloc[0])
+            return float(v)
+        except (TypeError, ValueError, IndexError):
+            return 0.0
+
     # Empresas text
     empresas_text = "La Positiva y Rímac"
     if len(datos.get("empresas", {})) > 0:
         partes = []
         for emp, count in datos["empresas"].items():
-            partes.append(f"{emp} ({int(count)} departamentos)")
+            partes.append(f"{emp} ({_safe_int(count)} departamentos)")
         empresas_text = " y ".join(partes)
 
     # Lluvia description
     lluvia_desc = "inundación, huayco, lluvias excesivas y deslizamiento"
     lluvia_tipos = datos.get("lluvia_por_tipo", {})
     if hasattr(lluvia_tipos, "items") and len(lluvia_tipos) > 0:
-        parts = [f"{t.lower()} ({int(c)})" for t, c in lluvia_tipos.items()]
+        parts = [f"{t.lower()} ({_safe_int(c)})" for t, c in lluvia_tipos.items()]
         lluvia_desc = ", ".join(parts)
 
     # Top 3 lluvia
@@ -86,7 +108,7 @@ def generate_nacional_docx(datos):
         c3_temp = datos["cuadro3"][datos["cuadro3"]["Departamento"] != "TOTAL"]
         if len(c3_temp) > 0:
             top3 = c3_temp.nlargest(3, "Avisos")
-            parts = [f"{r['Departamento'].title()} ({int(r['Avisos'])} avisos)" for _, r in top3.iterrows()]
+            parts = [f"{r['Departamento'].title()} ({_safe_int(r['Avisos'])} avisos)" for _, r in top3.iterrows()]
             top3_lluvia_text = ", ".join(parts)
 
     # Top 3 siniestros text
@@ -94,31 +116,33 @@ def generate_nacional_docx(datos):
     if len(datos.get("top3_siniestros", {})) > 0:
         parts = []
         for tipo, count in datos["top3_siniestros"].items():
-            pct = (count / datos["total_avisos"] * 100) if datos["total_avisos"] > 0 else 0
+            count_val = _safe_float(count)
+            total = _safe_float(datos.get("total_avisos", 0))
+            pct = (count_val / total * 100) if total > 0 else 0
             parts.append(f"{tipo.lower()} ({pct:.1f}%)")
         top3_sin_text = f"Los siniestros principales son {', '.join(parts)}."
 
     payload = {
         "fecha_corte": datos.get("fecha_corte", ""),
-        "total_avisos": datos.get("total_avisos", 0),
-        "total_ajustados": datos.get("total_ajustados", 0),
-        "pct_ajustados": datos.get("pct_ajustados", 0),
-        "monto_indemnizado": datos.get("monto_indemnizado", 0),
-        "monto_desembolsado": datos.get("monto_desembolsado", 0),
-        "productores_desembolso": datos.get("productores_desembolso", 0),
-        "prima_total": datos.get("prima_total", 0),
-        "prima_neta": datos.get("prima_neta", 0),
-        "sup_asegurada": datos.get("sup_asegurada", 0),
-        "prod_asegurados": datos.get("prod_asegurados", 0),
-        "indice_siniestralidad": datos.get("indice_siniestralidad", 0),
-        "pct_desembolso": datos.get("pct_desembolso", 0),
-        "deptos_con_desembolso": datos.get("deptos_con_desembolso", 0),
+        "total_avisos": _safe_int(datos.get("total_avisos", 0)),
+        "total_ajustados": _safe_int(datos.get("total_ajustados", 0)),
+        "pct_ajustados": _safe_float(datos.get("pct_ajustados", 0)),
+        "monto_indemnizado": _safe_float(datos.get("monto_indemnizado", 0)),
+        "monto_desembolsado": _safe_float(datos.get("monto_desembolsado", 0)),
+        "productores_desembolso": _safe_int(datos.get("productores_desembolso", 0)),
+        "prima_total": _safe_float(datos.get("prima_total", 0)),
+        "prima_neta": _safe_float(datos.get("prima_neta", 0)),
+        "sup_asegurada": _safe_float(datos.get("sup_asegurada", 0)),
+        "prod_asegurados": _safe_int(datos.get("prod_asegurados", 0)),
+        "indice_siniestralidad": _safe_float(datos.get("indice_siniestralidad", 0)),
+        "pct_desembolso": _safe_float(datos.get("pct_desembolso", 0)),
+        "deptos_con_desembolso": _safe_int(datos.get("deptos_con_desembolso", 0)),
         "empresas_text": empresas_text,
         "cuadro1": cuadro1,
         "cuadro2": cuadro2,
         "cuadro3": cuadro3,
-        "total_lluvia": datos.get("total_lluvia", 0),
-        "pct_lluvia": datos.get("pct_lluvia", 0),
+        "total_lluvia": _safe_int(datos.get("total_lluvia", 0)),
+        "pct_lluvia": _safe_float(datos.get("pct_lluvia", 0)),
         "lluvia_desc": lluvia_desc,
         "top3_lluvia_text": top3_lluvia_text,
         "top3_siniestros_text": top3_sin_text,
@@ -134,10 +158,24 @@ def generate_departamental_docx(depto_data):
     """
     import pandas as pd
 
+    def _safe_int_d(v):
+        try:
+            if hasattr(v, 'item'): return int(v.item())
+            if hasattr(v, 'iloc'): return int(v.iloc[0])
+            return int(v)
+        except (TypeError, ValueError, IndexError): return 0
+
+    def _safe_float_d(v):
+        try:
+            if hasattr(v, 'item'): return float(v.item())
+            if hasattr(v, 'iloc'): return float(v.iloc[0])
+            return float(v)
+        except (TypeError, ValueError, IndexError): return 0.0
+
     d = depto_data
-    total = d.get("total_avisos", 0)
+    total = _safe_int_d(d.get("total_avisos", 0))
     estados = d.get("estados", {})
-    cerrados = int(estados.get("CERRADO", 0)) if hasattr(estados, "get") and len(estados) > 0 else 0
+    cerrados = _safe_int_d(estados.get("CERRADO", 0)) if hasattr(estados, "get") and len(estados) > 0 else 0
     pendientes = total - cerrados
 
     pct_cerrados = f"{(cerrados / total * 100):.1f}" if total > 0 else "0"
