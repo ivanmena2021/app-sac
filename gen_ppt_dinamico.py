@@ -434,7 +434,9 @@ def _fmt_money(n):
     if n is None or n == 0:
         return "S/ 0"
     if abs(n) >= 1_000_000:
-        return f"S/ {n/1_000_000:,.2f} M"
+        return f"S/{n/1_000_000:,.2f}M"
+    if abs(n) >= 100_000:
+        return f"S/{n/1_000:,.0f}K"
     return f"S/ {n:,.0f}"
 
 
@@ -539,44 +541,58 @@ def _add_kpi_card(slide, left, top, w, h, label, value, sublabel, accent_color, 
     icon_p.font.size = Pt(20)
     icon_p.alignment = PP_ALIGN.CENTER
 
+    # Auto-size value font based on text length
+    val_str = str(value)
+    if len(val_str) > 10:
+        val_font = Pt(18)
+    elif len(val_str) > 7:
+        val_font = Pt(22)
+    else:
+        val_font = Pt(26)
+
     value_tf = slide.shapes.add_textbox(
-        left + Inches(0.1), top + Inches(0.95),
-        w - Inches(0.2), Inches(0.8)
+        left + Inches(0.08), top + Inches(0.88),
+        w - Inches(0.16), Inches(0.45)
     )
     value_frame = value_tf.text_frame
-    value_frame.word_wrap = True
+    value_frame.word_wrap = False
+    value_frame.margin_top = Pt(0)
+    value_frame.margin_bottom = Pt(0)
     value_p = value_frame.paragraphs[0]
-    value_p.text = str(value)
-    value_p.font.size = Pt(28)
+    value_p.text = val_str
+    value_p.font.size = val_font
     value_p.font.bold = True
     value_p.font.color.rgb = C["navy"]
     value_p.font.name = "Georgia"
     value_p.alignment = PP_ALIGN.CENTER
 
+    sub_tf = slide.shapes.add_textbox(
+        left + Inches(0.08), top + Inches(1.35),
+        w - Inches(0.16), Inches(0.25)
+    )
+    sub_frame = sub_tf.text_frame
+    sub_frame.word_wrap = True
+    sub_frame.margin_top = Pt(0)
+    sub_frame.margin_bottom = Pt(0)
+    sub_p = sub_frame.paragraphs[0]
+    sub_p.text = str(sublabel) if sublabel else ""
+    sub_p.font.size = Pt(8)
+    sub_p.font.color.rgb = C["gray"]
+    sub_p.alignment = PP_ALIGN.CENTER
+
     label_tf = slide.shapes.add_textbox(
-        left + Inches(0.1), top + Inches(1.75),
-        w - Inches(0.2), Inches(0.35)
+        left + Inches(0.08), top + Inches(1.58),
+        w - Inches(0.16), Inches(0.22)
     )
     label_frame = label_tf.text_frame
     label_frame.word_wrap = True
+    label_frame.margin_top = Pt(0)
+    label_frame.margin_bottom = Pt(0)
     label_p = label_frame.paragraphs[0]
     label_p.text = str(label)
-    label_p.font.size = Pt(11)
+    label_p.font.size = Pt(9)
     label_p.font.color.rgb = C["gray"]
     label_p.alignment = PP_ALIGN.CENTER
-
-    if sublabel:
-        sub_tf = slide.shapes.add_textbox(
-            left + Inches(0.1), top + h - Inches(0.35),
-            w - Inches(0.2), Inches(0.28)
-        )
-        sub_frame = sub_tf.text_frame
-        sub_frame.word_wrap = True
-        sub_p = sub_frame.paragraphs[0]
-        sub_p.text = str(sublabel)
-        sub_p.font.size = Pt(10)
-        sub_p.font.color.rgb = C["gray"]
-        sub_p.alignment = PP_ALIGN.CENTER
 
 
 def _add_header_bar(slide, title, color, y_pos=Inches(0.3)):
@@ -1147,38 +1163,40 @@ def _add_portada(prs, data):
     line_bottom.fill.fore_color.rgb = C["teal"]
     line_bottom.line.fill.background()
 
-    _make_logo(slide, Inches(4.0), Inches(0.55), Inches(2.0), Inches(2.2))
+    _make_logo(slide, Inches(4.0), Inches(0.55), Inches(2.0), Inches(1.6))
 
     tf_title = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.6),
-        Inches(9), Inches(0.6)
+        Inches(0.5), Inches(2.3),
+        Inches(9), Inches(0.55)
     )
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
+    text_frame.margin_top = Pt(0)
+    text_frame.margin_bottom = Pt(0)
     p = text_frame.paragraphs[0]
     p.text = "SEGURO AGRÍCOLA CATASTRÓFICO"
-    p.font.size = Pt(36)
+    p.font.size = Pt(28)
     p.font.bold = True
     p.font.color.rgb = C["white"]
     p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     tf_subtitle = slide.shapes.add_textbox(
-        Inches(0.5), Inches(3.25),
+        Inches(0.5), Inches(2.95),
         Inches(9), Inches(0.35)
     )
     text_frame = tf_subtitle.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = "SAC 2025–2026"
-    p.font.size = Pt(22)
+    p.font.size = Pt(20)
     p.font.color.rgb = C["teal"]
     p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     sep_line = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(3.5), Inches(3.7),
+        Inches(3.5), Inches(3.45),
         Inches(3), Inches(0.03)
     )
     sep_line.fill.solid()
@@ -1190,7 +1208,7 @@ def _add_portada(prs, data):
         scope_text = f"Departamento: {', '.join(data['filtros']['deptos'][:2])}"
 
     tf_scope = slide.shapes.add_textbox(
-        Inches(0.5), Inches(3.85),
+        Inches(0.5), Inches(3.6),
         Inches(9), Inches(0.3)
     )
     text_frame = tf_scope.text_frame
@@ -1257,35 +1275,37 @@ def _add_cierre(prs, fecha_corte):
     _make_logo(slide, Inches(4.0), Inches(0.55), Inches(2.0), Inches(1.3))
 
     tf_title = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.1),
-        Inches(9), Inches(0.7)
+        Inches(0.5), Inches(2.0),
+        Inches(9), Inches(0.55)
     )
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
+    text_frame.margin_top = Pt(0)
+    text_frame.margin_bottom = Pt(0)
     p = text_frame.paragraphs[0]
     p.text = "SEGURO AGRÍCOLA CATASTRÓFICO"
-    p.font.size = Pt(36)
+    p.font.size = Pt(28)
     p.font.bold = True
     p.font.color.rgb = C["white"]
     p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     tf_subtitle = slide.shapes.add_textbox(
-        Inches(0.5), Inches(2.85),
+        Inches(0.5), Inches(2.65),
         Inches(9), Inches(0.35)
     )
     text_frame = tf_subtitle.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
     p.text = "SAC 2025–2026"
-    p.font.size = Pt(22)
+    p.font.size = Pt(20)
     p.font.color.rgb = C["teal"]
     p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
     sep_line = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
-        Inches(3.5), Inches(3.3),
+        Inches(3.5), Inches(3.05),
         Inches(3), Inches(0.03)
     )
     sep_line.fill.solid()
@@ -1293,7 +1313,7 @@ def _add_cierre(prs, fecha_corte):
     sep_line.line.fill.background()
 
     tf_footer = slide.shapes.add_textbox(
-        Inches(0.5), Inches(3.7),
+        Inches(0.5), Inches(3.4),
         Inches(9), Inches(1.0)
     )
     text_frame = tf_footer.text_frame
@@ -1392,9 +1412,9 @@ def _add_nacional_section(prs, section):
     if empresas:
         for i, emp in enumerate(empresas[:2]):
             emp_label = f"{emp['empresa']}"
-            emp_val = f"{emp['avisos']} avisos"
-            emp_detail = f"{_fmt_pct(emp['pct_eval'])} cerrados · {_fmt_money(emp['indemnizacion'])}"
-            kpi_configs.append((emp_label, emp_val, emp_detail, C["teal"], f"{i+1}️"))
+            emp_val = f"{_fmt_num(emp['avisos'])}"
+            emp_detail = f"{_fmt_pct(emp['pct_eval'])} cerr. · {_fmt_money(emp['indemnizacion'])}"
+            kpi_configs.append((emp_label, emp_val, emp_detail, C["teal"], f"{i+1}"))
 
     for i, (label, value, sublabel, color, icon) in enumerate(kpi_configs[:8]):
         col = i % 4
