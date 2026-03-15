@@ -1,7 +1,7 @@
 """
 gen_ppt_dinamico.py — Motor de generación de PPT dinámicas para SAC
 ===================================================================
-Genera presentaciones PowerPoint con PptxGenJS (Node.js) vía subprocess.
+Genera presentaciones PowerPoint con python-pptx (Python puro).
 Incluye: métricas, pipeline SAC, gráficos, tablas, separadores.
 Filtros: geográfico, tipo siniestro, empresa, rango de fechas.
 """
@@ -9,11 +9,18 @@ Filtros: geográfico, tipo siniestro, empresa, rango de fechas.
 import io
 import os
 import json
-import subprocess
 import tempfile
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from pptx import Presentation
+from pptx.util import Inches, Pt, Emu
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_LABEL_POSITION
+from pptx.chart.data import CategoryChartData
+from pptx.enum.shapes import MSO_SHAPE
+from pptx.oxml.ns import qn
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -63,7 +70,6 @@ def _calcular_metricas(df):
     desemb = float(df["MONTO_DESEMBOLSADO"].sum()) if _safe_col(df, "MONTO_DESEMBOLSADO") else 0
     pct_desemb = (desemb / indem * 100) if indem > 0 else 0
     ha = float(df["SUP_INDEMNIZADA"].sum()) if _safe_col(df, "SUP_INDEMNIZADA") else 0
-    # Productores beneficiados: solo registros con indemnización > 0
     if _safe_col(df, "N_PRODUCTORES") and _safe_col(df, "INDEMNIZACION"):
         _indemn = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)
         _prods = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
@@ -91,7 +97,6 @@ def _calcular_pipeline(df):
         val = raw.get(estado, 0)
         if val > 0:
             result.append({"label": estado.title(), "val": int(val)})
-    # Add any remaining
     for k, v in raw.items():
         if k not in order and v > 0:
             result.append({"label": k.title(), "val": int(v)})
@@ -110,7 +115,6 @@ def _top_breakdown(df, col, n=10):
     if _safe_col(df, "SUP_INDEMNIZADA"):
         agg["Ha"] = ("SUP_INDEMNIZADA", "sum")
     if _safe_col(df, "N_PRODUCTORES"):
-        # Solo contar productores donde hay indemnización > 0
         df = df.copy()
         df["_PROD_BENEF"] = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
         if _safe_col(df, "INDEMNIZACION"):
@@ -186,7 +190,6 @@ def _generar_insights(df, metricas, tipos, provincias_o_distritos=None,
     if n == 0:
         return insights
 
-    # 1. Tipo siniestro predominante
     if tipos and len(tipos) > 0:
         top = tipos[0]
         pct = (top["avisos"] / n * 100) if n > 0 else 0
@@ -197,7 +200,6 @@ def _generar_insights(df, metricas, tipos, provincias_o_distritos=None,
             "type": "predominance"
         })
 
-    # 2. Eventos de lluvia
     if tipos:
         lluvia = [t for t in tipos if t["tipo"].upper() in LLUVIA_TYPES]
         if lluvia:
@@ -210,16 +212,9 @@ def _generar_insights(df, metricas, tipos, provincias_o_distritos=None,
                 "type": "lluvia"
             })
 
-    # 3. Rezago en evaluación (low evaluation rate)
     if provincias_o_distritos:
         rezago = [p for p in provincias_o_distritos
                   if p["avisos"] >= 5 and p.get("indem", 0) == 0]
-        if not rezago:
-            # Check for very low eval rates
-            for p in provincias_o_distritos:
-                if p["avisos"] >= 10:
-                    # We can't calculate pct_eval from breakdown, but flag high-count low-indem
-                    pass
         if rezago:
             top_rez = rezago[0]
             insights.append({
@@ -228,7 +223,6 @@ def _generar_insights(df, metricas, tipos, provincias_o_distritos=None,
                 "type": "rezago"
             })
 
-    # 4. Desembolso alert
     if m["pct_desembolso"] > 0:
         if m["pct_desembolso"] < 30:
             insights.append({
@@ -243,7 +237,6 @@ def _generar_insights(df, metricas, tipos, provincias_o_distritos=None,
                 "type": "positive"
             })
 
-    # 5. Highlight provincias seleccionadas
     if provs_seleccionadas and provincias_o_distritos:
         sel = [p for p in provincias_o_distritos if p["name"] in provs_seleccionadas]
         if sel:
@@ -258,7 +251,7 @@ def _generar_insights(df, metricas, tipos, provincias_o_distritos=None,
                 "type": "highlight"
             })
 
-    return insights[:4]  # Max 4 insights per section
+    return insights[:4]
 
 
 def _empresa_composition(df):
@@ -286,13 +279,12 @@ def _fmt_money_py(n):
 
 
 # ══════════════════════════════════════════════════════════════════
-# PREPARAR DATA PARA NODE.JS
+# PREPARAR DATA
 # ══════════════════════════════════════════════════════════════════
 
 def _prepare_data(df, filtros, fecha_corte):
-    """Prepara toda la data en un dict JSON-serializable para Node.
-    Soporta modelo acumulativo: Nacional + Departamental + Provincial + Distrital
-    se pueden combinar libremente.
+    """Prepara toda la data en un dict para la generación de slides.
+    Soporta modelo acumulativo: Nacional + Departamental + Provincial + Distrital.
     """
     scope = filtros.get("scope", "nacional")
     incluir_nacional = filtros.get("incluir_nacional", True)
@@ -300,7 +292,6 @@ def _prepare_data(df, filtros, fecha_corte):
     provs = filtros.get("provincias", [])
     dists = filtros.get("distritos", [])
 
-    # Aplicar filtros NO geográficos
     filtros_base = {k: v for k, v in filtros.items()
                     if k not in ("departamentos", "provincias", "distritos", "scope", "incluir_nacional")}
     df_base = _aplicar_filtros(df, filtros_base)
@@ -318,7 +309,6 @@ def _prepare_data(df, filtros, fecha_corte):
         "sections": [],
     }
 
-    # ── Nacional (si está marcado o si no hay deptos seleccionados) ──
     if incluir_nacional or not deptos:
         m = _calcular_metricas(df_base)
         tipos_nac = _tipo_breakdown(df_base)
@@ -336,7 +326,6 @@ def _prepare_data(df, filtros, fecha_corte):
             "insights": _generar_insights(df_base, m, tipos_nac, top_deptos_nac, "DEPARTAMENTO"),
         })
 
-    # ── Departamentales (siempre que haya deptos seleccionados) ──
     if deptos:
         for depto in deptos:
             df_d = df_base[df_base["DEPARTAMENTO"] == depto] if _safe_col(df_base, "DEPARTAMENTO") else pd.DataFrame()
@@ -361,7 +350,6 @@ def _prepare_data(df, filtros, fecha_corte):
                 "provs_seleccionadas": provs,
             })
 
-    # ── Provinciales (siempre que haya provs seleccionadas) ──
     if provs:
         for prov in provs:
             df_p = df_base[df_base["PROVINCIA"] == prov] if _safe_col(df_base, "PROVINCIA") else pd.DataFrame()
@@ -385,7 +373,6 @@ def _prepare_data(df, filtros, fecha_corte):
                 "insights": _generar_insights(df_p, m, tipos_p, dists_p, "DISTRITO"),
             })
 
-    # ── Distritales (siempre que haya dists seleccionados) ──
     if dists:
         for dist in dists[:5]:
             df_dist = df_base[df_base["DISTRITO"] == dist] if _safe_col(df_base, "DISTRITO") else pd.DataFrame()
@@ -408,784 +395,714 @@ def _prepare_data(df, filtros, fecha_corte):
 
 
 # ══════════════════════════════════════════════════════════════════
-# JS TEMPLATE
+# HELPER FUNCTIONS FOR PPT GENERATION (python-pptx)
 # ══════════════════════════════════════════════════════════════════
 
-JS_TEMPLATE = r'''
-const pptxgen = require("pptxgenjs");
-const React = require("react");
-const ReactDOMServer = require("react-dom/server");
-const sharp = require("sharp");
-const {
-  FaChartBar, FaSearchDollar, FaCheckCircle, FaUsers, FaSeedling,
-  FaHandHoldingUsd, FaMapMarkerAlt, FaExclamationTriangle, FaClipboardList,
-  FaBuilding, FaLeaf, FaMountain, FaArrowRight, FaIndustry
-} = require("react-icons/fa");
-
-function renderIconSvg(Icon, color = "#000", size = 256) {
-  return ReactDOMServer.renderToStaticMarkup(
-    React.createElement(Icon, { color, size: String(size) })
-  );
-}
-async function iconPng(Icon, color, size = 256) {
-  const svg = renderIconSvg(Icon, color, size);
-  const buf = await sharp(Buffer.from(svg)).png().toBuffer();
-  return "image/png;base64," + buf.toString("base64");
+# Color palette
+C = {
+    "forest": RGBColor(0x1B, 0x43, 0x32),
+    "green": RGBColor(0x2D, 0x6A, 0x4F),
+    "sage": RGBColor(0x52, 0xB7, 0x88),
+    "mint": RGBColor(0x95, 0xD5, 0xB2),
+    "cream": RGBColor(0xF5, 0xF1, 0xEB),
+    "gold": RGBColor(0xD4, 0xA8, 0x43),
+    "amber": RGBColor(0xC1, 0x78, 0x17),
+    "navy": RGBColor(0x1A, 0x27, 0x44),
+    "dark": RGBColor(0x21, 0x25, 0x29),
+    "gray": RGBColor(0x6C, 0x75, 0x7D),
+    "lightGray": RGBColor(0xE9, 0xEC, 0xEF),
+    "white": RGBColor(0xFF, 0xFF, 0xFF),
+    "red": RGBColor(0xC0, 0x39, 0x2B),
+    "blue": RGBColor(0x21, 0x96, 0xF3),
 }
 
-const C = {
-  forest: "1B4332", green: "2D6A4F", sage: "52B788", mint: "95D5B2",
-  cream: "F5F1EB", gold: "D4A843", amber: "C17817", navy: "1A2744",
-  dark: "212529", gray: "6C757D", lightGray: "E9ECEF", white: "FFFFFF",
-  red: "C0392B", blue: "2196F3"
-};
 
-const makeShadow = () => ({ type: "outer", blur: 4, offset: 2, angle: 135, color: "000000", opacity: 0.12 });
-const fmtNum = (n) => n == null ? "0" : Number(n).toLocaleString("es-PE", {maximumFractionDigits: 0});
-const fmtMoney = (n) => {
-  if (n == null || n === 0) return "S/ 0";
-  if (Math.abs(n) >= 1000000) return `S/ ${(n/1000000).toFixed(2).replace(".", ",")} M`;
-  return `S/ ${fmtNum(n)}`;
-};
-const fmtPct = (n) => n == null ? "0%" : `${Number(n).toFixed(1)}%`;
-
-const DATA = %%DATA_JSON%%;
-
-(async () => {
-  const pres = new pptxgen();
-  pres.layout = "LAYOUT_16x9";
-  pres.author = "DSFFA — MIDAGRI";
-  pres.title = "SAC 2025-2026 — Presentación Dinámica";
-
-  const icons = {
-    chart: await iconPng(FaChartBar, "#" + C.white),
-    search: await iconPng(FaSearchDollar, "#" + C.white),
-    check: await iconPng(FaCheckCircle, "#" + C.white),
-    users: await iconPng(FaUsers, "#" + C.white),
-    seed: await iconPng(FaSeedling, "#" + C.white),
-    hand: await iconPng(FaHandHoldingUsd, "#" + C.white),
-    map: await iconPng(FaMapMarkerAlt, "#" + C.white),
-    warn: await iconPng(FaExclamationTriangle, "#" + C.white),
-    clip: await iconPng(FaClipboardList, "#" + C.white),
-    build: await iconPng(FaBuilding, "#" + C.white),
-    leaf: await iconPng(FaLeaf, "#" + C.white),
-    mtn: await iconPng(FaMountain, "#" + C.white),
-    chartD: await iconPng(FaChartBar, "#" + C.forest),
-    searchD: await iconPng(FaSearchDollar, "#" + C.forest),
-    checkD: await iconPng(FaCheckCircle, "#" + C.forest),
-    usersD: await iconPng(FaUsers, "#" + C.forest),
-    handD: await iconPng(FaHandHoldingUsd, "#" + C.forest),
-    mapD: await iconPng(FaMapMarkerAlt, "#" + C.forest),
-    seedD: await iconPng(FaSeedling, "#" + C.forest),
-    warnD: await iconPng(FaExclamationTriangle, "#" + C.amber),
-    leafD: await iconPng(FaLeaf, "#" + C.green),
-    buildD: await iconPng(FaBuilding, "#" + C.navy),
-    industryD: await iconPng(FaIndustry, "#" + C.navy),
-  };
-
-  // ════════════════════════════════════════════════════════════════
-  //  HELPER: Add metric cards (2x4 or 2x3 grid)
-  // ════════════════════════════════════════════════════════════════
-  function addMetricCards(slide, cards, opts = {}) {
-    const cols = opts.cols || (cards.length > 6 ? 4 : 3);
-    const cardW = opts.cardW || (cols === 4 ? 2.12 : 2.8);
-    const cardH = opts.cardH || 1.5;
-    const gapX = 0.16, gapY = 0.18;
-    const startX = opts.startX || (10 - cols * cardW - (cols - 1) * gapX) / 2;
-    const startY = opts.startY || 1.1;
-    const accentColor = opts.accentColor || C.sage;
-    const valColor = opts.valColor || C.forest;
-
-    cards.forEach((c, i) => {
-      const col = i % cols, row = Math.floor(i / cols);
-      const cx = startX + col * (cardW + gapX);
-      const cy = startY + row * (cardH + gapY);
-      slide.addShape(pres.shapes.RECTANGLE, {
-        x: cx, y: cy, w: cardW, h: cardH,
-        fill: { color: C.white }, shadow: makeShadow()
-      });
-      slide.addShape(pres.shapes.RECTANGLE, {
-        x: cx, y: cy, w: 0.06, h: cardH, fill: { color: accentColor }
-      });
-      if (c.icon) {
-        slide.addImage({ data: c.icon, x: cx + 0.15, y: cy + 0.12, w: 0.3, h: 0.3 });
-      }
-      slide.addText(c.label, {
-        x: cx + (c.icon ? 0.52 : 0.18), y: cy + 0.1, w: cardW - (c.icon ? 0.62 : 0.3), h: 0.3,
-        fontSize: 9, fontFace: "Calibri", color: C.gray, margin: 0
-      });
-      slide.addText(String(c.val), {
-        x: cx + 0.15, y: cy + 0.55, w: cardW - 0.3, h: 0.45,
-        fontSize: cols === 4 ? 18 : 20, fontFace: "Georgia", color: valColor, bold: true, margin: 0
-      });
-      if (c.sub) {
-        slide.addText(c.sub, {
-          x: cx + 0.15, y: cy + 1.0, w: cardW - 0.3, h: 0.3,
-          fontSize: 8.5, fontFace: "Calibri", color: C.gray, italic: true, margin: 0
-        });
-      }
-    });
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  HELPER: Add pipeline row
-  // ════════════════════════════════════════════════════════════════
-  function addPipeline(slide, pipeline, dictamen, y) {
-    if (!pipeline || pipeline.length === 0) return;
-    slide.addText("Pipeline del Proceso SAC", {
-      x: 0.6, y: y - 0.32, w: 5, h: 0.25,
-      fontSize: 10, fontFace: "Calibri", color: C.dark, bold: true, margin: 0
-    });
-    const pColors = {
-      "Notificado": { bg: C.lightGray, txt: C.dark },
-      "Programado": { bg: C.sage, txt: C.forest },
-      "Reprogramado": { bg: C.gold, txt: C.dark },
-      "Cerrado": { bg: C.green, txt: C.white },
-    };
-    // Always show all 4 standard stages
-    const stdStages = ["Notificado", "Programado", "Reprogramado", "Cerrado"];
-    const pipeMap = {};
-    pipeline.forEach(p => { pipeMap[p.label] = p.val; });
-    const fullPipeline = stdStages.map(label => ({
-      label, val: pipeMap[label] || 0
-    }));
-    const maxItems = fullPipeline.length;
-    const pW = (9 - (maxItems - 1) * 0.18) / maxItems;
-    const pGap = 0.18;
-    fullPipeline.forEach((p, i) => {
-      const px = 0.6 + i * (pW + pGap);
-      const colors = pColors[p.label] || { bg: C.lightGray, txt: C.dark };
-      slide.addShape(pres.shapes.RECTANGLE, {
-        x: px, y: y, w: pW, h: 0.6, fill: { color: colors.bg }
-      });
-      slide.addText(p.label, {
-        x: px, y: y + 0.03, w: pW, h: 0.22,
-        fontSize: 9, fontFace: "Calibri", color: colors.txt, align: "center", margin: 0
-      });
-      slide.addText(fmtNum(p.val), {
-        x: px, y: y + 0.23, w: pW, h: 0.32,
-        fontSize: 16, fontFace: "Georgia", color: colors.txt, bold: true, align: "center", margin: 0
-      });
-      if (i < maxItems - 1) {
-        slide.addText("\u25B6", {
-          x: px + pW, y: y + 0.1, w: pGap, h: 0.35,
-          fontSize: 12, color: C.gray, align: "center", margin: 0
-        });
-      }
-    });
-
-    // Dictamen line
-    if (dictamen && Object.keys(dictamen).length > 0) {
-      const dictParts = Object.entries(dictamen).map(([k, v]) => `${v} ${k.toLowerCase()}`);
-      slide.addText("Dictamen: " + dictParts.join(" \u00B7 "), {
-        x: 0.6, y: y + 0.68, w: 8.8, h: 0.2,
-        fontSize: 9, fontFace: "Calibri", color: C.dark, italic: true, margin: 0
-      });
-    }
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  HELPER: Add header bar
-  // ════════════════════════════════════════════════════════════════
-  function addHeaderBar(slide, title, color) {
-    const barColor = color || C.forest;
-    slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 0.9, fill: { color: barColor } });
-    slide.addText(title, {
-      x: 0.5, y: 0.12, w: 9, h: 0.65, fontSize: 20, fontFace: "Georgia",
-      color: C.white, bold: true, margin: 0
-    });
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  HELPER: Add table
-  // ════════════════════════════════════════════════════════════════
-  function addDataTable(slide, headers, rows, opts = {}) {
-    const x = opts.x || 0.25, y = opts.y || 1.1, w = opts.w || 9.5;
-    const hdrColor = opts.hdrColor || C.forest;
-    const hdrOpts = { fill: { color: hdrColor }, color: C.white, bold: true, fontSize: 9, fontFace: "Calibri", align: "center" };
-    let tblData = [headers.map(h => ({ text: h, options: hdrOpts }))];
-    rows.forEach((r, i) => {
-      const bg = i % 2 === 0 ? C.white : C.lightGray;
-      tblData.push(r.map((cell, j) => {
-        const isNum = j > 0;
-        return { text: String(cell), options: { fontSize: 8.5, fontFace: "Calibri", color: C.dark, fill: { color: bg }, align: isNum ? "right" : "left" } };
-      }));
-    });
-    const colW = opts.colW || headers.map(() => w / headers.length);
-    slide.addTable(tblData, { x, y, w, colW, border: { pt: 0.3, color: C.lightGray } });
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  HELPER: Add insight box with dynamic insights
-  // ════════════════════════════════════════════════════════════════
-  function addInsightBox(slide, insights, x, y, w, h) {
-    if (!insights || insights.length === 0) return;
-    slide.addShape(pres.shapes.RECTANGLE, {
-      x, y, w, h, fill: { color: C.white }, shadow: makeShadow()
-    });
-    slide.addShape(pres.shapes.RECTANGLE, {
-      x, y, w, h: 0.06, fill: { color: C.gold }
-    });
-    slide.addText("Observaciones", {
-      x: x + 0.2, y: y + 0.15, w: w - 0.4, h: 0.35,
-      fontSize: 13, fontFace: "Georgia", color: C.navy, bold: true, margin: 0
-    });
-
-    const textRuns = [];
-    insights.forEach((ins, i) => {
-      if (i > 0) textRuns.push({ text: "\n", options: { breakLine: true, fontSize: 5 } });
-      textRuns.push({ text: ins.title, options: { bold: true, breakLine: true, fontSize: 10, color: C.dark } });
-      textRuns.push({ text: ins.text, options: { breakLine: true, fontSize: 10, color: C.gray } });
-    });
-    slide.addText(textRuns, { x: x + 0.2, y: y + 0.55, w: w - 0.4, h: h - 0.7, valign: "top", margin: 0 });
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  HELPER: Add highlight box for selected items
-  // ════════════════════════════════════════════════════════════════
-  function addHighlightBox(slide, text, x, y, w) {
-    slide.addShape(pres.shapes.RECTANGLE, {
-      x, y, w, h: 0.65,
-      fill: { color: C.mint, transparency: 60 },
-      line: { color: C.green, width: 1.5 }
-    });
-    slide.addText(text, {
-      x: x + 0.2, y: y + 0.08, w: w - 0.4, h: 0.45,
-      fontSize: 11, fontFace: "Calibri", color: C.forest, bold: true, margin: 0
-    });
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  PORTADA
-  // ════════════════════════════════════════════════════════════════
-  const s1 = pres.addSlide();
-  s1.background = { color: C.forest };
-  s1.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 0.06, fill: { color: C.gold } });
-  s1.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.06, w: 0.12, h: 5.565, fill: { color: C.sage } });
-
-  s1.addText("SEGURO AGRI\u0301COLA CATASTRO\u0301FICO", {
-    x: 0.7, y: 1.0, w: 8.6, h: 0.7, fontSize: 32, fontFace: "Georgia",
-    color: C.gold, bold: true, charSpacing: 3, margin: 0
-  });
-  s1.addText("SAC 2025\u20132026", {
-    x: 0.7, y: 1.7, w: 8.6, h: 0.6, fontSize: 26, fontFace: "Georgia",
-    color: C.white, margin: 0
-  });
-  s1.addShape(pres.shapes.LINE, { x: 0.7, y: 2.5, w: 3.5, h: 0, line: { color: C.gold, width: 2 } });
-
-  // Dynamic subtitle
-  const scopeLabels = { nacional: "Resumen Nacional", departamental: "Resumen Departamental",
-    provincial: "Resumen Provincial", distrital: "Resumen Distrital" };
-  let geoLine = scopeLabels[DATA.scope] || "Resumen";
-  if (DATA.filtros.deptos.length > 0) geoLine += " \u00B7 " + DATA.filtros.deptos.join(", ");
-  if (DATA.filtros.provs.length > 0) geoLine += "\n" + DATA.filtros.provs.join(", ");
-  if (DATA.filtros.dists.length > 0) geoLine += "\n" + DATA.filtros.dists.slice(0, 5).join(", ");
-
-  s1.addText(geoLine, {
-    x: 0.7, y: 2.8, w: 8.6, h: 0.8, fontSize: 16, fontFace: "Calibri",
-    color: C.mint, italic: true, margin: 0
-  });
-
-  let infoLine = `Corte: ${DATA.fecha_corte}`;
-  if (DATA.filtros.tipos.length > 0) infoLine += ` \u00B7 ${DATA.filtros.tipos.join(", ")}`;
-  if (DATA.filtros.empresa !== "ambas") infoLine += ` \u00B7 ${DATA.filtros.empresa}`;
-  if (DATA.filtros.fecha_inicio) infoLine += ` \u00B7 ${DATA.filtros.fecha_inicio} a ${DATA.filtros.fecha_fin}`;
-
-  s1.addText(infoLine, {
-    x: 0.7, y: 3.7, w: 8.6, h: 0.4, fontSize: 12, fontFace: "Calibri", color: C.cream, margin: 0
-  });
-  s1.addText("Direcci\u00F3n de Seguro y Fomento del Financiamiento Agrario \u2014 MIDAGRI", {
-    x: 0.7, y: 4.8, w: 8.6, h: 0.35, fontSize: 11, fontFace: "Calibri", color: C.sage, margin: 0
-  });
-  s1.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: C.gold } });
-
-  // ════════════════════════════════════════════════════════════════
-  //  PROCESS EACH SECTION
-  // ════════════════════════════════════════════════════════════════
-  for (const section of DATA.sections) {
-
-    if (section.type === "nacional") {
-      // ── Nacional: Métricas ──
-      const s = pres.addSlide();
-      s.background = { color: C.cream };
-      addHeaderBar(s, "RESUMEN NACIONAL SAC 2025\u20132026");
-
-      const m = section.metricas;
-      const empData = section.empresas || [];
-      const cards = [
-        { icon: icons.chartD, label: "Avisos de Siniestro", val: fmtNum(m.avisos), sub: "Total campaña" },
-        { icon: icons.checkD, label: "Evaluados (Cerrados)", val: fmtNum(m.cerrados), sub: `${fmtPct(m.pct_eval)} del total` },
-        { icon: icons.searchD, label: "Indemnización", val: fmtMoney(m.indemnizacion), sub: "Reconocida" },
-        { icon: icons.handD, label: "Desembolso", val: fmtMoney(m.desembolso), sub: `${fmtPct(m.pct_desembolso)} de indemnización` },
-        { icon: icons.seedD, label: "Ha Indemnizadas", val: fmtNum(m.ha_indemnizadas), sub: "Con evaluación cerrada" },
-        { icon: icons.usersD, label: "Productores", val: fmtNum(m.productores), sub: "Beneficiados" },
-      ];
-      // Add empresa cards if available
-      empData.forEach(e => {
-        cards.push({
-          icon: icons.buildD, label: e.empresa,
-          val: `${fmtNum(e.avisos)} avisos`,
-          sub: `${fmtPct(e.pct_eval)} cerrados \u00B7 ${fmtMoney(e.indemnizacion)}`
-        });
-      });
-
-      addMetricCards(s, cards, { cols: cards.length > 6 ? 4 : 3 });
-
-      // Pipeline
-      if (section.pipeline.length > 0) {
-        const pipeY = cards.length > 6 ? 4.6 : 4.35;
-        addPipeline(s, section.pipeline, section.dictamen, pipeY);
-      }
-
-      // ── Nacional: Top Departamentos chart ──
-      if (section.top_deptos && section.top_deptos.length > 0) {
-        const sc = pres.addSlide();
-        sc.background = { color: C.cream };
-        addHeaderBar(sc, "TOP DEPARTAMENTOS POR INDEMNIZACIÓN");
-
-        const labels = section.top_deptos.map(d => d.name);
-        const values = section.top_deptos.map(d => d.indem || 0);
-        sc.addChart(pres.charts.BAR, [{
-          name: "Indemnización (S/)", labels, values
-        }], {
-          x: 0.3, y: 1.1, w: 9.4, h: 4.2, barDir: "bar",
-          chartColors: [C.green],
-          chartArea: { fill: { color: C.white }, roundedCorners: true },
-          catAxisLabelColor: C.dark, catAxisLabelFontSize: 9,
-          valAxisLabelColor: C.gray, valAxisLabelFontSize: 8,
-          valGridLine: { color: C.lightGray, size: 0.5 },
-          catGridLine: { style: "none" },
-          showValue: true, dataLabelPosition: "outEnd",
-          dataLabelColor: C.dark, dataLabelFontSize: 8,
-          valAxisNumFmt: "#,##0", showLegend: false
-        });
-        sc.addText(`Fuente: DSFFA — MIDAGRI. Corte: ${DATA.fecha_corte}.`, {
-          x: 0.5, y: 5.2, w: 9, h: 0.25, fontSize: 8, fontFace: "Calibri", color: C.gray, italic: true, margin: 0
-        });
-      }
-
-      // ── Nacional: Tipo siniestro (pie + table) ──
-      if (section.tipos && section.tipos.length > 0) {
-        const st = pres.addSlide();
-        st.background = { color: C.cream };
-        addHeaderBar(st, "DISTRIBUCIÓN POR TIPO DE SINIESTRO");
-
-        const tipoLabels = section.tipos.map(t => t.tipo);
-        const tipoValues = section.tipos.map(t => t.avisos);
-        const pieColors = [C.forest, C.green, C.sage, C.blue, C.amber, C.gold, C.mint, C.red, C.lightGray, C.navy];
-        st.addChart(pres.charts.PIE, [{
-          name: "Avisos", labels: tipoLabels, values: tipoValues
-        }], {
-          x: 0.2, y: 1.1, w: 4.5, h: 4.0,
-          showPercent: true, showLegend: true, legendPos: "b", legendFontSize: 8,
-          chartColors: pieColors, dataLabelFontSize: 8
-        });
-
-        // Table right
-        const tipoHeaders = ["Tipo", "Avisos", "Indemnización"];
-        const tipoRows = section.tipos.slice(0, 10).map(t => [t.tipo, fmtNum(t.avisos), fmtMoney(t.indem || 0)]);
-        addDataTable(st, tipoHeaders, tipoRows, { x: 5.0, y: 1.2, w: 4.6, colW: [1.8, 1.1, 1.7] });
-
-        // Nacional insights box below table
-        addInsightBox(st, section.insights || [], 5.0, 1.2 + (Math.min(section.tipos.length, 10) + 1) * 0.35 + 0.25, 4.6, 1.8);
-      }
-    }
-
-    if (section.type === "departamental") {
-      // ── Separador ──
-      const sep = pres.addSlide();
-      sep.background = { color: C.navy };
-      sep.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 0.06, fill: { color: C.gold } });
-      sep.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: C.gold } });
-      sep.addImage({ data: icons.mtn, x: 4.5, y: 1.3, w: 1, h: 1 });
-      sep.addText(section.name, {
-        x: 1, y: 2.5, w: 8, h: 0.8, fontSize: 36, fontFace: "Georgia",
-        color: C.gold, bold: true, align: "center", charSpacing: 5, margin: 0
-      });
-      sep.addText("Resumen Departamental SAC 2025\u20132026", {
-        x: 1, y: 3.3, w: 8, h: 0.5, fontSize: 16, fontFace: "Calibri",
-        color: C.cream, align: "center", margin: 0
-      });
-      const sepInfo = [`${fmtNum(section.metricas.avisos)} avisos`, `${section.n_provincias || ""} provincias`];
-      if (section.empresa_comp) sepInfo.push(section.empresa_comp);
-      sep.addText(sepInfo.filter(Boolean).join(" \u00B7 "), {
-        x: 1, y: 3.9, w: 8, h: 0.4, fontSize: 13, fontFace: "Calibri",
-        color: C.sage, align: "center", italic: true, margin: 0
-      });
-
-      // ── Métricas ──
-      const sm = pres.addSlide();
-      sm.background = { color: C.cream };
-      addHeaderBar(sm, `${section.name} — INDICADORES CLAVE`, C.navy);
-
-      const m = section.metricas;
-      const cards = [
-        { icon: icons.chartD, label: "Total Avisos", val: fmtNum(m.avisos), sub: "Campaña completa" },
-        { icon: icons.checkD, label: "Evaluados (Cerrados)", val: fmtNum(m.cerrados), sub: `${fmtPct(m.pct_eval)} del total` },
-        { icon: icons.searchD, label: "Indemnización", val: fmtMoney(m.indemnizacion), sub: "Reconocida" },
-        { icon: icons.handD, label: "Desembolso", val: fmtMoney(m.desembolso), sub: `${fmtPct(m.pct_desembolso)} de indemnización` },
-        { icon: icons.seedD, label: "Ha Indemnizadas", val: fmtNum(m.ha_indemnizadas), sub: "Con evaluación cerrada" },
-        { icon: icons.usersD, label: "Productores", val: fmtNum(m.productores), sub: "Beneficiados" },
-      ];
-      addMetricCards(sm, cards, { accentColor: C.gold, valColor: C.navy });
-      addPipeline(sm, section.pipeline, section.dictamen, 4.5);
-
-      // ── Tabla de provincias ──
-      if (section.provincias && section.provincias.length > 0) {
-        const sp = pres.addSlide();
-        sp.background = { color: C.cream };
-        addHeaderBar(sp, `${section.name} — AVANCE POR PROVINCIA`, C.navy);
-
-        const headers = ["Provincia", "Avisos", "Cerrados", "% Eval.", "Indemnización", "Desembolso", "Ha", "Productores"];
-        const rows = section.provincias.map(p => {
-          const pctE = p.avisos > 0 ? ((p.indem > 0 ? p.avisos : 0) / p.avisos * 100) : 0;
-          return [p.name, fmtNum(p.avisos), "—", "—",
-            p.indem ? fmtMoney(p.indem) : "—", p.desemb ? fmtMoney(p.desemb) : "—",
-            p.ha ? String(p.ha) : "—", p.prod ? fmtNum(p.prod) : "—"];
-        });
-        addDataTable(sp, headers, rows, { colW: [1.4, 0.7, 0.8, 0.7, 1.2, 1.2, 0.7, 0.7] });
-
-        // Highlight box for selected provinces
-        if (section.provs_seleccionadas && section.provs_seleccionadas.length > 0) {
-          const selProvs = section.provincias.filter(p => section.provs_seleccionadas.includes(p.name));
-          if (selProvs.length > 0) {
-            const combined = selProvs.map(p => p.name).join(" y ");
-            const combAvisos = selProvs.reduce((s, p) => s + p.avisos, 0);
-            const combIndem = selProvs.reduce((s, p) => s + (p.indem || 0), 0);
-            const hlText = `Foco: ${combined} — ${fmtNum(combAvisos)} avisos, ${fmtMoney(combIndem)} indemnización`;
-            const hlY = 1.1 + (Math.min(rows.length, 15) + 1) * 0.35 + 0.25;
-            addHighlightBox(sp, hlText, 0.25, Math.min(hlY, 4.8), 9.5);
-          }
-        }
-      }
-
-      // ── Tipo siniestro chart ──
-      if (section.tipos && section.tipos.length > 0) {
-        const stc = pres.addSlide();
-        stc.background = { color: C.cream };
-        addHeaderBar(stc, `${section.name} — SINIESTROS POR TIPO`, C.navy);
-
-        stc.addChart(pres.charts.BAR, [{
-          name: "Avisos",
-          labels: section.tipos.map(t => t.tipo),
-          values: section.tipos.map(t => t.avisos)
-        }], {
-          x: 0.3, y: 1.1, w: 5.5, h: 4.2, barDir: "bar",
-          chartColors: [C.navy],
-          chartArea: { fill: { color: C.white }, roundedCorners: true },
-          catAxisLabelColor: C.dark, catAxisLabelFontSize: 9,
-          valAxisLabelColor: C.gray, valAxisLabelFontSize: 8,
-          valGridLine: { color: C.lightGray, size: 0.5 },
-          catGridLine: { style: "none" },
-          showValue: true, dataLabelPosition: "outEnd",
-          dataLabelColor: C.dark, dataLabelFontSize: 9,
-          showLegend: false
-        });
-
-        // Insight box from dynamic insights
-        addInsightBox(stc, section.insights || [], 6.1, 1.3, 3.6, 3.5);
-      }
-    }
-
-    if (section.type === "provincial") {
-      // ── Separador provincial ──
-      const sep = pres.addSlide();
-      sep.background = { color: C.forest };
-      sep.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 0.06, fill: { color: C.gold } });
-      sep.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: C.gold } });
-      sep.addImage({ data: icons.leaf, x: 4.5, y: 1.3, w: 1, h: 1 });
-      sep.addText(section.name, {
-        x: 1, y: 2.5, w: 8, h: 0.8, fontSize: 34, fontFace: "Georgia",
-        color: C.gold, bold: true, align: "center", charSpacing: 4, margin: 0
-      });
-      sep.addText(`${section.depto} — SAC 2025\u20132026`, {
-        x: 1, y: 3.3, w: 8, h: 0.5, fontSize: 16, fontFace: "Calibri",
-        color: C.cream, align: "center", margin: 0
-      });
-      const provSepInfo = [`${fmtNum(section.metricas.avisos)} avisos`, fmtMoney(section.metricas.indemnizacion)];
-      if (section.empresa_comp) provSepInfo.push(section.empresa_comp);
-      sep.addText(provSepInfo.join(" \u00B7 "), {
-        x: 1, y: 3.9, w: 8, h: 0.4, fontSize: 13, fontFace: "Calibri",
-        color: C.mint, align: "center", italic: true, margin: 0
-      });
-
-      // ── Detalle provincial: cards left + tables right ──
-      const sp = pres.addSlide();
-      sp.background = { color: C.cream };
-      addHeaderBar(sp, `PROVINCIA DE ${section.name}`);
-
-      const m = section.metricas;
-      const provCards = [
-        { icon: icons.chartD, label: "Total Avisos", val: fmtNum(m.avisos), sub: `${fmtPct(m.pct_eval)} evaluados` },
-        { icon: icons.searchD, label: "Indemnización", val: fmtMoney(m.indemnizacion), sub: `Desembolso: ${fmtMoney(m.desembolso)} (${fmtPct(m.pct_desembolso)})` },
-        { icon: icons.seedD, label: "Ha / Productores", val: `${fmtNum(m.ha_indemnizadas)} ha \u00B7 ${fmtNum(m.productores)}`, sub: "Con evaluación cerrada" },
-      ];
-      const jcW = 4.2, jcH = 1.15, jcGap = 0.2;
-      provCards.forEach((c, i) => {
-        const cy = 1.15 + i * (jcH + jcGap);
-        sp.addShape(pres.shapes.RECTANGLE, {
-          x: 0.5, y: cy, w: jcW, h: jcH,
-          fill: { color: C.white }, shadow: makeShadow()
-        });
-        sp.addShape(pres.shapes.RECTANGLE, {
-          x: 0.5, y: cy, w: 0.06, h: jcH, fill: { color: C.sage }
-        });
-        if (c.icon) sp.addImage({ data: c.icon, x: 0.68, y: cy + 0.1, w: 0.28, h: 0.28 });
-        sp.addText(c.label, {
-          x: 1.05, y: cy + 0.08, w: jcW - 0.7, h: 0.28,
-          fontSize: 9, fontFace: "Calibri", color: C.gray, margin: 0
-        });
-        sp.addText(String(c.val), {
-          x: 0.68, y: cy + 0.42, w: jcW - 0.35, h: 0.35,
-          fontSize: 18, fontFace: "Georgia", color: C.forest, bold: true, margin: 0
-        });
-        if (c.sub) sp.addText(c.sub, {
-          x: 0.68, y: cy + 0.82, w: jcW - 0.35, h: 0.25,
-          fontSize: 8.5, fontFace: "Calibri", color: C.gray, italic: true, margin: 0
-        });
-      });
-
-      // District table right
-      if (section.distritos && section.distritos.length > 0) {
-        const dHeaders = ["Distrito", "Avisos", "Indemniz.", "Ha"];
-        const dRows = section.distritos.map(d => [d.name, fmtNum(d.avisos), d.indem ? fmtMoney(d.indem) : "\u2014", d.ha ? String(d.ha) : "\u2014"]);
-        addDataTable(sp, dHeaders, dRows, { x: 5.2, y: 1.15, w: 4.4, colW: [1.7, 0.7, 1.0, 1.0] });
-      }
-
-      // Tipo table right below
-      if (section.tipos && section.tipos.length > 0) {
-        const tHeaders = ["Tipo Siniestro", "Avisos", "Indemniz."];
-        const tRows = section.tipos.slice(0, 6).map(t => [t.tipo, fmtNum(t.avisos), t.indem ? fmtMoney(t.indem) : "\u2014"]);
-        const tY = section.distritos && section.distritos.length > 0 ?
-          1.15 + (Math.min(section.distritos.length, 8) + 1) * 0.35 + 0.3 : 1.15;
-        addDataTable(sp, tHeaders, tRows, { x: 5.2, y: Math.min(tY, 3.5), w: 4.4, colW: [1.8, 0.8, 1.8] });
-      }
-
-      // Pipeline on this slide
-      // Pipeline goes on its own slide for provincial
-      const sPipe = pres.addSlide();
-      sPipe.background = { color: C.cream };
-      addHeaderBar(sPipe, `${section.name} — PROCESO SAC`);
-      addPipeline(sPipe, section.pipeline, section.dictamen, 1.5);
-
-      // Add summary metrics below pipeline
-      const mp = section.metricas;
-      sPipe.addShape(pres.shapes.RECTANGLE, {
-        x: 0.5, y: 3.0, w: 9, h: 1.6,
-        fill: { color: C.white }, shadow: makeShadow()
-      });
-      sPipe.addShape(pres.shapes.RECTANGLE, {
-        x: 0.5, y: 3.0, w: 9, h: 0.06, fill: { color: C.sage }
-      });
-      sPipe.addText("Resumen del proceso", {
-        x: 0.7, y: 3.15, w: 3, h: 0.3,
-        fontSize: 12, fontFace: "Georgia", color: C.forest, bold: true, margin: 0
-      });
-      sPipe.addText([
-        { text: `${fmtNum(mp.avisos)} avisos totales`, options: { bold: true, breakLine: true, fontSize: 11, color: C.dark } },
-        { text: `${fmtNum(mp.cerrados)} evaluaciones cerradas (${fmtPct(mp.pct_eval)})`, options: { breakLine: true, fontSize: 11, color: C.gray } },
-        { text: `${fmtMoney(mp.indemnizacion)} indemnizaci\u00F3n reconocida`, options: { breakLine: true, fontSize: 11, color: C.gray } },
-        { text: `${fmtMoney(mp.desembolso)} desembolsado (${fmtPct(mp.pct_desembolso)})`, options: { fontSize: 11, color: C.gray } },
-      ], { x: 0.7, y: 3.5, w: 4.3, h: 1.0, valign: "top", margin: 0 });
-
-      // Provincial insights box
-      addInsightBox(sPipe, section.insights || [], 5.2, 3.0, 4.3, 1.6);
-    }
-
-    if (section.type === "distrital") {
-      // ── Separador distrital ──
-      const sep = pres.addSlide();
-      sep.background = { color: C.navy };
-      sep.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 10, h: 0.06, fill: { color: C.gold } });
-      sep.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.565, w: 10, h: 0.06, fill: { color: C.gold } });
-      sep.addImage({ data: icons.map, x: 4.5, y: 1.5, w: 0.8, h: 0.8 });
-      sep.addText(`DISTRITO: ${section.name}`, {
-        x: 1, y: 2.5, w: 8, h: 0.7, fontSize: 30, fontFace: "Georgia",
-        color: C.gold, bold: true, align: "center", margin: 0
-      });
-      sep.addText(`${section.depto} / ${section.prov}`, {
-        x: 1, y: 3.2, w: 8, h: 0.5, fontSize: 14, fontFace: "Calibri",
-        color: C.cream, align: "center", margin: 0
-      });
-
-      // ── Métricas distrito ──
-      const sd = pres.addSlide();
-      sd.background = { color: C.cream };
-      addHeaderBar(sd, `DISTRITO: ${section.name}`);
-
-      const m = section.metricas;
-      const dCards = [
-        { icon: icons.chartD, label: "Avisos", val: fmtNum(m.avisos), sub: `${fmtPct(m.pct_eval)} evaluados` },
-        { icon: icons.checkD, label: "Cerrados", val: fmtNum(m.cerrados), sub: "Evaluaciones cerradas" },
-        { icon: icons.searchD, label: "Indemnización", val: fmtMoney(m.indemnizacion), sub: "Reconocida" },
-        { icon: icons.handD, label: "Desembolso", val: fmtMoney(m.desembolso), sub: `${fmtPct(m.pct_desembolso)} desembolsado` },
-        { icon: icons.seedD, label: "Ha Indemnizadas", val: fmtNum(m.ha_indemnizadas), sub: "" },
-        { icon: icons.usersD, label: "Productores", val: fmtNum(m.productores), sub: "Beneficiados" },
-      ];
-      addMetricCards(sd, dCards);
-      addPipeline(sd, section.pipeline, null, 4.5);
-    }
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  CIERRE
-  // ════════════════════════════════════════════════════════════════
-  const sEnd = pres.addSlide();
-  sEnd.background = { color: C.forest };
-  sEnd.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.55, w: 10, h: 0.075, fill: { color: C.gold } });
-  sEnd.addText("Gracias", {
-    x: 1, y: 1.5, w: 8, h: 1, fontSize: 36, fontFace: "Georgia",
-    color: C.white, bold: true, align: "center", margin: 0
-  });
-  sEnd.addText([
-    { text: "Seguro Agr\u00EDcola Catastr\u00F3fico \u2014 Campa\u00F1a 2025\u20132026", options: { breakLine: true, fontSize: 13 } },
-    { text: "Direcci\u00F3n de Seguro y Fomento del Financiamiento Agrario", options: { breakLine: true, fontSize: 12 } },
-    { text: "Ministerio de Desarrollo Agrario y Riego \u2014 MIDAGRI", options: { fontSize: 12 } },
-  ], {
-    x: 1.5, y: 2.8, w: 7, h: 1.2, fontFace: "Calibri",
-    color: C.mint, align: "center", margin: 0
-  });
-  sEnd.addText(`Datos al ${DATA.fecha_corte}`, {
-    x: 1, y: 4.3, w: 8, h: 0.4, fontSize: 10, fontFace: "Calibri",
-    color: C.gold, align: "center", margin: 0
-  });
-
-  // ════════════════════════════════════════════════════════════════
-  //  SAVE
-  // ════════════════════════════════════════════════════════════════
-  await pres.writeFile({ fileName: "%%OUTPUT_PATH%%" });
-  console.log("OK");
-})();
-'''
+def _fmt_num(n):
+    """Format number with locale."""
+    if n is None:
+        return "0"
+    return f"{int(n):,}"
 
 
-# ══════════════════════════════════════════════════════════════════
-# FUNCIÓN PRINCIPAL
-# ══════════════════════════════════════════════════════════════════
+def _fmt_money(n):
+    """Format money (S/ X,XXX or S/ X.XX M)."""
+    if n is None or n == 0:
+        return "S/ 0"
+    if abs(n) >= 1_000_000:
+        return f"S/ {n/1_000_000:,.2f} M"
+    return f"S/ {n:,.0f}"
 
-def _find_node():
-    """Busca el ejecutable de Node.js y el NODE_PATH adecuado."""
-    import shutil
-    node_exe = shutil.which("node")
-    if not node_exe:
-        # Intenta rutas comunes en Windows y Linux
-        common = [
-            r"C:\Program Files\nodejs\node.exe",
-            r"C:\Program Files (x86)\nodejs\node.exe",
-        ]
-        # Agregar rutas de usuario en Windows (nvm-windows, Chocolatey, etc.)
-        appdata = os.environ.get("APPDATA", "")
-        localappdata = os.environ.get("LOCALAPPDATA", "")
-        userprofile = os.environ.get("USERPROFILE", os.path.expanduser("~"))
-        if appdata:
-            common.append(os.path.join(appdata, "nvm", "current", "node.exe"))
-            common.append(os.path.join(appdata, "npm", "node.exe"))
-        if localappdata:
-            common.append(os.path.join(localappdata, "Programs", "node", "node.exe"))
-        if userprofile:
-            # nvm-windows instala en %APPDATA%\nvm\<version>\node.exe
-            nvm_dir = os.path.join(appdata or userprofile, "nvm")
-            if os.path.isdir(nvm_dir):
-                # Buscar la versión más reciente
-                versions = [d for d in os.listdir(nvm_dir) if d.startswith("v")]
-                if versions:
-                    versions.sort(reverse=True)
-                    common.append(os.path.join(nvm_dir, versions[0], "node.exe"))
-        # Linux/Mac
-        common.extend([
-            os.path.expanduser("~/.nvm/current/bin/node"),
-            "/usr/local/bin/node",
-            "/usr/bin/node",
-        ])
 
-        for p in common:
-            if os.path.isfile(p):
-                node_exe = p
-                break
+def _fmt_pct(n):
+    """Format percentage."""
+    if n is None:
+        return "0%"
+    return f"{n:.1f}%"
 
-    if not node_exe:
-        raise FileNotFoundError(
-            "Node.js no encontrado. Instálalo desde https://nodejs.org/ "
-            "y asegúrate de que 'node' esté en el PATH del sistema. "
-            "Después de instalar, REINICIA la terminal y Streamlit."
-        )
 
-    # Detectar node_modules: priorizar local, luego global
-    node_paths = []
-    # 1. node_modules junto al script (donde hicimos npm install)
-    local_nm = os.path.join(os.path.dirname(os.path.abspath(__file__)), "node_modules")
-    if os.path.isdir(local_nm):
-        node_paths.append(local_nm)
-    # 2. Global npm paths (usando os.pathsep para Windows compatibilidad)
+def _add_shadow(shape):
+    """Add shadow effect to shape via XML."""
     try:
-        sep = os.pathsep  # ';' en Windows, ':' en Linux/Mac
-        res = subprocess.run(
-            [node_exe, "-e", f"console.log(require('module').globalPaths.join('{sep}'))"],
-            capture_output=True, text=True, timeout=10
-        )
-        if res.returncode == 0 and res.stdout.strip():
-            node_paths.extend(res.stdout.strip().split(sep))
+        spPr = shape._element.spPr
+        effectLst = spPr.makeelement(qn('a:effectLst'), {})
+        outerShdw = effectLst.makeelement(qn('a:outerShdw'), {
+            'blurRad': '50800',
+            'dist': '25400',
+            'dir': '8100000',
+        })
+        srgbClr = outerShdw.makeelement(qn('a:srgbClr'), {'val': '000000'})
+        alpha = srgbClr.makeelement(qn('a:alpha'), {'val': '12000'})
+        srgbClr.append(alpha)
+        outerShdw.append(srgbClr)
+        effectLst.append(outerShdw)
+        spPr.append(effectLst)
     except Exception:
         pass
-    # 3. Fallback conocidos
-    fallbacks = []
-    if appdata:
-        fallbacks.append(os.path.join(appdata, "npm", "node_modules"))
-    if userprofile:
-        fallbacks.append(os.path.join(userprofile, "node_modules"))
-    fallbacks.extend([
-        "/sessions/serene-nice-archimedes/.npm-global/lib/node_modules",
-        os.path.expanduser("~/.npm-global/lib/node_modules"),
-        "/usr/local/lib/node_modules",
-        "/usr/lib/node_modules",
-    ])
-    for p in fallbacks:
-        if os.path.isdir(p) and p not in node_paths:
-            node_paths.append(p)
-
-    return node_exe, os.pathsep.join(node_paths)
 
 
-def _check_node_deps(node_exe, node_path_env):
-    """Verifica que las dependencias npm estén instaladas, si no, instala."""
-    required = ["pptxgenjs", "react", "react-dom", "sharp", "react-icons"]
-    env = os.environ.copy()
-    env["NODE_PATH"] = node_path_env
+def _add_header_bar(slide, title, color, y_pos=Inches(0.3)):
+    """Add colored rectangle header bar with title."""
+    shape = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), y_pos,
+        Inches(10), Inches(0.7)
+    )
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = color
+    shape.line.color.rgb = color
 
-    missing = []
-    for pkg in required:
-        res = subprocess.run(
-            [node_exe, "-e", f"require('{pkg}')"],
-            capture_output=True, text=True, timeout=10, env=env
+    text_frame = shape.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = title
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = C["white"]
+    p.alignment = PP_ALIGN.LEFT
+    text_frame.margin_left = Inches(0.3)
+    text_frame.margin_top = Inches(0.1)
+    text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+
+
+def _add_metric_card(slide, left, top, width, height, label, value, sublabel="", accent_color=None):
+    """Add a single metric card with shadow."""
+    if accent_color is None:
+        accent_color = C["sage"]
+
+    bg = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        left, top, width, height
+    )
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = C["white"]
+    bg.line.color.rgb = C["lightGray"]
+    _add_shadow(bg)
+
+    accent = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        left, top, Inches(0.05), height
+    )
+    accent.fill.solid()
+    accent.fill.fore_color.rgb = accent_color
+    accent.line.fill.background()
+
+    tf = slide.shapes.add_textbox(
+        left + Inches(0.15), top + Inches(0.1),
+        width - Inches(0.3), height - Inches(0.2)
+    )
+    text_frame = tf.text_frame
+    text_frame.word_wrap = True
+
+    p = text_frame.paragraphs[0]
+    p.text = str(value)
+    p.font.size = Pt(20)
+    p.font.bold = True
+    p.font.color.rgb = C["forest"]
+    p.alignment = PP_ALIGN.CENTER
+
+    p2 = text_frame.add_paragraph()
+    p2.text = str(label)
+    p2.font.size = Pt(11)
+    p2.font.color.rgb = C["gray"]
+    p2.alignment = PP_ALIGN.CENTER
+    p2.space_before = Pt(4)
+
+    if sublabel:
+        p3 = text_frame.add_paragraph()
+        p3.text = str(sublabel)
+        p3.font.size = Pt(9)
+        p3.font.color.rgb = C["gray"]
+        p3.alignment = PP_ALIGN.CENTER
+        p3.space_before = Pt(2)
+
+
+def _add_pipeline(slide, pipeline, dictamen, top_y):
+    """Add pipeline flow visualization."""
+    if not pipeline:
+        return
+
+    total = sum(p["val"] for p in pipeline)
+    x_start = Inches(0.5)
+    y_base = top_y
+
+    for i, stage in enumerate(pipeline):
+        x_pos = x_start + Inches(i * 2.2)
+
+        rect = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE,
+            x_pos, y_base,
+            Inches(1.8), Inches(0.6)
         )
-        if res.returncode != 0:
-            missing.append(pkg)
+        rect.fill.solid()
+        rect.fill.fore_color.rgb = C["sage"]
+        rect.line.color.rgb = C["green"]
 
-    if missing:
-        # Intentar instalar globalmente
-        install_dir = os.path.dirname(os.path.abspath(__file__))
-        npm_exe = os.path.join(os.path.dirname(node_exe), "npm")
-        if os.name == "nt":
-            npm_exe = os.path.join(os.path.dirname(node_exe), "npm.cmd")
-        if not os.path.isfile(npm_exe):
-            import shutil
-            npm_exe = shutil.which("npm") or shutil.which("npm.cmd") or "npm"
+        tf = slide.shapes.add_textbox(
+            x_pos + Inches(0.1), y_base + Inches(0.05),
+            Inches(1.6), Inches(0.5)
+        )
+        text_frame = tf.text_frame
+        text_frame.word_wrap = True
 
-        try:
-            subprocess.run(
-                [npm_exe, "install", "--save"] + missing,
-                cwd=install_dir, capture_output=True, text=True, timeout=120
+        p = text_frame.paragraphs[0]
+        p.text = stage["label"]
+        p.font.size = Pt(10)
+        p.font.bold = True
+        p.font.color.rgb = C["white"]
+        p.alignment = PP_ALIGN.CENTER
+
+        p2 = text_frame.add_paragraph()
+        p2.text = f"{stage['val']:,}"
+        p2.font.size = Pt(11)
+        p2.font.bold = True
+        p2.font.color.rgb = C["white"]
+        p2.alignment = PP_ALIGN.CENTER
+
+        if i < len(pipeline) - 1:
+            arrow = slide.shapes.add_shape(
+                MSO_SHAPE.RIGHT_ARROW,
+                x_pos + Inches(1.95), y_base + Inches(0.15),
+                Inches(0.25), Inches(0.3)
             )
-        except Exception as e:
-            raise RuntimeError(
-                f"Faltan dependencias npm: {', '.join(missing)}. "
-                f"Ejecuta: cd {install_dir} && npm install {' '.join(missing)}"
-            ) from e
+            arrow.fill.solid()
+            arrow.fill.fore_color.rgb = C["gold"]
+            arrow.line.fill.background()
 
+    if dictamen:
+        y_dict = y_base + Inches(1.0)
+        tf = slide.shapes.add_textbox(
+            Inches(0.5), y_dict,
+            Inches(9), Inches(0.4)
+        )
+        text_frame = tf.text_frame
+        text_frame.word_wrap = True
+
+        dictamen_str = " | ".join([f"{k}: {v}" for k, v in list(dictamen.items())[:3]])
+        p = text_frame.paragraphs[0]
+        p.text = f"Dictamen: {dictamen_str}"
+        p.font.size = Pt(10)
+        p.font.color.rgb = C["gray"]
+
+
+def _add_data_table(slide, headers, rows, left=Inches(0.3), top=Inches(1.2), max_rows=12):
+    """Add formatted table."""
+    rows_to_add = min(len(rows), max_rows)
+    cols = len(headers)
+
+    table_shape = slide.shapes.add_table(rows_to_add + 1, cols, left, top,
+                                          Inches(9.4), Inches(0.35 * (rows_to_add + 1)))
+    table = table_shape.table
+
+    for i, header in enumerate(headers):
+        cell = table.cell(0, i)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = C["forest"]
+        p = cell.text_frame.paragraphs[0]
+        p.text = header
+        p.font.size = Pt(10)
+        p.font.bold = True
+        p.font.color.rgb = C["white"]
+        p.alignment = PP_ALIGN.CENTER
+
+    for row_idx, row_data in enumerate(rows[:max_rows], 1):
+        for col_idx, value in enumerate(row_data):
+            cell = table.cell(row_idx, col_idx)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = C["white"] if row_idx % 2 == 0 else C["cream"]
+
+            p = cell.text_frame.paragraphs[0]
+            p.text = str(value) if value is not None else ""
+            p.font.size = Pt(9)
+            p.font.color.rgb = C["dark"]
+            p.alignment = PP_ALIGN.CENTER
+
+
+def _add_insight_box(slide, insights, left, top, width, height):
+    """Add insight box with text."""
+    if not insights:
+        return
+
+    insight = insights[0]
+
+    bg = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        left, top, width, height
+    )
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = C["mint"]
+    bg.line.color.rgb = C["sage"]
+    bg.line.width = Pt(1.5)
+
+    tf = slide.shapes.add_textbox(
+        left + Inches(0.15), top + Inches(0.1),
+        width - Inches(0.3), height - Inches(0.2)
+    )
+    text_frame = tf.text_frame
+    text_frame.word_wrap = True
+
+    p = text_frame.paragraphs[0]
+    p.text = insight.get("title", "")
+    p.font.size = Pt(11)
+    p.font.bold = True
+    p.font.color.rgb = C["forest"]
+
+    p2 = text_frame.add_paragraph()
+    p2.text = insight.get("text", "")
+    p2.font.size = Pt(9)
+    p2.font.color.rgb = C["dark"]
+    p2.space_before = Pt(4)
+
+
+def _add_highlight_box(slide, text, left, top, width):
+    """Add highlight/info box."""
+    bg = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        left, top, width, Inches(0.5)
+    )
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = C["gold"]
+    bg.line.fill.background()
+
+    tf = slide.shapes.add_textbox(
+        left + Inches(0.1), top + Inches(0.05),
+        width - Inches(0.2), Inches(0.4)
+    )
+    text_frame = tf.text_frame
+    text_frame.word_wrap = True
+
+    p = text_frame.paragraphs[0]
+    p.text = text
+    p.font.size = Pt(10)
+    p.font.bold = True
+    p.font.color.rgb = C["white"]
+    p.alignment = PP_ALIGN.CENTER
+
+
+# ══════════════════════════════════════════════════════════════════
+# SLIDE GENERATION FUNCTIONS
+# ══════════════════════════════════════════════════════════════════
+
+def _add_portada(prs, data):
+    """Add cover slide."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["forest"]
+    background.line.fill.background()
+
+    line_top = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.2),
+        prs.slide_width, Inches(0.08)
+    )
+    line_top.fill.solid()
+    line_top.fill.fore_color.rgb = C["gold"]
+    line_top.line.fill.background()
+
+    line_bottom = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(5.3),
+        prs.slide_width, Inches(0.08)
+    )
+    line_bottom.fill.solid()
+    line_bottom.fill.fore_color.rgb = C["gold"]
+    line_bottom.line.fill.background()
+
+    accent_bar = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.8),
+        Inches(0.15), Inches(4.0)
+    )
+    accent_bar.fill.solid()
+    accent_bar.fill.fore_color.rgb = C["sage"]
+    accent_bar.line.fill.background()
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.5), Inches(1.5),
+        Inches(9), Inches(1.0)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "SEGURO AGRÍCOLA CATASTRÓFICO"
+    p.font.size = Pt(32)
+    p.font.bold = True
+    p.font.color.rgb = C["gold"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.CENTER
+
+    tf_subtitle = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.7),
+        Inches(9), Inches(0.8)
+    )
+    text_frame = tf_subtitle.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "SAC 2025–2026"
+    p.font.size = Pt(26)
+    p.font.color.rgb = C["white"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.CENTER
+
+    sep_line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(3.5), Inches(3.6),
+        Inches(3), Inches(0.04)
+    )
+    sep_line.fill.solid()
+    sep_line.fill.fore_color.rgb = C["gold"]
+    sep_line.line.fill.background()
+
+    geo_info = data.get("filtros", {})
+    deptos = ", ".join(geo_info.get("deptos", [])[:3]) or "Nacional"
+
+    tf_geo = slide.shapes.add_textbox(
+        Inches(0.5), Inches(4.1),
+        Inches(9), Inches(0.4)
+    )
+    text_frame = tf_geo.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = f"Ámbito: {deptos}"
+    p.font.size = Pt(12)
+    p.font.color.rgb = C["mint"]
+    p.alignment = PP_ALIGN.CENTER
+
+    corte_info = f"Corte: {data.get('fecha_corte', 'S.F.')}"
+    tf_footer = slide.shapes.add_textbox(
+        Inches(0.5), Inches(4.8),
+        Inches(9), Inches(0.5)
+    )
+    text_frame = tf_footer.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Dirección de Seguro y Fomento del Financiamiento Agrario — MIDAGRI"
+    p.font.size = Pt(10)
+    p.font.color.rgb = C["lightGray"]
+    p.alignment = PP_ALIGN.CENTER
+
+    p2 = text_frame.add_paragraph()
+    p2.text = corte_info
+    p2.font.size = Pt(9)
+    p2.font.color.rgb = C["lightGray"]
+    p2.alignment = PP_ALIGN.CENTER
+
+
+def _add_cierre(prs):
+    """Add closing slide."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["forest"]
+    background.line.fill.background()
+
+    line_top = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.2),
+        prs.slide_width, Inches(0.08)
+    )
+    line_top.fill.solid()
+    line_top.fill.fore_color.rgb = C["gold"]
+    line_top.line.fill.background()
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(1), Inches(1.8),
+        Inches(8), Inches(1.5)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Gracias"
+    p.font.size = Pt(48)
+    p.font.bold = True
+    p.font.color.rgb = C["white"]
+    p.alignment = PP_ALIGN.CENTER
+
+    tf_footer = slide.shapes.add_textbox(
+        Inches(1), Inches(4.2),
+        Inches(8), Inches(0.8)
+    )
+    text_frame = tf_footer.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Dirección de Seguro y Fomento del Financiamiento Agrario"
+    p.font.size = Pt(11)
+    p.font.color.rgb = C["lightGray"]
+    p.alignment = PP_ALIGN.CENTER
+
+    p2 = text_frame.add_paragraph()
+    p2.text = "Ministerio de Desarrollo Agrario y Riego"
+    p2.font.size = Pt(10)
+    p2.font.color.rgb = C["lightGray"]
+    p2.alignment = PP_ALIGN.CENTER
+
+
+def _add_nacional_section(prs, section):
+    """Add nacional section slides."""
+    m = section["metricas"]
+    tipos = section.get("tipos", [])
+    top_deptos = section.get("top_deptos", [])
+    pipeline = section.get("pipeline", [])
+    dictamen = section.get("dictamen", {})
+    insights = section.get("insights", [])
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    _add_header_bar(slide, "RESUMEN NACIONAL SAC 2025–2026", C["forest"])
+
+    cards = [
+        ("Avisos", _fmt_num(m["avisos"]), "Notificados"),
+        ("Evaluados", _fmt_num(m["cerrados"]), f"{_fmt_pct(m['pct_eval'])}"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), "Total"),
+        ("Desembolso", _fmt_money(m["desembolso"]), f"{_fmt_pct(m['pct_desembolso'])}"),
+        ("Ha Indemnizadas", f"{m['ha_indemnizadas']:,.1f}", "Hectáreas"),
+        ("Productores", _fmt_num(m["productores"]), "Beneficiados"),
+    ]
+
+    for i, (label, value, sublabel) in enumerate(cards):
+        col = i % 3
+        row = i // 3
+        left = Inches(0.5 + col * 3.15)
+        top = Inches(1.3 + row * 1.75)
+        _add_metric_card(slide, left, top, Inches(2.9), Inches(1.5), label, value, sublabel)
+
+    _add_pipeline(slide, pipeline, dictamen, Inches(4.2))
+
+    if insights:
+        _add_insight_box(slide, insights, Inches(7.0), Inches(4.5), Inches(2.7), Inches(0.8))
+
+
+def _add_departamental_section(prs, section):
+    """Add departamental section slides."""
+    name = section.get("name", "Departamento")
+    m = section["metricas"]
+    provs = section.get("provincias", [])
+    tipos = section.get("tipos", [])
+    pipeline = section.get("pipeline", [])
+    insights = section.get("insights", [])
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["navy"]
+    background.line.fill.background()
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(1.0),
+        prs.slide_width, Inches(0.06)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["gold"]
+    line.line.fill.background()
+
+    tf = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.0),
+        Inches(9), Inches(1.5)
+    )
+    text_frame = tf.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = name.upper()
+    p.font.size = Pt(48)
+    p.font.bold = True
+    p.font.color.rgb = C["gold"]
+    p.alignment = PP_ALIGN.CENTER
+
+    p2 = text_frame.add_paragraph()
+    p2.text = f"{m['avisos']:,} avisos | {_fmt_money(m['indemnizacion'])} indemnización"
+    p2.font.size = Pt(12)
+    p2.font.color.rgb = C["white"]
+    p2.alignment = PP_ALIGN.CENTER
+    p2.space_before = Pt(6)
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    _add_header_bar(slide, f"MÉTRICAS — {name}", C["navy"])
+
+    cards = [
+        ("Avisos", _fmt_num(m["avisos"]), ""),
+        ("Evaluados", _fmt_num(m["cerrados"]), f"{_fmt_pct(m['pct_eval'])}"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), ""),
+        ("Desembolso", _fmt_money(m["desembolso"]), f"{_fmt_pct(m['pct_desembolso'])}"),
+    ]
+
+    for i, (label, value, sublabel) in enumerate(cards):
+        col = i % 2
+        row = i // 2
+        left = Inches(1.0 + col * 4.0)
+        top = Inches(1.3 + row * 1.65)
+        _add_metric_card(slide, left, top, Inches(3.8), Inches(1.5), label, value, sublabel, C["navy"])
+
+    _add_pipeline(slide, section.get("pipeline", []), section.get("dictamen", {}), Inches(3.2))
+
+    if provs:
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        background = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0), Inches(0),
+            prs.slide_width, prs.slide_height
+        )
+        background.fill.solid()
+        background.fill.fore_color.rgb = C["cream"]
+        background.line.fill.background()
+
+        _add_header_bar(slide, f"PROVINCIAS — {name}", C["forest"])
+
+        headers = ["Provincia", "Avisos", "Indemnización", "Desembolso", "Ha"]
+        rows = []
+        for p in provs[:12]:
+            rows.append([
+                p["name"],
+                _fmt_num(p["avisos"]),
+                _fmt_money(p.get("indem", 0)),
+                _fmt_money(p.get("desemb", 0)),
+                f"{p.get('ha', 0):.1f}"
+            ])
+
+        _add_data_table(slide, headers, rows, top=Inches(1.2))
+
+
+def _add_provincial_section(prs, section):
+    """Add provincial section slides."""
+    name = section.get("name", "Provincia")
+    depto = section.get("depto", "")
+    m = section["metricas"]
+    dists = section.get("distritos", [])
+    tipos = section.get("tipos", [])
+    pipeline = section.get("pipeline", [])
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["forest"]
+    background.line.fill.background()
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(1.0),
+        prs.slide_width, Inches(0.06)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["gold"]
+    line.line.fill.background()
+
+    tf = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.0),
+        Inches(9), Inches(1.5)
+    )
+    text_frame = tf.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = name.upper()
+    p.font.size = Pt(48)
+    p.font.bold = True
+    p.font.color.rgb = C["gold"]
+    p.alignment = PP_ALIGN.CENTER
+
+    p2 = text_frame.add_paragraph()
+    p2.text = f"{depto}"
+    p2.font.size = Pt(14)
+    p2.font.color.rgb = C["mint"]
+    p2.alignment = PP_ALIGN.CENTER
+
+
+def _add_distrital_section(prs, section):
+    """Add distrital section slides."""
+    name = section.get("name", "Distrito")
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["navy"]
+    background.line.fill.background()
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(1.0),
+        prs.slide_width, Inches(0.06)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["gold"]
+    line.line.fill.background()
+
+    tf = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.0),
+        Inches(9), Inches(1.5)
+    )
+    text_frame = tf.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = name.upper()
+    p.font.size = Pt(44)
+    p.font.bold = True
+    p.font.color.rgb = C["gold"]
+    p.alignment = PP_ALIGN.CENTER
+
+
+# ══════════════════════════════════════════════════════════════════
+# MAIN GENERATION FUNCTION
+# ══════════════════════════════════════════════════════════════════
 
 def generar_ppt_dinamico(df, filtros, fecha_corte):
     """
-    Genera una presentación PPT dinámica con PptxGenJS.
+    Genera una presentación PPT dinámica con python-pptx.
 
     Args:
         df: DataFrame consolidado (datos["midagri"])
@@ -1195,48 +1112,31 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
     Returns:
         bytes del archivo .pptx
     """
-    # 0. Find Node.js
-    node_exe, node_path_env = _find_node()
-    _check_node_deps(node_exe, node_path_env)
+    prs = Presentation()
+    prs.slide_width = Inches(10)
+    prs.slide_height = Inches(5.625)
+    prs.author = "DSFFA — MIDAGRI"
+    prs.title = "SAC 2025-2026 — Presentación Dinámica"
 
-    # 1. Prepare data
     data = _prepare_data(df, filtros, fecha_corte)
 
-    # 2. Create temp files
-    tmp_dir = tempfile.mkdtemp()
-    js_path = os.path.join(tmp_dir, "gen_ppt.js")
-    out_path = os.path.join(tmp_dir, "output.pptx")
+    _add_portada(prs, data)
 
-    # 3. Generate JS
-    data_json = json.dumps(data, ensure_ascii=False, default=str)
-    js_code = JS_TEMPLATE.replace("%%DATA_JSON%%", data_json)
-    js_code = js_code.replace("%%OUTPUT_PATH%%", out_path.replace("\\", "/"))
+    for section in data.get("sections", []):
+        section_type = section.get("type", "")
 
-    with open(js_path, "w", encoding="utf-8") as f:
-        f.write(js_code)
+        if section_type == "nacional":
+            _add_nacional_section(prs, section)
+        elif section_type == "departamental":
+            _add_departamental_section(prs, section)
+        elif section_type == "provincial":
+            _add_provincial_section(prs, section)
+        elif section_type == "distrital":
+            _add_distrital_section(prs, section)
 
-    # 4. Run Node.js
-    env = os.environ.copy()
-    env["NODE_PATH"] = node_path_env
+    _add_cierre(prs)
 
-    result = subprocess.run(
-        [node_exe, js_path],
-        capture_output=True, text=True, timeout=60, env=env
-    )
-
-    if result.returncode != 0:
-        raise RuntimeError(f"PptxGenJS error: {result.stderr[:500]}")
-
-    # 5. Read output
-    with open(out_path, "rb") as f:
-        ppt_bytes = f.read()
-
-    # 6. Cleanup
-    try:
-        os.remove(js_path)
-        os.remove(out_path)
-        os.rmdir(tmp_dir)
-    except Exception:
-        pass
-
-    return ppt_bytes
+    output = io.BytesIO()
+    prs.save(output)
+    output.seek(0)
+    return output.getvalue()
