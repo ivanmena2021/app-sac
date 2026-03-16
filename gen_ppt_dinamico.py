@@ -777,20 +777,26 @@ def _add_styled_table(slide, headers, rows, left=Inches(0.3), top=Inches(1.2),
 
 
 def _add_pipeline_flow(slide, pipeline, y_pos):
-    """Add 5-step pipeline flow with numbered circles and percentages."""
+    """Add N-step pipeline flow — adapta tamaño de tarjetas al número de pasos."""
     if not pipeline:
         return
 
+    n_steps = min(len(pipeline), 5)
     total = sum(p["val"] for p in pipeline)
-    x_start = Inches(0.4)
-    card_w = Inches(1.7)
-    card_h = Inches(1.8)
-    circle_size = Inches(0.7)
-
     colors = [C["teal"], C["amber"], C["teal"], C["navy"], C["orange"]]
 
-    for i, stage in enumerate(pipeline[:5]):
-        x_pos = x_start + Inches(i * 1.85)
+    # Calcular dimensiones dinámicas según cantidad de pasos
+    available_w = 9.2  # pulgadas útiles (0.4 a 9.6)
+    gap = 0.15  # espacio entre tarjetas (para flechas)
+    card_w_val = (available_w - gap * (n_steps - 1)) / n_steps
+    card_w = Inches(card_w_val)
+    card_h = Inches(2.6)
+    step_w = card_w_val + gap
+    circle_size = Inches(0.8)
+    x_start = Inches(0.4)
+
+    for i, stage in enumerate(pipeline[:n_steps]):
+        x_pos = x_start + Inches(i * step_w)
 
         card_bg = slide.shapes.add_shape(
             MSO_SHAPE.ROUNDED_RECTANGLE,
@@ -804,85 +810,85 @@ def _add_pipeline_flow(slide, pipeline, y_pos):
 
         top_bar = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
-            x_pos, y_pos, card_w, Inches(0.18)
+            x_pos, y_pos, card_w, Inches(0.2)
         )
         top_bar.fill.solid()
-        top_bar.fill.fore_color.rgb = colors[i]
+        top_bar.fill.fore_color.rgb = colors[i % len(colors)]
         top_bar.line.fill.background()
 
         circle = slide.shapes.add_shape(
             MSO_SHAPE.OVAL,
-            x_pos + (card_w - circle_size) / 2, y_pos + Inches(0.25),
+            x_pos + (card_w - circle_size) / 2, y_pos + Inches(0.35),
             circle_size, circle_size
         )
         circle.fill.solid()
-        circle.fill.fore_color.rgb = colors[i]
+        circle.fill.fore_color.rgb = colors[i % len(colors)]
         circle.line.fill.background()
 
         circle_tf = slide.shapes.add_textbox(
-            x_pos + (card_w - circle_size) / 2, y_pos + Inches(0.25),
+            x_pos + (card_w - circle_size) / 2, y_pos + Inches(0.35),
             circle_size, circle_size
         )
         circle_frame = circle_tf.text_frame
         circle_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
         circle_p = circle_frame.paragraphs[0]
         circle_p.text = str(i + 1)
-        circle_p.font.size = Pt(24)
+        circle_p.font.size = Pt(26)
         circle_p.font.bold = True
         circle_p.font.color.rgb = C["white"]
         circle_p.alignment = PP_ALIGN.CENTER
 
         label_tf = slide.shapes.add_textbox(
-            x_pos + Inches(0.05), y_pos + Inches(1.05),
-            card_w - Inches(0.1), Inches(0.3)
+            x_pos + Inches(0.05), y_pos + Inches(1.3),
+            card_w - Inches(0.1), Inches(0.35)
         )
         label_frame = label_tf.text_frame
         label_frame.word_wrap = True
         label_p = label_frame.paragraphs[0]
         label_p.text = stage["label"]
-        label_p.font.size = Pt(9)
+        label_p.font.size = Pt(10)
         label_p.font.color.rgb = C["gray"]
         label_p.alignment = PP_ALIGN.CENTER
 
         val_tf = slide.shapes.add_textbox(
-            x_pos + Inches(0.05), y_pos + Inches(1.35),
-            card_w - Inches(0.1), Inches(0.28)
+            x_pos + Inches(0.05), y_pos + Inches(1.7),
+            card_w - Inches(0.1), Inches(0.35)
         )
         val_frame = val_tf.text_frame
-        val_frame.word_wrap = True
+        val_frame.word_wrap = False
         val_p = val_frame.paragraphs[0]
         val_p.text = f"{stage['val']:,}"
-        val_p.font.size = Pt(16)
+        val_p.font.size = Pt(20)
         val_p.font.bold = True
         val_p.font.color.rgb = C["navy"]
         val_p.alignment = PP_ALIGN.CENTER
 
         pct = (stage["val"] / total * 100) if total > 0 else 0
         pct_tf = slide.shapes.add_textbox(
-            x_pos + Inches(0.05), y_pos + Inches(1.63),
-            card_w - Inches(0.1), Inches(0.15)
+            x_pos + Inches(0.05), y_pos + Inches(2.1),
+            card_w - Inches(0.1), Inches(0.25)
         )
         pct_frame = pct_tf.text_frame
         pct_frame.word_wrap = True
         pct_p = pct_frame.paragraphs[0]
         pct_p.text = f"{pct:.1f}%"
-        pct_p.font.size = Pt(10)
+        pct_p.font.size = Pt(12)
         pct_p.font.bold = True
-        pct_p.font.color.rgb = colors[i]
+        pct_p.font.color.rgb = colors[i % len(colors)]
         pct_p.alignment = PP_ALIGN.CENTER
 
-        if i < len(pipeline) - 1 and i < 4:
-            dash_x = x_pos + card_w + Inches(0.05)
-            dash_y = y_pos + Inches(0.9)
-            for j in range(3):
-                dash = slide.shapes.add_shape(
-                    MSO_SHAPE.RECTANGLE,
-                    dash_x + Inches(j * 0.08), dash_y,
-                    Inches(0.06), Inches(0.1)
-                )
-                dash.fill.solid()
-                dash.fill.fore_color.rgb = C["lightGray"]
-                dash.line.fill.background()
+        # Flecha entre tarjetas
+        if i < n_steps - 1:
+            arrow_x = x_pos + card_w + Inches(0.01)
+            arrow_y = y_pos + Inches(1.2)
+            arrow = slide.shapes.add_shape(
+                MSO_SHAPE.RIGHT_ARROW,
+                arrow_x, arrow_y,
+                Inches(gap - 0.02), Inches(0.22)
+            )
+            arrow.fill.solid()
+            arrow.fill.fore_color.rgb = C["lightGray"]
+            arrow.line.fill.background()
 
 
 def _add_alert_box(slide, text, left, top, width):
@@ -1025,7 +1031,7 @@ def _add_resumen_ejecutivo_slide(slide, prs, dept_name, text, fecha_corte):
 # ══════════════════════════════════════════════════════════════════
 
 def _generar_resumen_texto(section_data, scope_type):
-    """Generate narrative paragraph text from section metrics."""
+    """Generate narrative paragraph text from section metrics — texto completo."""
     m = section_data.get("metricas", {})
     tipos = section_data.get("tipos", [])
     provs = section_data.get("provincias", [])
@@ -1037,26 +1043,52 @@ def _generar_resumen_texto(section_data, scope_type):
     indem_total = m.get("indemnizacion", 0)
     pct_desembolso = m.get("pct_desembolso", 0)
     desembolso = m.get("desembolso", 0)
+    ha = m.get("ha_indemnizadas", 0)
+    productores = m.get("productores", 0)
+    pendientes = avisos - cerrados
 
-    tipo_predominante = tipos[0]["tipo"] if tipos else "datos"
-    prov_principal = provs[0]["name"] if provs else "principales distritos"
+    tipo_predominante = tipos[0]["tipo"] if tipos else "eventos registrados"
+    tipo_pct = (tipos[0]["avisos"] / avisos * 100) if tipos and avisos > 0 else 0
+    prov_principal = provs[0]["name"] if provs else "las zonas con mayor concentración"
 
-    text = (
-        f"{nombre} registra {avisos:,} avisos con avance de evaluación de {pct_eval:.1f}% "
-        f"({cerrados:,} expedientes cerrados). La indemnización total reconocida asciende a "
-        f"S/ {indem_total:,.0f}, con un desembolso acumulado de S/ {desembolso:,.0f} "
-        f"({pct_desembolso:.1f}% del monto reconocido). El tipo de siniestro predominante es "
-        f"{tipo_predominante}, concentrándose la mayor carga en {prov_principal}. "
-        f"Se observa rezago en la evaluación de expedientes pendientes, requiriendo acelerar "
-        f"los procesos de inspección y dictamen para cumplir los compromisos de desembolso. "
-        f"Las principales causas de atraso incluyen limitaciones en recursos humanos, "
-        f"complejidad de los siniestros y coordinación interinstitucional."
+    # Segundo tipo si existe
+    segundo_tipo = ""
+    if len(tipos) > 1:
+        segundo_tipo = f", seguido de {tipos[1]['tipo']} con {tipos[1]['avisos']:,} avisos"
+
+    # Construir párrafos temáticos
+    parrafo_general = (
+        f"{nombre} registra {avisos:,} avisos de siniestro con un avance de evaluación "
+        f"del {pct_eval:.1f}% ({cerrados:,} expedientes cerrados de {avisos:,} reportados). "
     )
-    return text[:200]  # Limit to ~200 words
+
+    parrafo_financiero = (
+        f"La indemnización total reconocida asciende a S/ {indem_total:,.0f}, con un "
+        f"desembolso acumulado de S/ {desembolso:,.0f} ({pct_desembolso:.1f}% del monto "
+        f"reconocido). Se han beneficiado {productores:,} productores sobre "
+        f"{ha:,.1f} hectáreas indemnizadas. "
+    )
+
+    parrafo_tipos = (
+        f"El tipo de siniestro predominante es {tipo_predominante}, que representa "
+        f"el {tipo_pct:.1f}% del total de avisos{segundo_tipo}. La mayor carga de "
+        f"siniestros se concentra en {prov_principal}. "
+    )
+
+    parrafo_pendientes = ""
+    if pendientes > 0:
+        parrafo_pendientes = (
+            f"Quedan {pendientes:,} expedientes pendientes de cierre, lo que requiere "
+            f"acelerar los procesos de inspección y dictamen para cumplir con los "
+            f"compromisos de desembolso hacia los productores afectados."
+        )
+
+    text = parrafo_general + parrafo_financiero + parrafo_tipos + parrafo_pendientes
+    return text
 
 
 def _add_pipeline_slide(prs, pipeline, dictamen, metricas):
-    """Add 5-step pipeline process flow slide."""
+    """Add pipeline process flow slide — sin alerta, centrado verticalmente."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
@@ -1090,10 +1122,8 @@ def _add_pipeline_slide(prs, pipeline, dictamen, metricas):
     line.fill.fore_color.rgb = C["teal"]
     line.line.fill.background()
 
-    _add_pipeline_flow(slide, pipeline, Inches(1.1))
-
-    info_text = "⚠ Avisos dictaminados NO INDEMNIZABLE: requieren documentación adicional"
-    _add_alert_box(slide, info_text, Inches(0.4), Inches(4.9), Inches(9.2))
+    # Centrar pipeline verticalmente en el espacio disponible (0.95 a 5.4)
+    _add_pipeline_flow(slide, pipeline, Inches(1.5))
 
 
 def _add_resumen_ejecutivo(prs, section_name, resumen_text, scope_label, fecha_corte):
@@ -1103,7 +1133,7 @@ def _add_resumen_ejecutivo(prs, section_name, resumen_text, scope_label, fecha_c
 
 
 def _add_tipo_siniestro_slide(prs, tipos):
-    """Add tipo de siniestro distribution slide."""
+    """Add tipo de siniestro: tabla compacta a la izquierda + chart de barras a la derecha."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
@@ -1137,22 +1167,64 @@ def _add_tipo_siniestro_slide(prs, tipos):
     line.fill.fore_color.rgb = C["teal"]
     line.line.fill.background()
 
-    headers = ["Tipo Siniestro", "Monto (S/)", "%"]
+    # ── Tabla compacta izquierda (con Avisos) ──
+    headers = ["Tipo Siniestro", "Avisos", "Indem. (S/)", "%"]
     rows = []
     total_monto = sum(t.get("indem", 0) for t in tipos)
+    total_avisos = sum(t.get("avisos", 0) for t in tipos)
 
-    for t in tipos[:12]:
+    for t in tipos[:10]:
         monto = t.get("indem", 0)
         pct = (monto / total_monto * 100) if total_monto > 0 else 0
         rows.append([
             t["tipo"],
+            _fmt_num(t.get("avisos", 0)),
             _fmt_money(monto),
             f"{pct:.1f}%"
         ])
 
-    col_widths = [Inches(3.5), Inches(3.0), Inches(1.2)]
-    _add_styled_table(slide, headers, rows, left=Inches(1.0), top=Inches(1.3),
-                     col_widths=col_widths, max_rows=12)
+    col_widths = [Inches(2.2), Inches(0.8), Inches(1.2), Inches(0.7)]
+    _add_styled_table(slide, headers, rows, left=Inches(0.3), top=Inches(1.15),
+                     col_widths=col_widths, max_rows=10)
+
+    # ── Chart de barras horizontales a la derecha ──
+    top_tipos = tipos[:8]
+    if top_tipos:
+        chart_data = CategoryChartData()
+        chart_data.categories = [t["tipo"][:18] for t in top_tipos]
+        chart_data.add_series('Indemnización', tuple(t.get("indem", 0) for t in top_tipos))
+
+        chart_shape = slide.shapes.add_chart(
+            XL_CHART_TYPE.BAR_CLUSTERED, Inches(5.3), Inches(1.15),
+            Inches(4.4), Inches(3.8), chart_data
+        ).chart
+
+        chart_shape.has_legend = False
+        chart_shape.series[0].format.fill.solid()
+        chart_shape.series[0].format.fill.fore_color.rgb = C["teal"]
+
+        # Etiquetas de datos
+        try:
+            chart_shape.series[0].has_data_labels = True
+            data_labels = chart_shape.series[0].data_labels
+            data_labels.font.size = Pt(8)
+            data_labels.font.color.rgb = C["navy"]
+        except Exception:
+            pass
+
+    # ── Resumen rápido ──
+    summary_tf = slide.shapes.add_textbox(
+        Inches(5.3), Inches(5.05),
+        Inches(4.4), Inches(0.25)
+    )
+    summary_frame = summary_tf.text_frame
+    summary_frame.word_wrap = True
+    summary_p = summary_frame.paragraphs[0]
+    summary_p.text = f"Total: {total_avisos:,} avisos · {_fmt_money(total_monto)} indemnización"
+    summary_p.font.size = Pt(9)
+    summary_p.font.bold = True
+    summary_p.font.color.rgb = C["navy"]
+    summary_p.alignment = PP_ALIGN.CENTER
 
     footer_tf = slide.shapes.add_textbox(
         Inches(0.4), Inches(5.35),
@@ -2060,14 +2132,14 @@ def _add_nivel2_nacional(prs, section, nivel2_label):
         top = Inches(1.35)
         _add_kpi_card(slide, left, top, Inches(2.15), Inches(1.85), label, value, sublabel, color, icon)
 
-    # Tabla de tipos
+    # Tabla de tipos — máx 4 filas para que quepa dentro de la lámina
     if tipos:
         headers = ["Tipo Siniestro", "Avisos", "Indem. (S/)"]
         rows = []
-        for t in tipos[:6]:
+        for t in tipos[:4]:
             rows.append([t["tipo"], _fmt_num(t["avisos"]), _fmt_money(t.get("indem", 0))])
-        _add_styled_table(slide, headers, rows, left=Inches(0.5), top=Inches(3.5),
-                         col_widths=[Inches(3.0), Inches(1.5), Inches(2.0)], max_rows=6)
+        _add_styled_table(slide, headers, rows, left=Inches(0.5), top=Inches(3.45),
+                         col_widths=[Inches(3.5), Inches(1.5), Inches(2.0)], max_rows=4)
 
 
 def _add_nivel2_departamental(prs, section, nivel2_label, fecha_corte):
