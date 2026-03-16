@@ -284,7 +284,15 @@ def _fmt_money_py(n):
 
 def _prepare_data(df, filtros, fecha_corte):
     """Prepara toda la data en un dict para la generación de slides.
-    Soporta modelo acumulativo: Nacional + Departamental + Provincial + Distrital.
+
+    Modelo de DOS NIVELES ACUMULATIVOS:
+      Nivel 1 (Geográfico / obligatorio): resumen total por dimensión geográfica.
+        - Se aplican solo filtros de empresa (no tipo_siniestro ni fechas).
+        - Nacional → Departamental → Provincial → Distrital según selección.
+      Nivel 2 (Complementario / opcional): filtros adicionales (tipos de siniestro,
+        fechas de ocurrencia, etc.) que generan secciones complementarias.
+        - Si se activa, se aplican los filtros de tipo + fecha sobre el mismo
+          alcance geográfico y se agregan slides adicionales.
     """
     scope = filtros.get("scope", "nacional")
     incluir_nacional = filtros.get("incluir_nacional", True)
@@ -292,43 +300,76 @@ def _prepare_data(df, filtros, fecha_corte):
     provs = filtros.get("provincias", [])
     dists = filtros.get("distritos", [])
 
-    filtros_base = {k: v for k, v in filtros.items()
-                    if k not in ("departamentos", "provincias", "distritos", "scope", "incluir_nacional")}
-    df_base = _aplicar_filtros(df, filtros_base)
+    # ── NIVEL 1: solo filtro de empresa (base geográfica limpia) ──
+    filtros_nivel1 = {
+        "empresa": filtros.get("empresa", "ambas"),
+    }
+    df_nivel1 = _aplicar_filtros(df, filtros_nivel1)
+
+    # ── NIVEL 2: empresa + tipos de siniestro + fechas ──
+    tipos_sel = filtros.get("tipos_siniestro", [])
+    fecha_inicio = filtros.get("fecha_inicio")
+    fecha_fin = filtros.get("fecha_fin")
+    col_fecha = filtros.get("col_fecha", "FECHA_AVISO")
+    hay_nivel2 = bool(tipos_sel) or bool(fecha_inicio and fecha_fin)
+
+    filtros_nivel2 = {
+        "empresa": filtros.get("empresa", "ambas"),
+        "tipos_siniestro": tipos_sel,
+        "fecha_inicio": fecha_inicio,
+        "fecha_fin": fecha_fin,
+        "col_fecha": col_fecha,
+    }
+    df_nivel2 = _aplicar_filtros(df, filtros_nivel2) if hay_nivel2 else pd.DataFrame()
+
+    # Etiqueta descriptiva para Nivel 2
+    nivel2_label_parts = []
+    if tipos_sel:
+        nivel2_label_parts.append(f"Tipo: {', '.join(tipos_sel[:3])}")
+    if fecha_inicio and fecha_fin:
+        nivel2_label_parts.append(f"Período: {fecha_inicio} — {fecha_fin}")
+    nivel2_label = " · ".join(nivel2_label_parts) if nivel2_label_parts else ""
 
     data = {
         "fecha_corte": fecha_corte,
         "scope": scope,
         "filtros": {
             "deptos": deptos, "provs": provs, "dists": dists,
-            "tipos": filtros.get("tipos_siniestro", []),
+            "tipos": tipos_sel,
             "empresa": filtros.get("empresa", "ambas"),
-            "fecha_inicio": str(filtros.get("fecha_inicio", "")) if filtros.get("fecha_inicio") else "",
-            "fecha_fin": str(filtros.get("fecha_fin", "")) if filtros.get("fecha_fin") else "",
+            "fecha_inicio": str(fecha_inicio) if fecha_inicio else "",
+            "fecha_fin": str(fecha_fin) if fecha_fin else "",
         },
-        "sections": [],
+        "nivel1_sections": [],
+        "nivel2_sections": [],
+        "nivel2_label": nivel2_label,
+        "hay_nivel2": hay_nivel2,
     }
 
+    # ─────────────────────────────────────────────
+    # NIVEL 1: Secciones geográficas (base limpia)
+    # ─────────────────────────────────────────────
+
     if incluir_nacional or not deptos:
-        m = _calcular_metricas(df_base)
-        tipos_nac = _tipo_breakdown(df_base)
-        top_deptos_nac = _top_breakdown(df_base, "DEPARTAMENTO", 10)
-        n_deptos = df_base["DEPARTAMENTO"].nunique() if _safe_col(df_base, "DEPARTAMENTO") else 0
-        data["sections"].append({
+        m = _calcular_metricas(df_nivel1)
+        tipos_nac = _tipo_breakdown(df_nivel1)
+        top_deptos_nac = _top_breakdown(df_nivel1, "DEPARTAMENTO", 10)
+        n_deptos = df_nivel1["DEPARTAMENTO"].nunique() if _safe_col(df_nivel1, "DEPARTAMENTO") else 0
+        data["nivel1_sections"].append({
             "type": "nacional",
             "metricas": m,
-            "pipeline": _calcular_pipeline(df_base),
-            "dictamen": _dictamen_breakdown(df_base),
-            "empresas": _empresa_breakdown(df_base),
+            "pipeline": _calcular_pipeline(df_nivel1),
+            "dictamen": _dictamen_breakdown(df_nivel1),
+            "empresas": _empresa_breakdown(df_nivel1),
             "top_deptos": top_deptos_nac,
             "tipos": tipos_nac,
             "n_deptos": n_deptos,
-            "insights": _generar_insights(df_base, m, tipos_nac, top_deptos_nac, "DEPARTAMENTO"),
+            "insights": _generar_insights(df_nivel1, m, tipos_nac, top_deptos_nac, "DEPARTAMENTO"),
         })
 
     if deptos:
         for depto in deptos:
-            df_d = df_base[df_base["DEPARTAMENTO"] == depto] if _safe_col(df_base, "DEPARTAMENTO") else pd.DataFrame()
+            df_d = df_nivel1[df_nivel1["DEPARTAMENTO"] == depto] if _safe_col(df_nivel1, "DEPARTAMENTO") else pd.DataFrame()
             if len(df_d) == 0:
                 continue
             m = _calcular_metricas(df_d)
@@ -336,7 +377,7 @@ def _prepare_data(df, filtros, fecha_corte):
             provs_d = _top_breakdown(df_d, "PROVINCIA", 20)
             emp_comp = _empresa_composition(df_d)
             n_provs = df_d["PROVINCIA"].nunique() if _safe_col(df_d, "PROVINCIA") else 0
-            data["sections"].append({
+            data["nivel1_sections"].append({
                 "type": "departamental",
                 "name": depto,
                 "metricas": m,
@@ -352,7 +393,7 @@ def _prepare_data(df, filtros, fecha_corte):
 
     if provs:
         for prov in provs:
-            df_p = df_base[df_base["PROVINCIA"] == prov] if _safe_col(df_base, "PROVINCIA") else pd.DataFrame()
+            df_p = df_nivel1[df_nivel1["PROVINCIA"] == prov] if _safe_col(df_nivel1, "PROVINCIA") else pd.DataFrame()
             if len(df_p) == 0:
                 continue
             m = _calcular_metricas(df_p)
@@ -360,7 +401,7 @@ def _prepare_data(df, filtros, fecha_corte):
             tipos_p = _tipo_breakdown(df_p)
             dists_p = _top_breakdown(df_p, "DISTRITO", 20)
             emp_comp = _empresa_composition(df_p)
-            data["sections"].append({
+            data["nivel1_sections"].append({
                 "type": "provincial",
                 "name": prov,
                 "depto": depto_name,
@@ -375,13 +416,13 @@ def _prepare_data(df, filtros, fecha_corte):
 
     if dists:
         for dist in dists[:5]:
-            df_dist = df_base[df_base["DISTRITO"] == dist] if _safe_col(df_base, "DISTRITO") else pd.DataFrame()
+            df_dist = df_nivel1[df_nivel1["DISTRITO"] == dist] if _safe_col(df_nivel1, "DISTRITO") else pd.DataFrame()
             if len(df_dist) == 0:
                 continue
             m = _calcular_metricas(df_dist)
             prov_name = str(df_dist["PROVINCIA"].iloc[0]) if _safe_col(df_dist, "PROVINCIA") and len(df_dist) > 0 else ""
             depto_name = str(df_dist["DEPARTAMENTO"].iloc[0]) if _safe_col(df_dist, "DEPARTAMENTO") and len(df_dist) > 0 else ""
-            data["sections"].append({
+            data["nivel1_sections"].append({
                 "type": "distrital",
                 "name": dist,
                 "prov": prov_name,
@@ -390,6 +431,66 @@ def _prepare_data(df, filtros, fecha_corte):
                 "pipeline": _calcular_pipeline(df_dist),
                 "tipos": _tipo_breakdown(df_dist),
             })
+
+    # ─────────────────────────────────────────────
+    # NIVEL 2: Secciones complementarias (filtradas)
+    # ─────────────────────────────────────────────
+
+    if hay_nivel2 and len(df_nivel2) > 0:
+        # Nacional filtrado
+        if incluir_nacional or not deptos:
+            m2 = _calcular_metricas(df_nivel2)
+            tipos_n2 = _tipo_breakdown(df_nivel2)
+            top_deptos_n2 = _top_breakdown(df_nivel2, "DEPARTAMENTO", 10)
+            data["nivel2_sections"].append({
+                "type": "nacional",
+                "metricas": m2,
+                "pipeline": _calcular_pipeline(df_nivel2),
+                "tipos": tipos_n2,
+                "top_deptos": top_deptos_n2,
+                "empresas": _empresa_breakdown(df_nivel2),
+                "insights": _generar_insights(df_nivel2, m2, tipos_n2, top_deptos_n2, "DEPARTAMENTO"),
+            })
+
+        # Departamentos filtrados
+        if deptos:
+            for depto in deptos:
+                df_d2 = df_nivel2[df_nivel2["DEPARTAMENTO"] == depto] if _safe_col(df_nivel2, "DEPARTAMENTO") else pd.DataFrame()
+                if len(df_d2) == 0:
+                    continue
+                m2 = _calcular_metricas(df_d2)
+                tipos_d2 = _tipo_breakdown(df_d2)
+                provs_d2 = _top_breakdown(df_d2, "PROVINCIA", 20)
+                data["nivel2_sections"].append({
+                    "type": "departamental",
+                    "name": depto,
+                    "metricas": m2,
+                    "pipeline": _calcular_pipeline(df_d2),
+                    "provincias": provs_d2,
+                    "tipos": tipos_d2,
+                    "empresa_comp": _empresa_composition(df_d2),
+                    "insights": _generar_insights(df_d2, m2, tipos_d2, provs_d2, "PROVINCIA", provs),
+                })
+
+        # Provincias filtradas
+        if provs:
+            for prov in provs:
+                df_p2 = df_nivel2[df_nivel2["PROVINCIA"] == prov] if _safe_col(df_nivel2, "PROVINCIA") else pd.DataFrame()
+                if len(df_p2) == 0:
+                    continue
+                m2 = _calcular_metricas(df_p2)
+                depto_name = str(df_p2["DEPARTAMENTO"].iloc[0]) if _safe_col(df_p2, "DEPARTAMENTO") and len(df_p2) > 0 else ""
+                tipos_p2 = _tipo_breakdown(df_p2)
+                dists_p2 = _top_breakdown(df_p2, "DISTRITO", 20)
+                data["nivel2_sections"].append({
+                    "type": "provincial",
+                    "name": prov,
+                    "depto": depto_name,
+                    "metricas": m2,
+                    "distritos": dists_p2,
+                    "tipos": tipos_p2,
+                    "insights": _generar_insights(df_p2, m2, tipos_p2, dists_p2, "DISTRITO"),
+                })
 
     return data
 
@@ -1765,13 +1866,351 @@ def _add_distrital_section(prs, section):
 
 
 # ══════════════════════════════════════════════════════════════════
+# NIVEL 2 — SLIDE GENERATORS (complementary filtered sections)
+# ══════════════════════════════════════════════════════════════════
+
+def _add_nivel2_separator(prs, nivel2_label, fecha_corte):
+    """Add dark separator slide that introduces Level 2 (complementary analysis)."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["forest"]
+    background.line.fill.background()
+
+    line_top = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.35),
+        prs.slide_width, Inches(0.06)
+    )
+    line_top.fill.solid()
+    line_top.fill.fore_color.rgb = C["gold"]
+    line_top.line.fill.background()
+
+    line_bottom = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(5.22),
+        prs.slide_width, Inches(0.06)
+    )
+    line_bottom.fill.solid()
+    line_bottom.fill.fore_color.rgb = C["gold"]
+    line_bottom.line.fill.background()
+
+    # Icon circle
+    circle = slide.shapes.add_shape(
+        MSO_SHAPE.OVAL,
+        Inches(4.15), Inches(0.7),
+        Inches(1.7), Inches(1.7)
+    )
+    circle.fill.solid()
+    circle.fill.fore_color.rgb = C["gold"]
+    circle.line.fill.background()
+
+    circle_tf = slide.shapes.add_textbox(
+        Inches(4.15), Inches(0.7),
+        Inches(1.7), Inches(1.7)
+    )
+    circle_frame = circle_tf.text_frame
+    circle_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    circle_p = circle_frame.paragraphs[0]
+    circle_p.text = "🔍"
+    circle_p.font.size = Pt(60)
+    circle_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.6),
+        Inches(9), Inches(0.6)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "ANÁLISIS COMPLEMENTARIO"
+    p.font.size = Pt(36)
+    p.font.bold = True
+    p.font.color.rgb = C["white"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.CENTER
+
+    tf_sub = slide.shapes.add_textbox(
+        Inches(0.5), Inches(3.25),
+        Inches(9), Inches(0.5)
+    )
+    text_frame = tf_sub.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = nivel2_label
+    p.font.size = Pt(16)
+    p.font.color.rgb = C["gold"]
+    p.font.name = "Calibri"
+    p.alignment = PP_ALIGN.CENTER
+
+    tf_desc = slide.shapes.add_textbox(
+        Inches(1.0), Inches(3.9),
+        Inches(8), Inches(0.5)
+    )
+    text_frame = tf_desc.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Las siguientes secciones muestran el mismo alcance geográfico filtrado por las características seleccionadas."
+    p.font.size = Pt(11)
+    p.font.italic = True
+    p.font.color.rgb = C["lightGray"]
+    p.alignment = PP_ALIGN.CENTER
+
+    tf_footer = slide.shapes.add_textbox(
+        Inches(0.5), Inches(4.85),
+        Inches(9), Inches(0.3)
+    )
+    text_frame = tf_footer.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = f"Corte al {fecha_corte}"
+    p.font.size = Pt(9)
+    p.font.italic = True
+    p.font.color.rgb = C["lightGray"]
+    p.alignment = PP_ALIGN.CENTER
+
+
+def _add_nivel2_nacional(prs, section, nivel2_label):
+    """Add Level 2 nacional slide: KPI cards + tipo siniestro for filtered data."""
+    m = section["metricas"]
+    tipos = section.get("tipos", [])
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    # Badge for Level 2
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(0.4), Inches(0.3),
+        Inches(2.0), Inches(0.3)
+    )
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = C["gold"]
+    badge.line.fill.background()
+
+    badge_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.3),
+        Inches(2.0), Inches(0.3)
+    )
+    badge_frame = badge_tf.text_frame
+    badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    badge_p = badge_frame.paragraphs[0]
+    badge_p.text = "COMPLEMENTARIO"
+    badge_p.font.size = Pt(9)
+    badge_p.font.bold = True
+    badge_p.font.color.rgb = C["white"]
+    badge_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(2.6), Inches(0.25),
+        Inches(7.0), Inches(0.45)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Nacional — Análisis Filtrado"
+    p.font.size = Pt(22)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    tf_sub = slide.shapes.add_textbox(
+        Inches(2.6), Inches(0.72),
+        Inches(7.0), Inches(0.25)
+    )
+    text_frame = tf_sub.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = nivel2_label
+    p.font.size = Pt(10)
+    p.font.color.rgb = C["gray"]
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(1.05),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["gold"]
+    line.line.fill.background()
+
+    # 4 KPI cards
+    kpi_configs = [
+        ("Avisos Filtrados", _fmt_num(m["avisos"]), "", C["gold"], "⚠"),
+        ("Avance Evaluación", _fmt_pct(m["pct_eval"]), f"{m['cerrados']:,} cerrados", C["teal"], "✔"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), "Reconocida", C["orange"], "●"),
+        ("Avance Desembolso", _fmt_pct(m["pct_desembolso"]), _fmt_money(m["desembolso"]), C["teal"], "✦"),
+    ]
+
+    for i, (label, value, sublabel, color, icon) in enumerate(kpi_configs):
+        left = Inches(0.35 + i * 2.35)
+        top = Inches(1.35)
+        _add_kpi_card(slide, left, top, Inches(2.15), Inches(1.85), label, value, sublabel, color, icon)
+
+    # Tabla de tipos
+    if tipos:
+        headers = ["Tipo Siniestro", "Avisos", "Indem. (S/)"]
+        rows = []
+        for t in tipos[:6]:
+            rows.append([t["tipo"], _fmt_num(t["avisos"]), _fmt_money(t.get("indem", 0))])
+        _add_styled_table(slide, headers, rows, left=Inches(0.5), top=Inches(3.5),
+                         col_widths=[Inches(3.0), Inches(1.5), Inches(2.0)], max_rows=6)
+
+
+def _add_nivel2_departamental(prs, section, nivel2_label, fecha_corte):
+    """Add Level 2 departamental slide: KPI cards + tables for filtered data."""
+    name = section.get("name", "Departamento")
+    m = section["metricas"]
+    tipos = section.get("tipos", [])
+    provs = section.get("provincias", [])
+
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    # Badge: dept name + complementary tag
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(0.4), Inches(0.3),
+        Inches(1.5), Inches(0.3)
+    )
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = C["white"]
+    badge.line.color.rgb = C["gold"]
+    badge.line.width = Pt(1.5)
+
+    badge_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.3),
+        Inches(1.5), Inches(0.3)
+    )
+    badge_frame = badge_tf.text_frame
+    badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    badge_p = badge_frame.paragraphs[0]
+    badge_p.text = name.upper()
+    badge_p.font.size = Pt(10)
+    badge_p.font.bold = True
+    badge_p.font.color.rgb = C["gold"]
+    badge_p.alignment = PP_ALIGN.CENTER
+
+    # Complementario tag
+    tag = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(2.05), Inches(0.3),
+        Inches(1.8), Inches(0.3)
+    )
+    tag.fill.solid()
+    tag.fill.fore_color.rgb = C["gold"]
+    tag.line.fill.background()
+
+    tag_tf = slide.shapes.add_textbox(
+        Inches(2.05), Inches(0.3),
+        Inches(1.8), Inches(0.3)
+    )
+    tag_frame = tag_tf.text_frame
+    tag_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    tag_p = tag_frame.paragraphs[0]
+    tag_p.text = "COMPLEMENTARIO"
+    tag_p.font.size = Pt(8)
+    tag_p.font.bold = True
+    tag_p.font.color.rgb = C["white"]
+    tag_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(4.0), Inches(0.25),
+        Inches(5.6), Inches(0.45)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Análisis Filtrado"
+    p.font.size = Pt(22)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    tf_sub = slide.shapes.add_textbox(
+        Inches(4.0), Inches(0.72),
+        Inches(5.6), Inches(0.25)
+    )
+    text_frame = tf_sub.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = nivel2_label
+    p.font.size = Pt(9)
+    p.font.color.rgb = C["gray"]
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(1.05),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["gold"]
+    line.line.fill.background()
+
+    # 4 KPI cards
+    kpi_configs = [
+        ("Avisos Filtrados", _fmt_num(m["avisos"]), "", C["gold"], "⚠"),
+        ("Avance Evaluación", _fmt_pct(m["pct_eval"]), f"{m['cerrados']:,} cerrados", C["teal"], "✔"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), "", C["orange"], "●"),
+        ("Avance Desembolso", _fmt_pct(m["pct_desembolso"]), _fmt_money(m["desembolso"]), C["teal"], "✦"),
+    ]
+
+    for i, (label, value, sublabel, color, icon) in enumerate(kpi_configs):
+        left = Inches(0.3 + i * 2.35)
+        top = Inches(1.25)
+        _add_kpi_card(slide, left, top, Inches(2.15), Inches(1.85), label, value, sublabel, color, icon)
+
+    # Tables: tipos + provincias (same layout as departamental)
+    if tipos:
+        headers = ["Tipo Siniestro", "Avisos", "Indem. (S/)"]
+        rows = [[t["tipo"], _fmt_num(t["avisos"]), _fmt_money(t.get("indem", 0))] for t in tipos[:5]]
+        _add_styled_table(slide, headers, rows, left=Inches(0.3), top=Inches(3.25),
+                         col_widths=[Inches(2.0), Inches(1.1), Inches(1.2)], max_rows=5)
+
+    if provs:
+        headers_p = ["Provincia", "Avisos", "Indem. (S/)"]
+        rows_p = [[p["name"], _fmt_num(p["avisos"]), _fmt_money(p.get("indem", 0))] for p in provs[:5]]
+        _add_styled_table(slide, headers_p, rows_p, left=Inches(5.0), top=Inches(3.25),
+                         col_widths=[Inches(2.0), Inches(1.1), Inches(1.2)], max_rows=5)
+
+    # Resumen ejecutivo for Level 2
+    resumen_text = _generar_resumen_texto(section, "departamental")
+    _add_resumen_ejecutivo(prs, f"{name} — Filtrado", resumen_text, "Complementario", fecha_corte)
+
+
+# ══════════════════════════════════════════════════════════════════
 # MAIN GENERATION FUNCTION
 # ══════════════════════════════════════════════════════════════════
 
 def generar_ppt_dinamico(df, filtros, fecha_corte):
     """
     Genera una presentación PPT dinámica con python-pptx.
-    Interfaz compatible con app.py: misma firma, misma lógica de datos.
+    Modelo de DOS NIVELES ACUMULATIVOS:
+      Nivel 1: Base geográfica (Nacional → Depto → Prov → Dist)
+      Nivel 2: Análisis complementario con filtros adicionales
+               (tipos de siniestro, fechas de ocurrencia, etc.)
 
     Args:
         df: DataFrame consolidado (datos["midagri"])
@@ -1789,9 +2228,11 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
 
     data = _prepare_data(df, filtros, fecha_corte)
 
+    # ── Portada ──
     _add_portada(prs, data)
 
-    for section in data.get("sections", []):
+    # ── NIVEL 1: Secciones geográficas (base) ──
+    for section in data.get("nivel1_sections", []):
         section_type = section.get("type", "")
 
         if section_type == "nacional":
@@ -1803,6 +2244,26 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
         elif section_type == "distrital":
             _add_distrital_section(prs, section)
 
+    # ── NIVEL 2: Secciones complementarias (filtradas) ──
+    nivel2_sections = data.get("nivel2_sections", [])
+    if nivel2_sections and data.get("hay_nivel2"):
+        nivel2_label = data.get("nivel2_label", "")
+
+        # Separador de Nivel 2
+        _add_nivel2_separator(prs, nivel2_label, fecha_corte)
+
+        for section in nivel2_sections:
+            section_type = section.get("type", "")
+
+            if section_type == "nacional":
+                _add_nivel2_nacional(prs, section, nivel2_label)
+            elif section_type == "departamental":
+                _add_nivel2_departamental(prs, section, nivel2_label, fecha_corte)
+            elif section_type == "provincial":
+                # For provincial Level 2, reuse the base provincial separator
+                _add_provincial_section(prs, section)
+
+    # ── Cierre ──
     _add_cierre(prs, fecha_corte)
 
     output = io.BytesIO()

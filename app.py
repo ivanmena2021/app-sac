@@ -1599,9 +1599,11 @@ else:
 
             df_ppt = datos["midagri"]
 
-            # ── Fila 1: Alcance geográfico (cascada acumulativa) ──
-            st.markdown("##### 🗺️ Alcance geográfico")
-            st.caption("Construya su presentación nivel por nivel. Cada nivel agrega secciones adicionales.")
+            # ══════════════════════════════════════════
+            # NIVEL 1: Alcance geográfico (OBLIGATORIO)
+            # ══════════════════════════════════════════
+            st.markdown("##### 🗺️ Nivel 1 — Alcance Geográfico (obligatorio)")
+            st.caption("Base de la presentación: resumen total por dimensión geográfica. Siempre se incluye.")
 
             deptos_sel_ppt = []
             provs_sel_ppt = []
@@ -1610,28 +1612,35 @@ else:
             # Checkbox para incluir resumen nacional
             incluir_nacional = st.checkbox("🌎 Incluir Resumen Nacional", value=True, key="ppt_incluir_nac")
 
-            # Departamentos
-            col_depto, col_prov = st.columns([1, 1])
+            # Empresa (aplica a ambos niveles)
+            col_emp_ppt, col_depto, col_prov = st.columns([0.8, 1.1, 1.1])
+            with col_emp_ppt:
+                empresa_ppt = st.radio(
+                    "Aseguradora",
+                    ["Ambas", "LA POSITIVA", "RIMAC"],
+                    key="ppt_empresa",
+                    horizontal=False,
+                )
+
             with col_depto:
                 deptos_disponibles = sorted(df_ppt["DEPARTAMENTO"].dropna().unique()) if "DEPARTAMENTO" in df_ppt.columns else []
                 deptos_sel_ppt = st.multiselect(
-                    "📍 Departamento(s) — sección departamental",
+                    "📍 Departamento(s)",
                     deptos_disponibles,
                     key="ppt_deptos",
                     help="Seleccione uno o más departamentos para generar secciones departamentales.",
                 )
 
-            # Provincias (filtradas por departamentos seleccionados)
             with col_prov:
                 if deptos_sel_ppt:
                     provs_disponibles = sorted(
                         df_ppt[df_ppt["DEPARTAMENTO"].isin(deptos_sel_ppt)]["PROVINCIA"].dropna().unique()
                     ) if "PROVINCIA" in df_ppt.columns else []
                     provs_sel_ppt = st.multiselect(
-                        "📍 Provincia(s) — sección provincial",
+                        "📍 Provincia(s)",
                         provs_disponibles,
                         key="ppt_provs",
-                        help="Seleccione provincias para generar detalle provincial con distritos.",
+                        help="Seleccione provincias para generar detalle provincial.",
                     )
 
             # Distritos (filtrados por provincias seleccionadas)
@@ -1640,14 +1649,14 @@ else:
                     df_ppt[df_ppt["PROVINCIA"].isin(provs_sel_ppt)]["DISTRITO"].dropna().unique()
                 ) if "DISTRITO" in df_ppt.columns else []
                 dists_sel_ppt = st.multiselect(
-                    "📍 Distrito(s) — sección distrital (máx. 5)",
+                    "📍 Distrito(s) — máx. 5",
                     dists_disponibles,
                     max_selections=5,
                     key="ppt_dists",
                     help="Opcional: seleccione distritos para generar tarjetas individuales.",
                 )
 
-            # Inferir scope basado en las selecciones
+            # Inferir scope
             scope_ppt = "nacional"
             if dists_sel_ppt:
                 scope_ppt = "distrital"
@@ -1656,24 +1665,30 @@ else:
             elif deptos_sel_ppt:
                 scope_ppt = "departamental"
 
-            # Mostrar resumen de lo que se generará
-            secciones_previas = []
+            # Resumen de Nivel 1
+            secciones_n1 = []
             if incluir_nacional:
-                secciones_previas.append("Resumen Nacional")
+                secciones_n1.append("Nacional")
             if deptos_sel_ppt:
-                secciones_previas.append(f"Departamental: {', '.join(deptos_sel_ppt)}")
+                secciones_n1.append(f"Depto: {', '.join(deptos_sel_ppt)}")
             if provs_sel_ppt:
-                secciones_previas.append(f"Provincial: {', '.join(provs_sel_ppt)}")
+                secciones_n1.append(f"Prov: {', '.join(provs_sel_ppt)}")
             if dists_sel_ppt:
-                secciones_previas.append(f"Distrital: {', '.join(dists_sel_ppt[:5])}")
-            if secciones_previas:
-                st.markdown(f"**Secciones a generar:** {' → '.join(secciones_previas)}")
+                secciones_n1.append(f"Dist: {', '.join(dists_sel_ppt[:5])}")
+            if secciones_n1:
+                st.markdown(f"**Nivel 1:** {' → '.join(secciones_n1)}")
             else:
                 st.warning("Seleccione al menos un nivel geográfico.")
 
-            # ── Fila 2: Filtros adicionales ──
-            st.markdown("##### 🔧 Filtros adicionales")
-            col_tipo, col_emp, col_fecha = st.columns([1.5, 1, 1.5])
+            st.divider()
+
+            # ══════════════════════════════════════════
+            # NIVEL 2: Análisis complementario (OPCIONAL)
+            # ══════════════════════════════════════════
+            st.markdown("##### 🔍 Nivel 2 — Análisis Complementario (opcional)")
+            st.caption("Agrega secciones adicionales con filtros de tipo de siniestro y/o período. Se suma al Nivel 1.")
+
+            col_tipo, col_fecha = st.columns([1.5, 1.5])
 
             with col_tipo:
                 tipos_disponibles = sorted(df_ppt["TIPO_SINIESTRO"].dropna().unique()) if "TIPO_SINIESTRO" in df_ppt.columns else []
@@ -1681,19 +1696,11 @@ else:
                     "Tipo(s) de siniestro",
                     tipos_disponibles,
                     key="ppt_tipos",
-                    help="Dejar vacío para incluir todos",
-                )
-
-            with col_emp:
-                empresa_ppt = st.radio(
-                    "Aseguradora",
-                    ["Ambas", "LA POSITIVA", "RIMAC"],
-                    key="ppt_empresa",
-                    horizontal=False,
+                    help="Seleccione tipos para generar análisis complementario filtrado.",
                 )
 
             with col_fecha:
-                filtrar_fecha = st.checkbox("Filtrar por período", key="ppt_filtrar_fecha")
+                filtrar_fecha = st.checkbox("Filtrar por período de ocurrencia", key="ppt_filtrar_fecha")
                 fecha_inicio_ppt = None
                 fecha_fin_ppt = None
                 if filtrar_fecha:
@@ -1702,6 +1709,18 @@ else:
                         fecha_inicio_ppt = st.date_input("Desde", key="ppt_fecha_ini")
                     with col_ff:
                         fecha_fin_ppt = st.date_input("Hasta", key="ppt_fecha_fin")
+
+            # Resumen de Nivel 2
+            hay_nivel2 = bool(tipos_sel_ppt) or bool(fecha_inicio_ppt and fecha_fin_ppt)
+            if hay_nivel2:
+                n2_parts = []
+                if tipos_sel_ppt:
+                    n2_parts.append(f"Tipo: {', '.join(tipos_sel_ppt[:3])}")
+                if fecha_inicio_ppt and fecha_fin_ppt:
+                    n2_parts.append(f"Período: {fecha_inicio_ppt} — {fecha_fin_ppt}")
+                st.markdown(f"**Nivel 2:** {' · '.join(n2_parts)}")
+            else:
+                st.caption("Sin filtros complementarios. Solo se generará el Nivel 1.")
 
             # Construir filtros
             filtros_ppt = {
@@ -1717,20 +1736,31 @@ else:
                 "col_fecha": "FECHA_AVISO",
             }
 
-            # ── Fila 3: Preview ──
+            # ── Preview ──
             from gen_ppt_dinamico import _aplicar_filtros, _calcular_metricas
-            filtros_preview = {k: v for k, v in filtros_ppt.items()
-                               if k not in ("scope",)}
-            # Para preview, aplicar filtros geográficos también
-            df_preview = _aplicar_filtros(df_ppt, filtros_ppt)
+            # Preview siempre muestra Nivel 1 (base geográfica sin filtros tipo/fecha)
+            filtros_n1_preview = {
+                "empresa": filtros_ppt["empresa"],
+                "departamentos": deptos_sel_ppt,
+                "provincias": provs_sel_ppt,
+                "distritos": dists_sel_ppt,
+            }
+            df_preview = _aplicar_filtros(df_ppt, filtros_n1_preview)
             m_prev = _calcular_metricas(df_preview)
 
-            st.info(
-                f"📊 **{m_prev['avisos']:,}** avisos · "
-                f"**{m_prev['cerrados']:,}** cerrados ({m_prev['pct_eval']:.1f}%) · "
-                f"**S/ {m_prev['indemnizacion']:,.0f}** indemnización · "
-                f"**S/ {m_prev['desembolso']:,.0f}** desembolso"
+            preview_text = (
+                f"📊 **Nivel 1:** {m_prev['avisos']:,} avisos · "
+                f"{m_prev['cerrados']:,} cerrados ({m_prev['pct_eval']:.1f}%) · "
+                f"S/ {m_prev['indemnizacion']:,.0f} indemnización"
             )
+            if hay_nivel2:
+                df_prev2 = _aplicar_filtros(df_ppt, filtros_ppt)
+                m_prev2 = _calcular_metricas(df_prev2)
+                preview_text += (
+                    f"\n🔍 **Nivel 2:** {m_prev2['avisos']:,} avisos filtrados · "
+                    f"S/ {m_prev2['indemnizacion']:,.0f} indemnización"
+                )
+            st.info(preview_text)
 
             # ── Fila 4: Generar + Descargar ──
             col_gen_ppt, col_dl_ppt = st.columns([1, 1])
@@ -1765,19 +1795,21 @@ else:
                         use_container_width=True,
                     )
 
-            with st.expander("ℹ️ ¿Qué incluye la presentación?"):
+            with st.expander("ℹ️ ¿Cómo funciona la presentación de dos niveles?"):
                 st.markdown(
-                    "La presentación se construye **acumulativamente** según sus selecciones:\n\n"
-                    "- **Nacional** (checkbox): Métricas generales, top departamentos (gráfico), "
-                    "distribución por tipo de siniestro, observaciones automáticas\n"
-                    "- **Departamental** (multiselect): Sección por cada departamento con métricas, "
-                    "provincias, pipeline SAC y observaciones\n"
-                    "- **Provincial** (multiselect): Detalle por provincia con distritos, tipos de siniestro, "
-                    "pipeline y observaciones contextuales\n"
-                    "- **Distrital** (multiselect, máx. 5): Tarjetas de métricas por cada distrito\n\n"
-                    "**Ejemplo**: Marque Nacional + seleccione Cajamarca + seleccione Jaén y San Ignacio → "
-                    "obtendrá una PPT con resumen nacional, detalle de Cajamarca con highlight en las "
-                    "provincias seleccionadas, y secciones detalladas de Jaén y San Ignacio."
+                    "La presentación se construye con **dos niveles acumulativos**:\n\n"
+                    "**Nivel 1 — Geográfico (obligatorio):**\n"
+                    "- Siempre presente como base de la presentación\n"
+                    "- **Nacional**: Métricas generales, top departamentos, tipos de siniestro, pipeline\n"
+                    "- **Departamental**: Sección por cada departamento con métricas, provincias, resumen ejecutivo\n"
+                    "- **Provincial / Distrital**: Detalle por provincia/distrito\n\n"
+                    "**Nivel 2 — Complementario (opcional):**\n"
+                    "- Se agrega sobre el Nivel 1, no lo reemplaza\n"
+                    "- Filtra por tipo de siniestro y/o período de ocurrencia\n"
+                    "- Genera slides adicionales con el mismo alcance geográfico pero datos filtrados\n\n"
+                    "**Ejemplo**: Nacional + Cajamarca + filtro 'HELADA' → "
+                    "Primero se muestra el resumen nacional y de Cajamarca completo, "
+                    "luego se agregan slides de análisis complementario mostrando solo HELADA."
                 )
 
     # ═══════════════════════════════════════════════════════════════════════
