@@ -1376,21 +1376,47 @@ def _add_portada(prs, data):
     sep_line.fill.fore_color.rgb = C["teal"]
     sep_line.line.fill.background()
 
-    scope_text = "Resumen de Avance Nacional"
-    if data.get("filtros", {}).get("deptos"):
-        scope_text = f"Departamento: {', '.join(data['filtros']['deptos'][:2])}"
+    # ── Índice / contenido de la presentación ──
+    filtros = data.get("filtros", {})
+    indice_lines = []
+
+    # Nivel 1: estructura geográfica
+    if data.get("scope") == "nacional" or (not filtros.get("deptos") and not filtros.get("provs") and not filtros.get("dists")):
+        indice_lines.append("Nacional")
+    if filtros.get("deptos"):
+        for d in filtros["deptos"]:
+            indice_lines.append(f"Departamento: {d.title()}")
+    if filtros.get("provs"):
+        for p in filtros["provs"]:
+            indice_lines.append(f"  Provincia: {p.title()}")
+    if filtros.get("dists"):
+        for d in filtros["dists"][:5]:
+            indice_lines.append(f"    Distrito: {d.title()}")
+
+    # Nivel 2
+    if data.get("hay_nivel2"):
+        indice_lines.append("")
+        indice_lines.append(f"Análisis Complementario: {data.get('nivel2_label', '')}")
 
     tf_scope = slide.shapes.add_textbox(
-        Inches(0.5), Inches(3.6),
-        Inches(9), Inches(0.3)
+        Inches(1.5), Inches(3.55),
+        Inches(7), Inches(1.2)
     )
     text_frame = tf_scope.text_frame
     text_frame.word_wrap = True
-    p = text_frame.paragraphs[0]
-    p.text = scope_text
-    p.font.size = Pt(14)
-    p.font.color.rgb = C["white"]
-    p.alignment = PP_ALIGN.CENTER
+
+    for idx, line in enumerate(indice_lines):
+        if idx == 0:
+            p = text_frame.paragraphs[0]
+        else:
+            p = text_frame.add_paragraph()
+        p.text = line
+        p.font.size = Pt(12)
+        p.font.color.rgb = C["lightGray"] if line.strip().startswith(("Provincia", "Distrito", "Análisis")) else C["white"]
+        p.font.name = "Georgia"
+        p.alignment = PP_ALIGN.LEFT
+        p.space_before = Pt(1)
+        p.space_after = Pt(1)
 
     fecha_corte = data.get("fecha_corte", "S.F.")
     tf_footer = slide.shapes.add_textbox(
@@ -1666,6 +1692,20 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     circle_p.font.size = Pt(60)
     circle_p.alignment = PP_ALIGN.CENTER
 
+    # Etiqueta de nivel geográfico sobre el nombre
+    tf_level = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.35),
+        Inches(9), Inches(0.35)
+    )
+    level_frame = tf_level.text_frame
+    level_frame.word_wrap = True
+    lp = level_frame.paragraphs[0]
+    lp.text = "DEPARTAMENTO"
+    lp.font.size = Pt(14)
+    lp.font.color.rgb = C["teal"]
+    lp.font.name = "Georgia"
+    lp.alignment = PP_ALIGN.CENTER
+
     tf_title = slide.shapes.add_textbox(
         Inches(0.5), Inches(2.7),
         Inches(9), Inches(0.8)
@@ -1673,7 +1713,7 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = name.upper()
+    p.text = name.title()
     p.font.size = Pt(40)
     p.font.bold = True
     p.font.color.rgb = C["white"]
@@ -1687,6 +1727,7 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     p2.alignment = PP_ALIGN.CENTER
     p2.space_before = Pt(4)
 
+    # ── Slide 2: KPIs + Tablas ──
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
@@ -1700,7 +1741,7 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     badge = slide.shapes.add_shape(
         MSO_SHAPE.ROUNDED_RECTANGLE,
         Inches(0.4), Inches(0.35),
-        Inches(1.5), Inches(0.35)
+        Inches(2.2), Inches(0.35)
     )
     badge.fill.solid()
     badge.fill.fore_color.rgb = C["white"]
@@ -1709,20 +1750,20 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
 
     badge_tf = slide.shapes.add_textbox(
         Inches(0.4), Inches(0.35),
-        Inches(1.5), Inches(0.35)
+        Inches(2.2), Inches(0.35)
     )
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = name.upper()
+    badge_p.text = f"DEPTO: {name.upper()}"
     badge_p.font.size = Pt(11)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["orange"]
     badge_p.alignment = PP_ALIGN.CENTER
 
     tf_title = slide.shapes.add_textbox(
-        Inches(2.1), Inches(0.28),
-        Inches(7.5), Inches(0.5)
+        Inches(2.8), Inches(0.28),
+        Inches(6.8), Inches(0.5)
     )
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
@@ -1841,6 +1882,20 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     circle_p.font.size = Pt(60)
     circle_p.alignment = PP_ALIGN.CENTER
 
+    # Etiqueta de nivel geográfico
+    tf_level = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.35),
+        Inches(9), Inches(0.35)
+    )
+    level_frame = tf_level.text_frame
+    level_frame.word_wrap = True
+    lp = level_frame.paragraphs[0]
+    lp.text = "PROVINCIA"
+    lp.font.size = Pt(14)
+    lp.font.color.rgb = C["sage"]
+    lp.font.name = "Georgia"
+    lp.alignment = PP_ALIGN.CENTER
+
     tf_title = slide.shapes.add_textbox(
         Inches(0.5), Inches(2.7),
         Inches(9), Inches(0.8)
@@ -1848,7 +1903,7 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = name.upper()
+    p.text = name.title()
     p.font.size = Pt(40)
     p.font.bold = True
     p.font.color.rgb = C["white"]
@@ -1856,7 +1911,7 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
-    p2.text = f"{depto} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización" if depto else "Provincia"
+    p2.text = f"{depto.title()} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización" if depto else "Provincia"
     p2.font.size = Pt(13)
     p2.font.color.rgb = C["sage"]
     p2.alignment = PP_ALIGN.CENTER
@@ -1876,7 +1931,7 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     badge = slide.shapes.add_shape(
         MSO_SHAPE.ROUNDED_RECTANGLE,
         Inches(0.4), Inches(0.35),
-        Inches(1.5), Inches(0.35)
+        Inches(2.2), Inches(0.35)
     )
     badge.fill.solid()
     badge.fill.fore_color.rgb = C["white"]
@@ -1885,20 +1940,20 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
 
     badge_tf = slide.shapes.add_textbox(
         Inches(0.4), Inches(0.35),
-        Inches(1.5), Inches(0.35)
+        Inches(2.2), Inches(0.35)
     )
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = name.upper()
+    badge_p.text = f"PROV: {name.upper()}"
     badge_p.font.size = Pt(11)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["forest"]
     badge_p.alignment = PP_ALIGN.CENTER
 
     tf_title = slide.shapes.add_textbox(
-        Inches(2.1), Inches(0.28),
-        Inches(7.5), Inches(0.5)
+        Inches(2.8), Inches(0.28),
+        Inches(6.8), Inches(0.5)
     )
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
@@ -2017,6 +2072,20 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
     circle_p.font.size = Pt(60)
     circle_p.alignment = PP_ALIGN.CENTER
 
+    # Etiqueta de nivel geográfico
+    tf_level = slide.shapes.add_textbox(
+        Inches(0.5), Inches(2.35),
+        Inches(9), Inches(0.35)
+    )
+    level_frame = tf_level.text_frame
+    level_frame.word_wrap = True
+    lp = level_frame.paragraphs[0]
+    lp.text = "DISTRITO"
+    lp.font.size = Pt(14)
+    lp.font.color.rgb = C["teal"]
+    lp.font.name = "Georgia"
+    lp.alignment = PP_ALIGN.CENTER
+
     tf_title = slide.shapes.add_textbox(
         Inches(0.5), Inches(2.7),
         Inches(9), Inches(0.8)
@@ -2024,7 +2093,7 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = name.upper()
+    p.text = name.title()
     p.font.size = Pt(40)
     p.font.bold = True
     p.font.color.rgb = C["white"]
@@ -2033,9 +2102,9 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
 
     subtitle_parts = []
     if prov:
-        subtitle_parts.append(prov)
+        subtitle_parts.append(prov.title())
     if depto:
-        subtitle_parts.append(depto)
+        subtitle_parts.append(depto.title())
     subtitle = " — ".join(subtitle_parts) if subtitle_parts else "Distrito"
     p2 = text_frame.add_paragraph()
     p2.text = f"{subtitle} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización"
@@ -2058,7 +2127,7 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
     badge = slide.shapes.add_shape(
         MSO_SHAPE.ROUNDED_RECTANGLE,
         Inches(0.4), Inches(0.35),
-        Inches(1.5), Inches(0.35)
+        Inches(2.2), Inches(0.35)
     )
     badge.fill.solid()
     badge.fill.fore_color.rgb = C["white"]
@@ -2067,20 +2136,20 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
 
     badge_tf = slide.shapes.add_textbox(
         Inches(0.4), Inches(0.35),
-        Inches(1.5), Inches(0.35)
+        Inches(2.2), Inches(0.35)
     )
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = name.upper()
+    badge_p.text = f"DIST: {name.upper()}"
     badge_p.font.size = Pt(11)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["navy"]
     badge_p.alignment = PP_ALIGN.CENTER
 
     tf_title = slide.shapes.add_textbox(
-        Inches(2.1), Inches(0.28),
-        Inches(7.5), Inches(0.5)
+        Inches(2.8), Inches(0.28),
+        Inches(6.8), Inches(0.5)
     )
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
