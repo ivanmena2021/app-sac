@@ -212,18 +212,17 @@ def _normalize_midagri(uploaded_bytes):
             col_map[c] = "FECHA_AVISO"
         elif "FECHA DE ATENCIÓN" in cu or "FECHA ATENCION" in cu:
             col_map[c] = "FECHA_ATENCION"
-        elif "PROGRAMACION" in cu and "AJUSTE" in cu and "REPROGRAM" not in cu:
+        elif "FECHA" in cu and "PROGRAMACION" in cu and "AJUSTE" in cu and "REPROGRAM" not in cu:
             col_map[c] = "FECHA_PROGRAMACION_AJUSTE"
-        elif "AJUSTE" in cu and "ACTA" in cu and ("1" in cu or " 01" in cu) and "FINAL" not in cu:
+        elif "FECHA" in cu and "AJUSTE" in cu and "ACTA" in cu and ("ACTA 1" in cu or "ACTA 01" in cu):
             col_map[c] = "FECHA_AJUSTE_ACTA_1"
-        elif ("AJUSTE" in cu and "ACTA" in cu and "1" not in cu and "01" not in cu
-              and "FINAL" not in cu and "N°" not in cu and "NUMERO" not in cu):
+        elif "FECHA" in cu and "AJUSTE" in cu and "ACTA" in cu and "ACTA 1" not in cu and "ACTA 01" not in cu and "N°" not in cu:
             col_map[c] = "FECHA_AJUSTE_ACTA_FINAL"
-        elif "REPROGRAMACI" in cu and ("01" in cu or " 1" in cu) and "02" not in cu and "03" not in cu:
+        elif "FECHA" in cu and "REPROGRAMACI" in cu and ("01" in cu or cu.endswith("1")) and "02" not in cu and "03" not in cu:
             col_map[c] = "FECHA_REPROGRAMACION_01"
-        elif "REPROGRAMACI" in cu and "02" in cu:
+        elif "FECHA" in cu and "REPROGRAMACI" in cu and "02" in cu:
             col_map[c] = "FECHA_REPROGRAMACION_02"
-        elif "REPROGRAMACI" in cu and "03" in cu:
+        elif "FECHA" in cu and "REPROGRAMACI" in cu and "03" in cu:
             col_map[c] = "FECHA_REPROGRAMACION_03"
         elif "ESTADO SINIESTRO" in cu:
             col_map[c] = "ESTADO_SINIESTRO"
@@ -259,7 +258,16 @@ def _normalize_midagri(uploaded_bytes):
             col_map[c] = "FECHA_DESEMBOLSO"
         elif "PRIORIZADO" in cu:
             col_map[c] = "PRIORIZADO"
-    df = df.rename(columns=col_map)
+    # Evitar duplicados: si dos columnas mapean al mismo nombre, quedarse con la primera
+    seen_vals = {}
+    dedup_map = {}
+    for orig, norm in col_map.items():
+        if norm not in seen_vals:
+            seen_vals[norm] = orig
+            dedup_map[orig] = norm
+    df = df.rename(columns=dedup_map)
+    # Eliminar columnas duplicadas residuales
+    df = df.loc[:, ~df.columns.duplicated()]
 
     if "DEPARTAMENTO" in df.columns:
         df["DEPARTAMENTO"] = df["DEPARTAMENTO"].astype(str).str.strip().str.upper()
@@ -328,18 +336,17 @@ def _normalize_siniestros(uploaded_bytes):
             col_map[c] = "FECHA_AVISO"
         elif "FECHA DE ATENCIÓN" in cu or "FECHA DE ATENCION" in cu:
             col_map[c] = "FECHA_ATENCION"
-        elif "PROGRAMACION" in cu and "AJUSTE" in cu and "REPROGRAM" not in cu:
+        elif "FECHA" in cu and "PROGRAMACION" in cu and "AJUSTE" in cu and "REPROGRAM" not in cu:
             col_map[c] = "FECHA_PROGRAMACION_AJUSTE"
-        elif "AJUSTE" in cu and "ACTA" in cu and ("1" in cu or " 01" in cu) and "FINAL" not in cu:
+        elif "FECHA" in cu and "AJUSTE" in cu and "ACTA" in cu and ("ACTA 1" in cu or "ACTA 01" in cu):
             col_map[c] = "FECHA_AJUSTE_ACTA_1"
-        elif ("AJUSTE" in cu and "ACTA" in cu and "1" not in cu and "01" not in cu
-              and "FINAL" not in cu and "N°" not in cu and "NUMERO" not in cu):
+        elif "FECHA" in cu and "AJUSTE" in cu and "ACTA" in cu and "ACTA 1" not in cu and "ACTA 01" not in cu and "N°" not in cu:
             col_map[c] = "FECHA_AJUSTE_ACTA_FINAL"
-        elif "REPROGRAMACI" in cu and ("01" in cu or " 1" in cu) and "02" not in cu and "03" not in cu:
+        elif "FECHA" in cu and "REPROGRAMACI" in cu and ("01" in cu or cu.endswith("1")) and "02" not in cu and "03" not in cu:
             col_map[c] = "FECHA_REPROGRAMACION_01"
-        elif "REPROGRAMACI" in cu and "02" in cu:
+        elif "FECHA" in cu and "REPROGRAMACI" in cu and "02" in cu:
             col_map[c] = "FECHA_REPROGRAMACION_02"
-        elif "REPROGRAMACI" in cu and "03" in cu:
+        elif "FECHA" in cu and "REPROGRAMACI" in cu and "03" in cu:
             col_map[c] = "FECHA_REPROGRAMACION_03"
         elif "ESTADO SINIESTRO" in cu:
             col_map[c] = "ESTADO_SINIESTRO"
@@ -377,7 +384,15 @@ def _normalize_siniestros(uploaded_bytes):
             col_map[c] = "PRIORIZADO"
         elif "OBSERVACI" in cu:
             col_map[c] = "OBSERVACION"
-    df = df.rename(columns=col_map)
+    # Evitar duplicados: si dos columnas mapean al mismo nombre, quedarse con la primera
+    seen_vals = {}
+    dedup_map = {}
+    for orig, norm in col_map.items():
+        if norm not in seen_vals:
+            seen_vals[norm] = orig
+            dedup_map[orig] = norm
+    df = df.rename(columns=dedup_map)
+    df = df.loc[:, ~df.columns.duplicated()]
 
     if "DEPARTAMENTO" in df.columns:
         df["DEPARTAMENTO"] = df["DEPARTAMENTO"].astype(str).str.strip().str.upper()
