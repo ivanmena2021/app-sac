@@ -24,6 +24,7 @@ from comparativo_campanias import (
     load_campania_anterior, generate_comparison_chart, get_comparison_table,
     get_monthly_detail_table, METRICAS_COMPARACION,
 )
+from semaforo_alertas import render_semaforo_tab
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -993,9 +994,10 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    tab_analisis, tab_reportes = st.tabs([
+    tab_analisis, tab_reportes, tab_semaforo = st.tabs([
         "🔍 Análisis Interactivo",
         "📥 Generar Reportes",
+        "🚦 Semáforo de Alertas",
     ])
 
     # ═══════════════════════════════════════════════════════════════════
@@ -1811,6 +1813,12 @@ else:
                     "Primero se muestra el resumen nacional y de Cajamarca completo, "
                     "luego se agregan slides de análisis complementario mostrando solo HELADA."
                 )
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # SECCIÓN 3: SEMÁFORO DE ALERTAS
+    # ═══════════════════════════════════════════════════════════════════════
+    with tab_semaforo:
+        render_semaforo_tab(datos)
 
     # ═══════════════════════════════════════════════════════════════════════
     # FOOTER

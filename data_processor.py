@@ -212,6 +212,19 @@ def _normalize_midagri(uploaded_bytes):
             col_map[c] = "FECHA_AVISO"
         elif "FECHA DE ATENCIÓN" in cu or "FECHA ATENCION" in cu:
             col_map[c] = "FECHA_ATENCION"
+        elif "PROGRAMACION" in cu and "AJUSTE" in cu and "REPROGRAM" not in cu:
+            col_map[c] = "FECHA_PROGRAMACION_AJUSTE"
+        elif "AJUSTE" in cu and "ACTA" in cu and ("1" in cu or " 01" in cu) and "FINAL" not in cu:
+            col_map[c] = "FECHA_AJUSTE_ACTA_1"
+        elif ("AJUSTE" in cu and "ACTA" in cu and "1" not in cu and "01" not in cu
+              and "FINAL" not in cu and "N°" not in cu and "NUMERO" not in cu):
+            col_map[c] = "FECHA_AJUSTE_ACTA_FINAL"
+        elif "REPROGRAMACI" in cu and ("01" in cu or " 1" in cu) and "02" not in cu and "03" not in cu:
+            col_map[c] = "FECHA_REPROGRAMACION_01"
+        elif "REPROGRAMACI" in cu and "02" in cu:
+            col_map[c] = "FECHA_REPROGRAMACION_02"
+        elif "REPROGRAMACI" in cu and "03" in cu:
+            col_map[c] = "FECHA_REPROGRAMACION_03"
         elif "ESTADO SINIESTRO" in cu:
             col_map[c] = "ESTADO_SINIESTRO"
         elif "ESTADO INSPECCION" in cu or "ESTADO INSPECCIÓN" in cu:
@@ -262,6 +275,16 @@ def _normalize_midagri(uploaded_bytes):
             df[col] = df[col].replace("-", np.nan)
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
+    # Coerción de fechas
+    _date_cols = ["FECHA_AVISO", "FECHA_ATENCION", "FECHA_SINIESTRO",
+                  "FECHA_PROGRAMACION_AJUSTE", "FECHA_AJUSTE_ACTA_1",
+                  "FECHA_AJUSTE_ACTA_FINAL", "FECHA_REPROGRAMACION_01",
+                  "FECHA_REPROGRAMACION_02", "FECHA_REPROGRAMACION_03",
+                  "FECHA_ENVIO_DRAS", "FECHA_VALIDACION", "FECHA_DESEMBOLSO"]
+    for col in _date_cols:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
+
     return df
 
 
@@ -305,6 +328,19 @@ def _normalize_siniestros(uploaded_bytes):
             col_map[c] = "FECHA_AVISO"
         elif "FECHA DE ATENCIÓN" in cu or "FECHA DE ATENCION" in cu:
             col_map[c] = "FECHA_ATENCION"
+        elif "PROGRAMACION" in cu and "AJUSTE" in cu and "REPROGRAM" not in cu:
+            col_map[c] = "FECHA_PROGRAMACION_AJUSTE"
+        elif "AJUSTE" in cu and "ACTA" in cu and ("1" in cu or " 01" in cu) and "FINAL" not in cu:
+            col_map[c] = "FECHA_AJUSTE_ACTA_1"
+        elif ("AJUSTE" in cu and "ACTA" in cu and "1" not in cu and "01" not in cu
+              and "FINAL" not in cu and "N°" not in cu and "NUMERO" not in cu):
+            col_map[c] = "FECHA_AJUSTE_ACTA_FINAL"
+        elif "REPROGRAMACI" in cu and ("01" in cu or " 1" in cu) and "02" not in cu and "03" not in cu:
+            col_map[c] = "FECHA_REPROGRAMACION_01"
+        elif "REPROGRAMACI" in cu and "02" in cu:
+            col_map[c] = "FECHA_REPROGRAMACION_02"
+        elif "REPROGRAMACI" in cu and "03" in cu:
+            col_map[c] = "FECHA_REPROGRAMACION_03"
         elif "ESTADO SINIESTRO" in cu:
             col_map[c] = "ESTADO_SINIESTRO"
         elif "ESTADO INSPECCION" in cu:
@@ -354,6 +390,16 @@ def _normalize_siniestros(uploaded_bytes):
                  "PRIMA_NETA_DPTO", "SUP_SEMBRADA", "SUP_ASEGURADA"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Coerción de fechas
+    _date_cols = ["FECHA_AVISO", "FECHA_ATENCION", "FECHA_SINIESTRO",
+                  "FECHA_PROGRAMACION_AJUSTE", "FECHA_AJUSTE_ACTA_1",
+                  "FECHA_AJUSTE_ACTA_FINAL", "FECHA_REPROGRAMACION_01",
+                  "FECHA_REPROGRAMACION_02", "FECHA_REPROGRAMACION_03",
+                  "FECHA_ENVIO_DRAS", "FECHA_VALIDACION", "FECHA_DESEMBOLSO"]
+    for col in _date_cols:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce", dayfirst=True)
 
     return df
 
