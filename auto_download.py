@@ -203,7 +203,7 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                 )
 
             # 5. Clic y esperar descarga (timeout largo: ~70-90 segundos)
-            with page.expect_download(timeout=180000) as download_info:
+            with page.expect_download(timeout=300000) as download_info:
                 midagri_btn.click()
 
             # 6. Guardar archivo

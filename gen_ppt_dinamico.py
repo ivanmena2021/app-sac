@@ -1784,14 +1784,15 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     _add_resumen_ejecutivo(prs, name, resumen_text, "Departamental", fecha_corte)
 
 
-def _add_provincial_section(prs, section):
-    """Add provincial section: separator + metrics."""
+def _add_provincial_section(prs, section, fecha_corte="S.F."):
+    """Add provincial section: separator + metrics + tables + resumen ejecutivo."""
     name = section.get("name", "Provincia")
     depto = section.get("depto", "")
     m = section["metricas"]
     dists = section.get("distritos", [])
     tipos = section.get("tipos", [])
 
+    # ── Slide 1: Separador provincial ──
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
@@ -1855,18 +1856,119 @@ def _add_provincial_section(prs, section):
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
-    p2.text = depto if depto else "Provincia"
+    p2.text = f"{depto} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización" if depto else "Provincia"
     p2.font.size = Pt(13)
     p2.font.color.rgb = C["sage"]
     p2.alignment = PP_ALIGN.CENTER
     p2.space_before = Pt(4)
 
+    # ── Slide 2: KPIs + Tablas (tipo siniestro y distritos) ──
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
 
-def _add_distrital_section(prs, section):
-    """Add distrital section: separator slide."""
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(0.4), Inches(0.35),
+        Inches(1.5), Inches(0.35)
+    )
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = C["white"]
+    badge.line.color.rgb = C["sage"]
+    badge.line.width = Pt(1.5)
+
+    badge_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.35),
+        Inches(1.5), Inches(0.35)
+    )
+    badge_frame = badge_tf.text_frame
+    badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    badge_p = badge_frame.paragraphs[0]
+    badge_p.text = name.upper()
+    badge_p.font.size = Pt(11)
+    badge_p.font.bold = True
+    badge_p.font.color.rgb = C["forest"]
+    badge_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(2.1), Inches(0.28),
+        Inches(7.5), Inches(0.5)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Análisis Provincial — Indicadores Clave"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = C["forest"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.85),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["sage"]
+    line.line.fill.background()
+
+    kpi_configs = [
+        ("Avisos Reportados", _fmt_num(m["avisos"]), "", C["amber"], "⚠"),
+        ("Avance Evaluación", f"{_fmt_pct(m['pct_eval'])}", f"{m['cerrados']:,} cerrados", C["teal"], "✔"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), "", C["orange"], "●"),
+        ("Avance Desembolso", f"{_fmt_pct(m['pct_desembolso'])}", _fmt_money(m["desembolso"]), C["teal"], "✦"),
+    ]
+
+    for i, (label, value, sublabel, color, icon) in enumerate(kpi_configs):
+        left = Inches(0.3 + i * 2.35)
+        top = Inches(1.25)
+        _add_kpi_card(slide, left, top, Inches(2.15), Inches(1.85), label, value, sublabel, color, icon)
+
+    if tipos:
+        headers = ["Tipo Siniestro", "Avisos", "Indem. (S/)"]
+        rows = []
+        for t in tipos[:8]:
+            rows.append([
+                t["tipo"],
+                _fmt_num(t["avisos"]),
+                _fmt_money(t.get("indem", 0)),
+            ])
+        col_widths = [Inches(2.0), Inches(1.1), Inches(1.2)]
+        _add_styled_table(slide, headers, rows, left=Inches(0.3), top=Inches(3.25), col_widths=col_widths, max_rows=5)
+
+    if dists:
+        headers_d = ["Distrito", "Avisos", "Indem. (S/)"]
+        rows_d = []
+        for d in dists[:5]:
+            rows_d.append([
+                d["name"],
+                _fmt_num(d["avisos"]),
+                _fmt_money(d.get("indem", 0)),
+            ])
+        col_widths_d = [Inches(2.0), Inches(1.1), Inches(1.2)]
+        _add_styled_table(slide, headers_d, rows_d, left=Inches(5.0), top=Inches(3.25), col_widths=col_widths_d, max_rows=5)
+
+    # ── Slide 3: Resumen Ejecutivo ──
+    resumen_text = _generar_resumen_texto(section, "provincial")
+    _add_resumen_ejecutivo(prs, name, resumen_text, "Provincial", fecha_corte)
+
+
+def _add_distrital_section(prs, section, fecha_corte="S.F."):
+    """Add distrital section: separator + metrics + tables + resumen ejecutivo."""
     name = section.get("name", "Distrito")
     prov = section.get("prov", "")
+    depto = section.get("depto", "")
+    m = section["metricas"]
+    tipos = section.get("tipos", [])
 
+    # ── Slide 1: Separador distrital ──
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.shapes.add_shape(
         MSO_SHAPE.RECTANGLE,
@@ -1929,12 +2031,103 @@ def _add_distrital_section(prs, section):
     p.font.name = "Georgia"
     p.alignment = PP_ALIGN.CENTER
 
+    subtitle_parts = []
+    if prov:
+        subtitle_parts.append(prov)
+    if depto:
+        subtitle_parts.append(depto)
+    subtitle = " — ".join(subtitle_parts) if subtitle_parts else "Distrito"
     p2 = text_frame.add_paragraph()
-    p2.text = f"{prov} Provincia" if prov else "Distrito"
+    p2.text = f"{subtitle} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización"
     p2.font.size = Pt(13)
     p2.font.color.rgb = C["teal"]
     p2.alignment = PP_ALIGN.CENTER
     p2.space_before = Pt(4)
+
+    # ── Slide 2: KPIs + Tabla de tipos de siniestro ──
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    background.fill.solid()
+    background.fill.fore_color.rgb = C["cream"]
+    background.line.fill.background()
+
+    badge = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE,
+        Inches(0.4), Inches(0.35),
+        Inches(1.5), Inches(0.35)
+    )
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = C["white"]
+    badge.line.color.rgb = C["teal"]
+    badge.line.width = Pt(1.5)
+
+    badge_tf = slide.shapes.add_textbox(
+        Inches(0.4), Inches(0.35),
+        Inches(1.5), Inches(0.35)
+    )
+    badge_frame = badge_tf.text_frame
+    badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+    badge_p = badge_frame.paragraphs[0]
+    badge_p.text = name.upper()
+    badge_p.font.size = Pt(11)
+    badge_p.font.bold = True
+    badge_p.font.color.rgb = C["navy"]
+    badge_p.alignment = PP_ALIGN.CENTER
+
+    tf_title = slide.shapes.add_textbox(
+        Inches(2.1), Inches(0.28),
+        Inches(7.5), Inches(0.5)
+    )
+    text_frame = tf_title.text_frame
+    text_frame.word_wrap = True
+    p = text_frame.paragraphs[0]
+    p.text = "Análisis Distrital — Indicadores Clave"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.font.color.rgb = C["navy"]
+    p.font.name = "Georgia"
+    p.alignment = PP_ALIGN.LEFT
+
+    line = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0.85),
+        prs.slide_width, Inches(0.04)
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = C["teal"]
+    line.line.fill.background()
+
+    kpi_configs = [
+        ("Avisos Reportados", _fmt_num(m["avisos"]), "", C["amber"], "⚠"),
+        ("Avance Evaluación", f"{_fmt_pct(m['pct_eval'])}", f"{m['cerrados']:,} cerrados", C["teal"], "✔"),
+        ("Indemnización", _fmt_money(m["indemnizacion"]), "", C["orange"], "●"),
+        ("Avance Desembolso", f"{_fmt_pct(m['pct_desembolso'])}", _fmt_money(m["desembolso"]), C["teal"], "✦"),
+    ]
+
+    for i, (label, value, sublabel, color, icon) in enumerate(kpi_configs):
+        left = Inches(0.3 + i * 2.35)
+        top = Inches(1.25)
+        _add_kpi_card(slide, left, top, Inches(2.15), Inches(1.85), label, value, sublabel, color, icon)
+
+    if tipos:
+        headers = ["Tipo Siniestro", "Avisos", "Indem. (S/)"]
+        rows = []
+        for t in tipos[:8]:
+            rows.append([
+                t["tipo"],
+                _fmt_num(t["avisos"]),
+                _fmt_money(t.get("indem", 0)),
+            ])
+        col_widths = [Inches(2.0), Inches(1.1), Inches(1.2)]
+        _add_styled_table(slide, headers, rows, left=Inches(0.3), top=Inches(3.25), col_widths=col_widths, max_rows=5)
+
+    # ── Slide 3: Resumen Ejecutivo ──
+    resumen_text = _generar_resumen_texto(section, "distrital")
+    _add_resumen_ejecutivo(prs, name, resumen_text, "Distrital", fecha_corte)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -2312,9 +2505,9 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
         elif section_type == "departamental":
             _add_departamental_section(prs, section, fecha_corte)
         elif section_type == "provincial":
-            _add_provincial_section(prs, section)
+            _add_provincial_section(prs, section, fecha_corte)
         elif section_type == "distrital":
-            _add_distrital_section(prs, section)
+            _add_distrital_section(prs, section, fecha_corte)
 
     # ── NIVEL 2: Secciones complementarias (filtradas) ──
     nivel2_sections = data.get("nivel2_sections", [])
@@ -2332,8 +2525,7 @@ def generar_ppt_dinamico(df, filtros, fecha_corte):
             elif section_type == "departamental":
                 _add_nivel2_departamental(prs, section, nivel2_label, fecha_corte)
             elif section_type == "provincial":
-                # For provincial Level 2, reuse the base provincial separator
-                _add_provincial_section(prs, section)
+                _add_provincial_section(prs, section, fecha_corte)
 
     # ── Cierre ──
     _add_cierre(prs, fecha_corte)
