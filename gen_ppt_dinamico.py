@@ -34,52 +34,52 @@ def _safe_col(df, col):
 
 
 def _aplicar_filtros(df, filtros):
-    """Aplica todos los filtros al DataFrame."""
-    df = df.copy()
+    """Aplica todos los filtros al DataFrame (sin copia innecesaria)."""
+    mask = pd.Series(True, index=df.index)
     empresa = filtros.get("empresa", "ambas")
     if empresa != "ambas" and _safe_col(df, "EMPRESA"):
-        df = df[df["EMPRESA"].astype(str).str.upper().str.contains(empresa.upper())]
+        mask &= df["EMPRESA"].astype(str).str.upper().str.contains(empresa.upper(), na=False)
     tipos = filtros.get("tipos_siniestro", [])
     if tipos and _safe_col(df, "TIPO_SINIESTRO"):
-        df = df[df["TIPO_SINIESTRO"].isin(tipos)]
+        mask &= df["TIPO_SINIESTRO"].isin(tipos)
     fecha_inicio = filtros.get("fecha_inicio")
     fecha_fin = filtros.get("fecha_fin")
     col_fecha = filtros.get("col_fecha", "FECHA_AVISO")
     if fecha_inicio and fecha_fin and _safe_col(df, col_fecha):
-        df[col_fecha] = pd.to_datetime(df[col_fecha], errors="coerce")
-        mask = (df[col_fecha] >= pd.Timestamp(fecha_inicio)) & (df[col_fecha] <= pd.Timestamp(fecha_fin))
-        df = df[mask]
+        dt_col = pd.to_datetime(df[col_fecha], errors="coerce")
+        mask &= (dt_col >= pd.Timestamp(fecha_inicio)) & (dt_col <= pd.Timestamp(fecha_fin))
     deptos = filtros.get("departamentos", [])
     provs = filtros.get("provincias", [])
     dists = filtros.get("distritos", [])
     if deptos and _safe_col(df, "DEPARTAMENTO"):
-        df = df[df["DEPARTAMENTO"].isin(deptos)]
+        mask &= df["DEPARTAMENTO"].isin(deptos)
     if provs and _safe_col(df, "PROVINCIA"):
-        df = df[df["PROVINCIA"].isin(provs)]
+        mask &= df["PROVINCIA"].isin(provs)
     if dists and _safe_col(df, "DISTRITO"):
-        df = df[df["DISTRITO"].isin(dists)]
-    return df
+        mask &= df["DISTRITO"].isin(dists)
+    return df[mask]
 
 
 def _calcular_metricas(df):
-    """Calcula métricas principales del DataFrame."""
+    """Calcula métricas principales del DataFrame (optimizado)."""
     n = len(df)
-    cerrados = 0
-    if _safe_col(df, "ESTADO_INSPECCION"):
-        cerrados = int(len(df[df["ESTADO_INSPECCION"].astype(str).str.upper() == "CERRADO"]))
-    pct_eval = (cerrados / n * 100) if n > 0 else 0
+    if n == 0:
+        return {"avisos": 0, "cerrados": 0, "pct_eval": 0, "indemnizacion": 0,
+                "desembolso": 0, "pct_desembolso": 0, "ha_indemnizadas": 0, "productores": 0}
+    cerrados = int((df["ESTADO_INSPECCION"].astype(str).str.upper() == "CERRADO").sum()) if _safe_col(df, "ESTADO_INSPECCION") else 0
+    pct_eval = cerrados / n * 100
     indem = float(df["INDEMNIZACION"].sum()) if _safe_col(df, "INDEMNIZACION") else 0
     desemb = float(df["MONTO_DESEMBOLSADO"].sum()) if _safe_col(df, "MONTO_DESEMBOLSADO") else 0
     pct_desemb = (desemb / indem * 100) if indem > 0 else 0
     ha = float(df["SUP_INDEMNIZADA"].sum()) if _safe_col(df, "SUP_INDEMNIZADA") else 0
-    if _safe_col(df, "N_PRODUCTORES") and _safe_col(df, "INDEMNIZACION"):
-        _indemn = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)
+    productores = 0
+    if _safe_col(df, "N_PRODUCTORES"):
         _prods = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
-        productores = int(_prods[_indemn > 0].sum())
-    elif _safe_col(df, "N_PRODUCTORES"):
-        productores = int(df["N_PRODUCTORES"].sum())
-    else:
-        productores = 0
+        if _safe_col(df, "INDEMNIZACION"):
+            _indemn = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)
+            productores = int(_prods[_indemn > 0].sum())
+        else:
+            productores = int(_prods.sum())
     return {
         "avisos": n, "cerrados": cerrados, "pct_eval": round(pct_eval, 1),
         "indemnizacion": indem, "desembolso": desemb,
@@ -106,7 +106,7 @@ def _calcular_pipeline(df):
 
 
 def _top_breakdown(df, col, n=10):
-    """Top N por columna geográfica."""
+    """Top N por columna geográfica (optimizado sin copy)."""
     if not _safe_col(df, col):
         return []
     agg = {"Avisos": (col, "count")}
@@ -116,13 +116,15 @@ def _top_breakdown(df, col, n=10):
         agg["Desembolso"] = ("MONTO_DESEMBOLSADO", "sum")
     if _safe_col(df, "SUP_INDEMNIZADA"):
         agg["Ha"] = ("SUP_INDEMNIZADA", "sum")
-    if _safe_col(df, "N_PRODUCTORES"):
-        df = df.copy()
-        df["_PROD_BENEF"] = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
+
+    has_prod = _safe_col(df, "N_PRODUCTORES")
+    if has_prod:
+        _prods = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
         if _safe_col(df, "INDEMNIZACION"):
             _ind = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)
-            df["_PROD_BENEF"] = df["_PROD_BENEF"].where(_ind > 0, 0)
-        agg["Productores"] = ("_PROD_BENEF", "sum")
+            _prods = _prods.where(_ind > 0, 0)
+        prod_by_geo = _prods.groupby(df[col]).sum()
+
     result = df.groupby(col).agg(**agg).reset_index()
     result = result.sort_values("Avisos", ascending=False).head(n)
     rows = []
@@ -134,8 +136,8 @@ def _top_breakdown(df, col, n=10):
             row["desemb"] = float(r["Desembolso"])
         if "Ha" in r:
             row["ha"] = round(float(r["Ha"]), 2)
-        if "Productores" in r:
-            row["prod"] = int(r["Productores"])
+        if has_prod and r[col] in prod_by_geo.index:
+            row["prod"] = int(prod_by_geo[r[col]])
         rows.append(row)
     return rows
 
