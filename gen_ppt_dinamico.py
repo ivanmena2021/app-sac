@@ -10,8 +10,10 @@ import io
 import os
 import json
 import tempfile
+import hashlib
 import pandas as pd
 import numpy as np
+from functools import lru_cache
 from datetime import datetime
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
@@ -367,9 +369,15 @@ def _prepare_data(df, filtros, fecha_corte):
             "insights": _generar_insights(df_nivel1, m, tipos_nac, top_deptos_nac, "DEPARTAMENTO"),
         })
 
+    # Pre-agrupar por departamento para evitar filtrados repetidos
+    _dept_groups = {}
+    if deptos and _safe_col(df_nivel1, "DEPARTAMENTO"):
+        for d_name, d_df in df_nivel1[df_nivel1["DEPARTAMENTO"].isin(deptos)].groupby("DEPARTAMENTO"):
+            _dept_groups[d_name] = d_df
+
     if deptos:
         for depto in deptos:
-            df_d = df_nivel1[df_nivel1["DEPARTAMENTO"] == depto] if _safe_col(df_nivel1, "DEPARTAMENTO") else pd.DataFrame()
+            df_d = _dept_groups.get(depto, pd.DataFrame())
             if len(df_d) == 0:
                 continue
             m = _calcular_metricas(df_d)
@@ -391,9 +399,15 @@ def _prepare_data(df, filtros, fecha_corte):
                 "provs_seleccionadas": provs,
             })
 
+    # Pre-agrupar por provincia
+    _prov_groups = {}
+    if provs and _safe_col(df_nivel1, "PROVINCIA"):
+        for p_name, p_df in df_nivel1[df_nivel1["PROVINCIA"].isin(provs)].groupby("PROVINCIA"):
+            _prov_groups[p_name] = p_df
+
     if provs:
         for prov in provs:
-            df_p = df_nivel1[df_nivel1["PROVINCIA"] == prov] if _safe_col(df_nivel1, "PROVINCIA") else pd.DataFrame()
+            df_p = _prov_groups.get(prov, pd.DataFrame())
             if len(df_p) == 0:
                 continue
             m = _calcular_metricas(df_p)
@@ -414,9 +428,15 @@ def _prepare_data(df, filtros, fecha_corte):
                 "insights": _generar_insights(df_p, m, tipos_p, dists_p, "DISTRITO"),
             })
 
+    # Pre-agrupar por distrito
+    _dist_groups = {}
+    if dists and _safe_col(df_nivel1, "DISTRITO"):
+        for dt_name, dt_df in df_nivel1[df_nivel1["DISTRITO"].isin(dists[:5])].groupby("DISTRITO"):
+            _dist_groups[dt_name] = dt_df
+
     if dists:
         for dist in dists[:5]:
-            df_dist = df_nivel1[df_nivel1["DISTRITO"] == dist] if _safe_col(df_nivel1, "DISTRITO") else pd.DataFrame()
+            df_dist = _dist_groups.get(dist, pd.DataFrame())
             if len(df_dist) == 0:
                 continue
             m = _calcular_metricas(df_dist)
@@ -452,10 +472,15 @@ def _prepare_data(df, filtros, fecha_corte):
                 "insights": _generar_insights(df_nivel2, m2, tipos_n2, top_deptos_n2, "DEPARTAMENTO"),
             })
 
-        # Departamentos filtrados
+        # Departamentos filtrados (pre-agrupado)
+        _dept_groups2 = {}
+        if deptos and _safe_col(df_nivel2, "DEPARTAMENTO"):
+            for d2n, d2f in df_nivel2[df_nivel2["DEPARTAMENTO"].isin(deptos)].groupby("DEPARTAMENTO"):
+                _dept_groups2[d2n] = d2f
+
         if deptos:
             for depto in deptos:
-                df_d2 = df_nivel2[df_nivel2["DEPARTAMENTO"] == depto] if _safe_col(df_nivel2, "DEPARTAMENTO") else pd.DataFrame()
+                df_d2 = _dept_groups2.get(depto, pd.DataFrame())
                 if len(df_d2) == 0:
                     continue
                 m2 = _calcular_metricas(df_d2)
@@ -472,10 +497,15 @@ def _prepare_data(df, filtros, fecha_corte):
                     "insights": _generar_insights(df_d2, m2, tipos_d2, provs_d2, "PROVINCIA", provs),
                 })
 
-        # Provincias filtradas
+        # Provincias filtradas (pre-agrupado)
+        _prov_groups2 = {}
+        if provs and _safe_col(df_nivel2, "PROVINCIA"):
+            for p2n, p2f in df_nivel2[df_nivel2["PROVINCIA"].isin(provs)].groupby("PROVINCIA"):
+                _prov_groups2[p2n] = p2f
+
         if provs:
             for prov in provs:
-                df_p2 = df_nivel2[df_nivel2["PROVINCIA"] == prov] if _safe_col(df_nivel2, "PROVINCIA") else pd.DataFrame()
+                df_p2 = _prov_groups2.get(prov, pd.DataFrame())
                 if len(df_p2) == 0:
                     continue
                 m2 = _calcular_metricas(df_p2)
@@ -499,28 +529,83 @@ def _prepare_data(df, filtros, fecha_corte):
 # HELPER FUNCTIONS FOR PPT GENERATION (python-pptx)
 # ══════════════════════════════════════════════════════════════════
 
-# Color palette
+# ── Paleta institucional MIDAGRI ──
 C = {
-    "forest": RGBColor(0x1B, 0x43, 0x32),
-    "green": RGBColor(0x2D, 0x6A, 0x4F),
-    "sage": RGBColor(0x52, 0xB7, 0x88),
-    "mint": RGBColor(0x95, 0xD5, 0xB2),
-    "cream": RGBColor(0xF5, 0xF1, 0xEB),
-    "gold": RGBColor(0xD4, 0xA8, 0x43),
-    "amber": RGBColor(0xC1, 0x78, 0x17),
-    "navy": RGBColor(0x1A, 0x27, 0x44),
-    "dark": RGBColor(0x21, 0x25, 0x29),
-    "gray": RGBColor(0x6C, 0x75, 0x7D),
-    "lightGray": RGBColor(0xE9, 0xEC, 0xEF),
+    "forest": RGBColor(0x40, 0x8B, 0x14),      # Verde MIDAGRI principal (#408B14)
+    "green": RGBColor(0x52, 0xB0, 0x17),        # Verde claro indicadores (#52B017)
+    "sage": RGBColor(0x52, 0xB0, 0x17),          # Verde claro (alias)
+    "mint": RGBColor(0x95, 0xD5, 0xB2),          # Verde suave
+    "cream": RGBColor(0xF2, 0xF2, 0xF2),        # Gris claro fondo MIDAGRI (#F2F2F2)
+    "gold": RGBColor(0xFF, 0xC0, 0x00),          # Dorado MIDAGRI (#FFC000)
+    "amber": RGBColor(0xFF, 0xC0, 0x00),         # Dorado (alias)
+    "navy": RGBColor(0x3F, 0x3F, 0x3F),          # Gris oscuro MIDAGRI (#3F3F3F)
+    "dark": RGBColor(0x21, 0x25, 0x29),          # Negro profundo
+    "gray": RGBColor(0x59, 0x59, 0x59),          # Gris medio MIDAGRI (#595959)
+    "lightGray": RGBColor(0xD8, 0xD8, 0xD8),    # Gris claro MIDAGRI (#D8D8D8)
     "white": RGBColor(0xFF, 0xFF, 0xFF),
     "red": RGBColor(0xC0, 0x39, 0x2B),
     "blue": RGBColor(0x21, 0x96, 0xF3),
-    "orange": RGBColor(0xE6, 0x7E, 0x22),
+    "orange": RGBColor(0xFF, 0xC0, 0x00),        # Dorado MIDAGRI (reemplaza naranja)
     "coral": RGBColor(0xE7, 0x4C, 0x3C),
-    "teal": RGBColor(0x2B, 0xA5, 0xA5),
+    "teal": RGBColor(0x10, 0xA9, 0xA7),          # Teal MIDAGRI (#10A9A7)
     "yellowBg": RGBColor(0xFF, 0xF3, 0xCD),
     "lightCream": RGBColor(0xF8, 0xF9, 0xFA),
 }
+
+
+# ── Corrección ortográfica de nombres geográficos peruanos ──
+_GEO_TILDES = {
+    # Departamentos
+    "AMAZONAS": "Amazonas", "ANCASH": "Áncash", "APURIMAC": "Apurímac",
+    "AREQUIPA": "Arequipa", "AYACUCHO": "Ayacucho", "CAJAMARCA": "Cajamarca",
+    "CALLAO": "Callao", "CUSCO": "Cusco", "HUANCAVELICA": "Huancavelica",
+    "HUANUCO": "Huánuco", "ICA": "Ica", "JUNIN": "Junín",
+    "LA LIBERTAD": "La Libertad", "LAMBAYEQUE": "Lambayeque", "LIMA": "Lima",
+    "LORETO": "Loreto", "MADRE DE DIOS": "Madre de Dios",
+    "MOQUEGUA": "Moquegua", "PASCO": "Pasco", "PIURA": "Piura",
+    "PUNO": "Puno", "SAN MARTIN": "San Martín", "TACNA": "Tacna",
+    "TUMBES": "Tumbes", "UCAYALI": "Ucayali",
+    # Provincias con tilde frecuente
+    "MOYOBAMBA": "Moyobamba", "RIOJA": "Rioja", "LAMAS": "Lamas",
+    "SAN JOSE DE SISA": "San José de Sisa", "MARISCAL CACERES": "Mariscal Cáceres",
+    "HUALLAGA": "Huallaga", "BELLAVISTA": "Bellavista", "PICOTA": "Picota",
+    "TOCACHE": "Tocache", "EL DORADO": "El Dorado",
+    "CONCEPCION": "Concepción", "JAEN": "Jaén", "SATIPO": "Satipo",
+    "HUAMANGA": "Huamanga", "CAÑETE": "Cañete", "BARRANCA": "Barranca",
+    "HUAURA": "Huaura", "MAYNAS": "Maynas", "CORONEL PORTILLO": "Coronel Portillo",
+    "SANCHEZ CARRION": "Sánchez Carrión", "SANTIAGO DE CHUCO": "Santiago de Chuco",
+    "BOLIVAR": "Bolívar", "PARINACOCHAS": "Parinacochas",
+    "VICTOR FAJARDO": "Víctor Fajardo", "PABON": "Pabón",
+    "RODRIGUEZ DE MENDOZA": "Rodríguez de Mendoza",
+    "GRAN CHIMU": "Gran Chimú", "CUTERVO": "Cutervo",
+    "CHOTA": "Chota", "SANTA CRUZ": "Santa Cruz",
+    "SAN IGNACIO": "San Ignacio", "SAN MARCOS": "San Marcos",
+    "SAN MIGUEL": "San Miguel", "SAN PABLO": "San Pablo",
+    "CONTUMAZA": "Contumazá", "CELENDIN": "Celendín",
+    "HUALGAYOC": "Hualgayoc", "CHICLAYO": "Chiclayo",
+    "FERREÑAFE": "Ferreñafe", "TRUJILLO": "Trujillo",
+    "ASCOPE": "Ascope", "CHEPEN": "Chepén",
+    "PACASMAYO": "Pacasmayo", "PATAZ": "Pataz",
+    "OTUZCO": "Otuzco", "VIRU": "Virú",
+}
+
+
+@lru_cache(maxsize=512)
+def _fix_geo_name(name):
+    """Corregir tildes en nombres geográficos peruanos."""
+    if not name:
+        return name
+    key = name.strip().upper()
+    if key in _GEO_TILDES:
+        return _GEO_TILDES[key]
+    # Si no está en diccionario, usar title() como fallback
+    return name.strip().title()
+
+
+@lru_cache(maxsize=512)
+def _fix_geo_upper(name):
+    """Versión en mayúsculas con tildes correctas."""
+    return _fix_geo_name(name).upper()
 
 
 def _fmt_num(n):
@@ -664,7 +749,7 @@ def _add_kpi_card(slide, left, top, w, h, label, value, sublabel, accent_color, 
     value_p.font.size = val_font
     value_p.font.bold = True
     value_p.font.color.rgb = C["navy"]
-    value_p.font.name = "Georgia"
+    value_p.font.name = "Calibri"
     value_p.alignment = PP_ALIGN.CENTER
 
     sub_tf = slide.shapes.add_textbox(
@@ -969,7 +1054,7 @@ def _add_resumen_ejecutivo_slide(slide, prs, dept_name, text, fecha_corte):
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = dept_name.upper()
+    badge_p.text = _fix_geo_upper(dept_name)
     badge_p.font.size = Pt(12)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["teal"]
@@ -986,7 +1071,7 @@ def _add_resumen_ejecutivo_slide(slide, prs, dept_name, text, fecha_corte):
     title_p.font.size = Pt(24)
     title_p.font.bold = True
     title_p.font.color.rgb = C["lightGray"]
-    title_p.font.name = "Georgia"
+    title_p.font.name = "Calibri"
     title_p.alignment = PP_ALIGN.LEFT
 
     sep_line = slide.shapes.add_shape(
@@ -1008,7 +1093,7 @@ def _add_resumen_ejecutivo_slide(slide, prs, dept_name, text, fecha_corte):
     body_p.text = text
     body_p.font.size = Pt(15)
     body_p.font.color.rgb = C["white"]
-    body_p.font.name = "Georgia"
+    body_p.font.name = "Calibri"
     body_p.alignment = PP_ALIGN.JUSTIFY
     body_p.line_spacing = 1.4
 
@@ -1110,7 +1195,7 @@ def _add_pipeline_slide(prs, pipeline, dictamen, metricas):
     p.font.size = Pt(20)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     line = slide.shapes.add_shape(
@@ -1155,7 +1240,7 @@ def _add_tipo_siniestro_slide(prs, tipos):
     p.font.size = Pt(20)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     line = slide.shapes.add_shape(
@@ -1263,7 +1348,7 @@ def _add_top_deptos_chart(prs, top_deptos):
     p.font.size = Pt(20)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     line = slide.shapes.add_shape(
@@ -1351,7 +1436,7 @@ def _add_portada(prs, data):
     p.font.size = Pt(28)
     p.font.bold = True
     p.font.color.rgb = C["white"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     tf_subtitle = slide.shapes.add_textbox(
@@ -1364,7 +1449,7 @@ def _add_portada(prs, data):
     p.text = "SAC 2025–2026"
     p.font.size = Pt(20)
     p.font.color.rgb = C["teal"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     sep_line = slide.shapes.add_shape(
@@ -1385,13 +1470,13 @@ def _add_portada(prs, data):
         indice_lines.append("Nacional")
     if filtros.get("deptos"):
         for d in filtros["deptos"]:
-            indice_lines.append(f"Departamento: {d.title()}")
+            indice_lines.append(f"Departamento: {_fix_geo_name(d)}")
     if filtros.get("provs"):
-        for p in filtros["provs"]:
-            indice_lines.append(f"  Provincia: {p.title()}")
+        for pv in filtros["provs"]:
+            indice_lines.append(f"  Provincia: {_fix_geo_name(pv)}")
     if filtros.get("dists"):
         for d in filtros["dists"][:5]:
-            indice_lines.append(f"    Distrito: {d.title()}")
+            indice_lines.append(f"    Distrito: {_fix_geo_name(d)}")
 
     # Nivel 2
     if data.get("hay_nivel2"):
@@ -1413,7 +1498,7 @@ def _add_portada(prs, data):
         p.text = line
         p.font.size = Pt(12)
         p.font.color.rgb = C["lightGray"] if line.strip().startswith(("Provincia", "Distrito", "Análisis")) else C["white"]
-        p.font.name = "Georgia"
+        p.font.name = "Calibri"
         p.alignment = PP_ALIGN.LEFT
         p.space_before = Pt(1)
         p.space_after = Pt(1)
@@ -1486,7 +1571,7 @@ def _add_cierre(prs, fecha_corte):
     p.font.size = Pt(28)
     p.font.bold = True
     p.font.color.rgb = C["white"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     tf_subtitle = slide.shapes.add_textbox(
@@ -1499,7 +1584,7 @@ def _add_cierre(prs, fecha_corte):
     p.text = "SAC 2025–2026"
     p.font.size = Pt(20)
     p.font.color.rgb = C["teal"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     sep_line = slide.shapes.add_shape(
@@ -1571,7 +1656,7 @@ def _add_nacional_section(prs, section):
     p.font.size = Pt(22)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     tf_sub = slide.shapes.add_textbox(
@@ -1703,7 +1788,7 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     lp.text = "DEPARTAMENTO"
     lp.font.size = Pt(14)
     lp.font.color.rgb = C["teal"]
-    lp.font.name = "Georgia"
+    lp.font.name = "Calibri"
     lp.alignment = PP_ALIGN.CENTER
 
     tf_title = slide.shapes.add_textbox(
@@ -1713,11 +1798,11 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = name.title()
+    p.text = _fix_geo_name(name)
     p.font.size = Pt(40)
     p.font.bold = True
     p.font.color.rgb = C["white"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
@@ -1755,7 +1840,7 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = f"DEPTO: {name.upper()}"
+    badge_p.text = f"DEPTO: {_fix_geo_upper(name)}"
     badge_p.font.size = Pt(11)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["orange"]
@@ -1772,7 +1857,7 @@ def _add_departamental_section(prs, section, fecha_corte="S.F."):
     p.font.size = Pt(24)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     line = slide.shapes.add_shape(
@@ -1893,7 +1978,7 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     lp.text = "PROVINCIA"
     lp.font.size = Pt(14)
     lp.font.color.rgb = C["sage"]
-    lp.font.name = "Georgia"
+    lp.font.name = "Calibri"
     lp.alignment = PP_ALIGN.CENTER
 
     tf_title = slide.shapes.add_textbox(
@@ -1903,15 +1988,15 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = name.title()
+    p.text = _fix_geo_name(name)
     p.font.size = Pt(40)
     p.font.bold = True
     p.font.color.rgb = C["white"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     p2 = text_frame.add_paragraph()
-    p2.text = f"{depto.title()} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización" if depto else "Provincia"
+    p2.text = f"{_fix_geo_name(depto)} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización" if depto else "Provincia"
     p2.font.size = Pt(13)
     p2.font.color.rgb = C["sage"]
     p2.alignment = PP_ALIGN.CENTER
@@ -1945,7 +2030,7 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = f"PROV: {name.upper()}"
+    badge_p.text = f"PROV: {_fix_geo_upper(name)}"
     badge_p.font.size = Pt(11)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["forest"]
@@ -1962,7 +2047,7 @@ def _add_provincial_section(prs, section, fecha_corte="S.F."):
     p.font.size = Pt(24)
     p.font.bold = True
     p.font.color.rgb = C["forest"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     line = slide.shapes.add_shape(
@@ -2083,7 +2168,7 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
     lp.text = "DISTRITO"
     lp.font.size = Pt(14)
     lp.font.color.rgb = C["teal"]
-    lp.font.name = "Georgia"
+    lp.font.name = "Calibri"
     lp.alignment = PP_ALIGN.CENTER
 
     tf_title = slide.shapes.add_textbox(
@@ -2093,18 +2178,18 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
     text_frame = tf_title.text_frame
     text_frame.word_wrap = True
     p = text_frame.paragraphs[0]
-    p.text = name.title()
+    p.text = _fix_geo_name(name)
     p.font.size = Pt(40)
     p.font.bold = True
     p.font.color.rgb = C["white"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     subtitle_parts = []
     if prov:
-        subtitle_parts.append(prov.title())
+        subtitle_parts.append(_fix_geo_name(prov))
     if depto:
-        subtitle_parts.append(depto.title())
+        subtitle_parts.append(_fix_geo_name(depto))
     subtitle = " — ".join(subtitle_parts) if subtitle_parts else "Distrito"
     p2 = text_frame.add_paragraph()
     p2.text = f"{subtitle} — {m['avisos']:,} avisos — {_fmt_money(m['indemnizacion'])} indemnización"
@@ -2141,7 +2226,7 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = f"DIST: {name.upper()}"
+    badge_p.text = f"DIST: {_fix_geo_upper(name)}"
     badge_p.font.size = Pt(11)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["navy"]
@@ -2158,7 +2243,7 @@ def _add_distrital_section(prs, section, fecha_corte="S.F."):
     p.font.size = Pt(24)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     line = slide.shapes.add_shape(
@@ -2265,7 +2350,7 @@ def _add_nivel2_separator(prs, nivel2_label, fecha_corte):
     p.font.size = Pt(36)
     p.font.bold = True
     p.font.color.rgb = C["white"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.CENTER
 
     tf_sub = slide.shapes.add_textbox(
@@ -2357,7 +2442,7 @@ def _add_nivel2_nacional(prs, section, nivel2_label):
     p.font.size = Pt(22)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     tf_sub = slide.shapes.add_textbox(
@@ -2439,7 +2524,7 @@ def _add_nivel2_departamental(prs, section, nivel2_label, fecha_corte):
     badge_frame = badge_tf.text_frame
     badge_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     badge_p = badge_frame.paragraphs[0]
-    badge_p.text = name.upper()
+    badge_p.text = _fix_geo_upper(name)
     badge_p.font.size = Pt(10)
     badge_p.font.bold = True
     badge_p.font.color.rgb = C["gold"]
@@ -2479,7 +2564,7 @@ def _add_nivel2_departamental(prs, section, nivel2_label, fecha_corte):
     p.font.size = Pt(22)
     p.font.bold = True
     p.font.color.rgb = C["navy"]
-    p.font.name = "Georgia"
+    p.font.name = "Calibri"
     p.alignment = PP_ALIGN.LEFT
 
     tf_sub = slide.shapes.add_textbox(
