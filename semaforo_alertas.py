@@ -81,6 +81,10 @@ def compute_semaforo(df, today=None):
     estado_sin = _safe_col(df, "ESTADO_SINIESTRO").astype(str).str.upper()
     dictamen   = _safe_col(df, "DICTAMEN").astype(str).str.upper()
 
+    # ── Excluir avisos nulos (OBSERVACION contiene "AVISO NULO") ──
+    observacion = _safe_col(df, "OBSERVACION").astype(str).str.upper()
+    es_nulo = observacion.str.contains("AVISO NULO", na=False)
+
     # ── Etapa 6: PAGO ──
     m6 = f_valid.notna() & f_desemb.isna()
     d6 = (today - f_valid).dt.days.fillna(0).astype(int)
@@ -160,6 +164,12 @@ def compute_semaforo(df, today=None):
     alerta  = np.where(m1, a1, alerta)
     dias    = np.where(m1, d1, dias)
     detalle = np.where(m1, det1, detalle)
+
+    # ── Forzar avisos nulos como "completado" (excluirlos del semáforo) ──
+    etapa   = np.where(es_nulo, "completado", etapa)
+    alerta  = np.where(es_nulo, "", alerta)
+    dias    = np.where(es_nulo, 0, dias)
+    detalle = np.where(es_nulo, "Aviso nulo — excluido", detalle)
 
     # Asignar al DataFrame
     result = df.copy()
@@ -271,14 +281,17 @@ def export_semaforo_excel(df_sem, pipeline, kpis):
     ws2 = wb.create_sheet("Detalle Alertas")
 
     display_cols = ["CODIGO_AVISO", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
-                    "EMPRESA", "TIPO_SINIESTRO", "SEM_ETAPA", "SEM_ALERTA",
+                    "SECTOR_ESTADISTICO", "TIPO_CULTIVO", "EMPRESA",
+                    "TIPO_SINIESTRO", "SEM_ETAPA", "SEM_ALERTA",
                     "SEM_DIAS", "SEM_DETALLE"]
     available = [c for c in display_cols if c in df_sem.columns]
     df_export = df_sem[df_sem["SEM_ETAPA"] != "completado"][available].copy()
 
     col_labels = {
         "CODIGO_AVISO": "Código Aviso", "DEPARTAMENTO": "Departamento",
-        "PROVINCIA": "Provincia", "DISTRITO": "Distrito", "EMPRESA": "Empresa",
+        "PROVINCIA": "Provincia", "DISTRITO": "Distrito",
+        "SECTOR_ESTADISTICO": "Sector", "TIPO_CULTIVO": "Cultivo",
+        "EMPRESA": "Empresa",
         "TIPO_SINIESTRO": "Tipo Siniestro", "SEM_ETAPA": "Etapa",
         "SEM_ALERTA": "Alerta", "SEM_DIAS": "Días", "SEM_DETALLE": "Detalle"
     }
@@ -513,7 +526,8 @@ def render_semaforo_tab(datos):
     # ── Tabla detalle ──
     st.markdown("#### 📋 Detalle de Alertas")
 
-    display_cols = ["CODIGO_AVISO", "DEPARTAMENTO", "PROVINCIA", "EMPRESA",
+    display_cols = ["CODIGO_AVISO", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
+                    "SECTOR_ESTADISTICO", "TIPO_CULTIVO", "EMPRESA",
                     "TIPO_SINIESTRO", "SEM_ETAPA", "SEM_ALERTA", "SEM_DIAS", "SEM_DETALLE"]
     available = [c for c in display_cols if c in df_fil.columns]
 
@@ -523,7 +537,9 @@ def render_semaforo_tab(datos):
 
     rename_map = {
         "CODIGO_AVISO": "Código Aviso", "DEPARTAMENTO": "Departamento",
-        "PROVINCIA": "Provincia", "EMPRESA": "Empresa",
+        "PROVINCIA": "Provincia", "DISTRITO": "Distrito",
+        "SECTOR_ESTADISTICO": "Sector", "TIPO_CULTIVO": "Cultivo",
+        "EMPRESA": "Empresa",
         "TIPO_SINIESTRO": "Tipo Siniestro", "SEM_ETAPA": "Etapa",
         "SEM_ALERTA": "Alerta", "SEM_DIAS": "Días", "SEM_DETALLE": "Detalle"
     }
