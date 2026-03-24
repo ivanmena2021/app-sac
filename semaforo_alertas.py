@@ -33,6 +33,9 @@ COLORS = {
     "rojo":   {"hex": "#e74c3c", "bg": "#f8d7da", "label": "Vencido"},
 }
 
+# Mapeo precomputado (evita recrear dict en cada render)
+_STAGE_KEY_TO_LABEL = {s["key"]: s["label"] for s in STAGES}
+
 
 # ═══════════════════════════════════════════════════════════════
 #  A) MOTOR DE CÁLCULO (vectorizado)
@@ -305,19 +308,23 @@ def export_semaforo_excel(df_sem, pipeline, kpis):
 
     fill_map = {"verde": fill_v, "ambar": fill_a, "rojo": fill_r}
     font_white = Font(color="FFFFFF", bold=True)
+    center_align = Alignment(horizontal="center")
 
-    for row_idx, (_, row) in enumerate(df_export.iterrows(), 2):
-        for col_idx, col in enumerate(available, 1):
-            val = row[col]
+    # Batch write: usar .values en vez de iterrows (5-10x más rápido)
+    alerta_col_idx = available.index("SEM_ALERTA") + 1 if "SEM_ALERTA" in available else -1
+    data_matrix = df_export[available].values
+    for row_idx, row_data in enumerate(data_matrix, 2):
+        for col_idx, val in enumerate(row_data, 1):
             cell = ws2.cell(row=row_idx, column=col_idx, value=val)
             cell.border = thin_border
-            if col == "SEM_ALERTA" and val in fill_map:
+            if col_idx == alerta_col_idx and val in fill_map:
                 cell.fill = fill_map[val]
                 cell.font = font_white
-                cell.alignment = Alignment(horizontal="center")
+                cell.alignment = center_align
 
-    for i, col in enumerate(available, 1):
-        ws2.column_dimensions[chr(64 + i) if i <= 26 else "A"].width = 18
+    from openpyxl.utils import get_column_letter
+    for i in range(1, len(available) + 1):
+        ws2.column_dimensions[get_column_letter(i)].width = 18
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -507,8 +514,8 @@ def render_semaforo_tab(datos):
                                      default=alertas_opts, key="sem_fil_alerta",
                                      format_func=lambda x: {"verde": "🟢 Verde", "ambar": "🟡 Ámbar", "rojo": "🔴 Rojo"}[x])
 
-    # Aplicar filtros
-    df_fil = df_sem[df_sem["SEM_ETAPA"] != "completado"].copy()
+    # Aplicar filtros (sin .copy() innecesario — solo lectura)
+    df_fil = df_sem[df_sem["SEM_ETAPA"] != "completado"]
     if fil_depto:
         df_fil = df_fil[df_fil["DEPARTAMENTO"].isin(fil_depto)]
     if fil_empresa:
@@ -533,7 +540,7 @@ def render_semaforo_tab(datos):
 
     df_display = df_fil[available].copy()
     df_display["SEM_ETAPA"] = df_display["SEM_ETAPA"].map(
-        {s["key"]: s["label"] for s in STAGES}).fillna(df_display["SEM_ETAPA"])
+        _STAGE_KEY_TO_LABEL).fillna(df_display["SEM_ETAPA"])
 
     rename_map = {
         "CODIGO_AVISO": "Código Aviso", "DEPARTAMENTO": "Departamento",

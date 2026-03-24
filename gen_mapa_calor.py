@@ -198,7 +198,6 @@ def _build_metrics(datos, nivel_key="Departamental", depto_filter=None):
         agg_dict["monto_desembolsado"] = ("MONTO_DESEMBOLSADO", "sum")
     if "N_PRODUCTORES" in df.columns:
         # Solo contar productores donde hay indemnización > 0
-        df = df.copy()
         df["_PROD_BENEF"] = pd.to_numeric(df["N_PRODUCTORES"], errors="coerce").fillna(0)
         if "INDEMNIZACION" in df.columns:
             _ind = pd.to_numeric(df["INDEMNIZACION"], errors="coerce").fillna(0)

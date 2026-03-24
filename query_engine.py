@@ -530,22 +530,17 @@ def process_query(query, datos):
     # Asignar empresa al DataFrame
     depto_empresa = {}
     if "EMPRESA_ASEGURADORA" in materia.columns and "DEPARTAMENTO" in materia.columns:
-        for _, row in materia.iterrows():
-            d = str(row["DEPARTAMENTO"]).strip().upper()
-            e = str(row["EMPRESA_ASEGURADORA"]).strip().upper()
-            depto_empresa[d] = e
+        depto_empresa = dict(zip(
+            materia["DEPARTAMENTO"].astype(str).str.strip().str.upper(),
+            materia["EMPRESA_ASEGURADORA"].astype(str).str.strip().str.upper()
+        ))
 
     df = midagri.copy()
     if "DEPARTAMENTO" in df.columns:
-        df["EMPRESA"] = df["DEPARTAMENTO"].map(depto_empresa).fillna("OTROS")
-        def _norm_emp(e):
-            eu = str(e).upper()
-            if "POSITIVA" in eu:
-                return "LA POSITIVA"
-            elif "RIMAC" in eu or "RÍMAC" in eu:
-                return "RÍMAC"
-            return eu
-        df["EMPRESA"] = df["EMPRESA"].apply(_norm_emp)
+        emp_col = df["DEPARTAMENTO"].map(depto_empresa).fillna("OTROS").str.upper()
+        # Vectorizar normalización de empresa
+        df["EMPRESA"] = np.where(emp_col.str.contains("POSITIVA", na=False), "LA POSITIVA",
+                        np.where(emp_col.str.contains("RIMAC|RÍMAC", na=False, regex=True), "RÍMAC", emp_col))
 
     # ─── Detectar provincias, distritos, sectores ───
     provincias = _detect_provincias(query, df)
@@ -574,9 +569,10 @@ def process_query(query, datos):
 
     # ─── Filtrar por tipo de siniestro ───
     if tipos and "TIPO_SINIESTRO" in df.columns:
-        # Normalizar tanto los tipos buscados como los del DataFrame
+        # Normalizar tanto los tipos buscados como los del DataFrame (vectorizado)
         tipos_norm = {_normalize(t) for t in tipos}
-        df = df[df["TIPO_SINIESTRO"].apply(lambda x: _normalize(str(x)) in tipos_norm)]
+        col_norm = df["TIPO_SINIESTRO"].astype(str).str.strip().str.upper()
+        df = df[col_norm.isin(tipos_norm)]
 
     # ─── Filtrar por período temporal ───
     temporal = days  # ahora es dict o None
