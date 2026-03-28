@@ -766,3 +766,45 @@ def get_departamento_data(datos, depto):
         "fecha_corte": datos["fecha_corte"],
         "df_depto": df_depto,
     }
+
+
+def filter_by_date_range(datos, start_date, end_date):
+    """Filtra datos por rango de fechas y recalcula métricas agregadas.
+    Retorna nuevo dict datos con midagri filtrado."""
+    midagri = datos["midagri"]
+    date_col = "FECHA_SINIESTRO" if "FECHA_SINIESTRO" in midagri.columns else "FECHA_AVISO"
+
+    if date_col not in midagri.columns:
+        return datos
+
+    start_ts = pd.Timestamp(start_date)
+    end_ts = pd.Timestamp(end_date)
+    mask = midagri[date_col].notna() & (midagri[date_col] >= start_ts) & (midagri[date_col] <= end_ts)
+    filtered = midagri[mask]
+
+    if len(filtered) == 0:
+        return datos
+
+    # Recalcular métricas con el DataFrame filtrado
+    new_datos = dict(datos)  # copia superficial
+    new_datos["midagri"] = filtered
+
+    new_datos["total_avisos"] = len(filtered)
+    new_datos["ha_indemnizadas"] = round(filtered["SUP_INDEMNIZADA"].sum(), 2) if "SUP_INDEMNIZADA" in filtered.columns else 0
+    new_datos["monto_indemnizado"] = round(filtered["INDEMNIZACION"].sum(), 2) if "INDEMNIZACION" in filtered.columns else 0
+    new_datos["monto_desembolsado"] = round(filtered["MONTO_DESEMBOLSADO"].sum(), 2) if "MONTO_DESEMBOLSADO" in filtered.columns else 0
+    new_datos["productores_desembolso"] = int(filtered["N_PRODUCTORES"].sum()) if "N_PRODUCTORES" in filtered.columns else 0
+
+    prima_neta = datos.get("prima_neta", 0)
+    indemn = new_datos["monto_indemnizado"]
+    new_datos["indice_siniestralidad"] = round(indemn / prima_neta * 100, 2) if prima_neta > 0 else 0
+    new_datos["pct_desembolso"] = round(new_datos["monto_desembolsado"] / indemn * 100, 2) if indemn > 0 else 0
+
+    if "TIPO_SINIESTRO" in filtered.columns:
+        new_datos["siniestros_por_tipo"] = filtered["TIPO_SINIESTRO"].value_counts()
+        new_datos["top3_siniestros"] = new_datos["siniestros_por_tipo"].head(3)
+
+    if "DEPARTAMENTO" in filtered.columns:
+        new_datos["departamentos_list"] = sorted(filtered["DEPARTAMENTO"].dropna().unique().tolist())
+
+    return new_datos

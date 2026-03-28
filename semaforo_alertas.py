@@ -7,6 +7,7 @@ Seguro Agrícola Catastrófico (SAC).
 import io
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -216,6 +217,87 @@ def get_kpi_summary(df_sem):
         "pct_ambar": round(a / total * 100, 1),
         "pct_rojo":  round(r / total * 100, 1),
     }
+
+
+def get_notification_banner_html(datos):
+    """Genera HTML de banner de notificaciones con resumen de alertas.
+    Retorna None si no hay columnas de semáforo."""
+    df = datos.get("midagri")
+    if df is None or df.empty:
+        return None
+    if not check_semaforo_columns(df):
+        return None
+
+    today = pd.Timestamp.now().normalize()
+    df_sem = compute_semaforo(df, today)
+    kpis = get_kpi_summary(df_sem)
+
+    if kpis["total"] == 0:
+        return None
+
+    return (
+        '<div style="background:linear-gradient(135deg,#fff8f0,#fef3e6);border:1px solid #f0c78a;'
+        'border-radius:12px;padding:0.8rem 1.2rem;margin-bottom:1rem;display:flex;'
+        'align-items:center;gap:1.5rem;flex-wrap:wrap;">'
+        '<div style="font-weight:700;color:#0c2340;font-size:0.85rem;">Alertas SAC</div>'
+        f'<div style="display:flex;gap:0.3rem;align-items:center;">'
+        f'<span style="background:#e74c3c;color:white;border-radius:20px;padding:2px 10px;'
+        f'font-size:0.78rem;font-weight:700;">{kpis["rojo"]}</span>'
+        f'<span style="color:#64748b;font-size:0.75rem;">vencidos</span></div>'
+        f'<div style="display:flex;gap:0.3rem;align-items:center;">'
+        f'<span style="background:#f39c12;color:white;border-radius:20px;padding:2px 10px;'
+        f'font-size:0.78rem;font-weight:700;">{kpis["ambar"]}</span>'
+        f'<span style="color:#64748b;font-size:0.75rem;">en riesgo</span></div>'
+        f'<div style="display:flex;gap:0.3rem;align-items:center;">'
+        f'<span style="background:#27ae60;color:white;border-radius:20px;padding:2px 10px;'
+        f'font-size:0.78rem;font-weight:700;">{kpis["verde"]}</span>'
+        f'<span style="color:#64748b;font-size:0.75rem;">en plazo</span></div>'
+        '</div>'
+    )
+
+
+def generate_sankey_figure(df_sem):
+    """Genera diagrama Sankey mostrando flujo de avisos por las 6 etapas."""
+    active = df_sem[df_sem["SEM_ETAPA"] != "completado"]
+    if active.empty:
+        return None
+
+    stage_keys = [s["key"] for s in STAGES]
+    stage_labels = [s["label"] for s in STAGES] + ["Completado"]
+    node_colors = ["#3498db", "#2980b9", "#1a5276", "#f39c12", "#e67e22", "#27ae60", "#95a5a6"]
+
+    # Contar avisos por etapa y alerta
+    sources, targets, values, link_colors = [], [], [], []
+    color_map = {"verde": "rgba(39,174,96,0.4)", "ambar": "rgba(243,156,18,0.4)", "rojo": "rgba(231,76,60,0.4)"}
+
+    for i, key in enumerate(stage_keys):
+        sub = active[active["SEM_ETAPA"] == key]
+        for alert_level in ["verde", "ambar", "rojo"]:
+            cnt = int((sub["SEM_ALERTA"] == alert_level).sum())
+            if cnt > 0:
+                # Flujo de esta etapa hacia "Completado" (último nodo)
+                sources.append(i)
+                targets.append(len(stage_keys))  # Completado
+                values.append(cnt)
+                link_colors.append(color_map.get(alert_level, "rgba(150,150,150,0.3)"))
+
+    if not values:
+        return None
+
+    fig = go.Figure(go.Sankey(
+        node=dict(
+            pad=20, thickness=25,
+            label=stage_labels,
+            color=node_colors,
+        ),
+        link=dict(source=sources, target=targets, value=values, color=link_colors),
+    ))
+    fig.update_layout(
+        title_text="Flujo de Avisos por Etapas",
+        font_size=12, height=350,
+        margin=dict(l=20, r=20, t=40, b=20),
+    )
+    return fig
 
 
 def export_semaforo_excel(df_sem, pipeline, kpis):
@@ -491,6 +573,15 @@ def render_semaforo_tab(datos):
     # ── Pipeline visual ──
     st.markdown("#### Pipeline de Procesos")
     st.markdown(_render_pipeline_html(pipeline), unsafe_allow_html=True)
+
+    # ── Diagrama Sankey ──
+    try:
+        fig_sankey = generate_sankey_figure(df_sem)
+        if fig_sankey:
+            with st.expander("📊 Diagrama de Flujo (Sankey)", expanded=False):
+                st.plotly_chart(fig_sankey, use_container_width=True)
+    except Exception:
+        pass
 
     st.markdown("---")
 

@@ -24,7 +24,12 @@ from comparativo_campanias import (
     load_campania_anterior, generate_comparison_chart, get_comparison_table,
     get_monthly_detail_table, METRICAS_COMPARACION,
 )
-from semaforo_alertas import render_semaforo_tab
+from semaforo_alertas import render_semaforo_tab, get_notification_banner_html
+from data_quality import render_quality_dashboard
+from batch_reports import render_batch_tab
+from comparativo_departamentos import render_comparativo_departamentos
+from data_processor import filter_by_date_range
+from calendario_agricola import render_calendario_tab
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -907,6 +912,56 @@ else:
         unsafe_allow_html=True,
     )
 
+    # ─── Filtro global de fechas (sidebar) ───
+    try:
+        midagri_df = datos["midagri"]
+        date_col = "FECHA_SINIESTRO" if "FECHA_SINIESTRO" in midagri_df.columns else "FECHA_AVISO"
+        if date_col in midagri_df.columns:
+            valid_dates = midagri_df[date_col].dropna()
+            if len(valid_dates) > 0:
+                min_date = valid_dates.min().date()
+                max_date = valid_dates.max().date()
+                with st.sidebar:
+                    st.markdown("#### 📅 Filtro de Fechas")
+                    preset = st.radio("Período", ["Todo", "Últimos 30 días", "Últimos 90 días",
+                                                   "Este año", "Personalizado"],
+                                       key="date_preset", horizontal=True, label_visibility="collapsed")
+                    import datetime as _dt
+                    if preset == "Últimos 30 días":
+                        f_start = max_date - _dt.timedelta(days=30)
+                        f_end = max_date
+                    elif preset == "Últimos 90 días":
+                        f_start = max_date - _dt.timedelta(days=90)
+                        f_end = max_date
+                    elif preset == "Este año":
+                        f_start = _dt.date(max_date.year, 1, 1)
+                        f_end = max_date
+                    elif preset == "Personalizado":
+                        date_range = st.date_input("Rango", [min_date, max_date],
+                                                    min_value=min_date, max_value=max_date,
+                                                    key="custom_date_range")
+                        if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
+                            f_start, f_end = date_range
+                        else:
+                            f_start, f_end = min_date, max_date
+                    else:
+                        f_start, f_end = min_date, max_date
+
+                    if (f_start, f_end) != (min_date, max_date):
+                        datos = filter_by_date_range(datos, f_start, f_end)
+                        st.caption(f"🔍 Filtrado: {f_start.strftime('%d/%m/%Y')} — {f_end.strftime('%d/%m/%Y')} "
+                                   f"({datos['total_avisos']:,} avisos)")
+    except Exception:
+        pass
+
+    # ─── Banner de notificaciones del semáforo ───
+    try:
+        notif_html = get_notification_banner_html(datos)
+        if notif_html:
+            st.markdown(notif_html, unsafe_allow_html=True)
+    except Exception:
+        pass
+
     # ─── Botones: descargar consolidado + nueva actualización ───
     col_spacer, col_download, col_refresh = st.columns([2, 1, 1])
     with col_download:
@@ -1004,11 +1059,14 @@ else:
     # SECCIÓN 1: ANÁLISIS INTERACTIVO
     # ═══════════════════════════════════════════════════════════════════
     with tab_analisis:
-        sub_chat, sub_mapa, sub_compar, sub_explorar = st.tabs([
+        sub_chat, sub_mapa, sub_compar, sub_dept_comp, sub_explorar, sub_quality, sub_calendario = st.tabs([
             "💬 Consultas",
             "🗺️ Mapa de Calor",
             "📈 Comparativo Campañas",
+            "📊 Comparar Deptos",
             "🔍 Explorar Datos",
+            "📋 Calidad de Datos",
+            "🌱 Calendario Agrícola",
         ])
 
         # ─── Sub-tab: Consultas ───
@@ -1395,16 +1453,29 @@ else:
                 chart_data.columns = ["Tipo Siniestro", "Cantidad"]
                 st.bar_chart(chart_data.set_index("Tipo Siniestro").head(10))
 
+        # ── Sub-tab: Comparar Departamentos ──
+        with sub_dept_comp:
+            render_comparativo_departamentos(datos)
+
+        # ── Sub-tab: Calidad de Datos ──
+        with sub_quality:
+            render_quality_dashboard(datos)
+
+        # ── Sub-tab: Calendario Agrícola ──
+        with sub_calendario:
+            render_calendario_tab(datos)
+
     # ═══════════════════════════════════════════════════════════════════
     # SECCIÓN 2: GENERAR REPORTES
     # ═══════════════════════════════════════════════════════════════════
     with tab_reportes:
-        sub_nac, sub_depto, sub_oper, sub_eme, sub_ppt = st.tabs([
+        sub_nac, sub_depto, sub_oper, sub_eme, sub_ppt, sub_batch = st.tabs([
             "📄 Ayuda Memoria Nacional",
             "🏔️ Ayuda Memoria Departamental",
             "📋 Operatividad SAC",
             "📊 Reporte EME",
             "📊 Presentación Dinámica",
+            "📦 Generar Todos",
         ])
 
         # ─── Sub-tab: Ayuda Memoria Nacional ───
@@ -1447,6 +1518,31 @@ else:
                 st.dataframe(datos["cuadro2"], use_container_width=True, hide_index=True)
             with st.expander("📋 Vista previa: Cuadro 3 — Lluvias Intensas"):
                 st.dataframe(datos["cuadro3"], use_container_width=True, hide_index=True)
+
+            # ── PDF Resumen Ejecutivo ──
+            st.markdown("---")
+            col_pdf_gen, col_pdf_dl = st.columns([1, 1])
+            with col_pdf_gen:
+                if st.button("📊 Generar PDF Ejecutivo", key="gen_pdf_exec"):
+                    with st.spinner("Generando PDF..."):
+                        try:
+                            from gen_pdf_resumen import generate_executive_pdf
+                            pdf_bytes = generate_executive_pdf(datos)
+                            fecha_str = datetime.now().strftime("%d_%m_%Y")
+                            st.session_state["pdf_exec"] = pdf_bytes
+                            st.session_state["pdf_exec_name"] = f"Resumen_Ejecutivo_SAC_{fecha_str}.pdf"
+                            st.success("PDF generado")
+                        except Exception as e:
+                            st.error(f"Error generando PDF: {e}")
+            with col_pdf_dl:
+                if st.session_state.get("pdf_exec"):
+                    st.download_button(
+                        "⬇️ Descargar PDF Ejecutivo",
+                        data=st.session_state["pdf_exec"],
+                        file_name=st.session_state["pdf_exec_name"],
+                        mime="application/pdf",
+                        use_container_width=True,
+                    )
 
         # ─── Sub-tab: Ayuda Memoria Departamental ───
         with sub_depto:
@@ -1813,6 +1909,10 @@ else:
                     "Primero se muestra el resumen nacional y de Cajamarca completo, "
                     "luego se agregan slides de análisis complementario mostrando solo HELADA."
                 )
+
+        # ── Sub-tab: Generar Todos ──
+        with sub_batch:
+            render_batch_tab(datos)
 
     # ═══════════════════════════════════════════════════════════════════════
     # SECCIÓN 3: SEMÁFORO DE ALERTAS
