@@ -711,11 +711,13 @@ def get_departamento_data(datos, depto):
             indemniz=("INDEMNIZACION", "sum") if "INDEMNIZACION" in df_depto.columns else ("PROVINCIA", "count"),
             desembolso=("MONTO_DESEMBOLSADO", "sum") if "MONTO_DESEMBOLSADO" in df_depto.columns else ("PROVINCIA", "count"),
         ).reset_index()
-        # Calculate % avance (vectorizado)
-        ind = pd.to_numeric(dist_provincia.get("indemniz", 0), errors="coerce").fillna(0)
-        des = pd.to_numeric(dist_provincia.get("desembolso", 0), errors="coerce").fillna(0)
-        pct = np.where(ind > 0, np.round(des / ind * 100).astype(int), 0)
-        dist_provincia["pct_avance"] = [f"{p}%" for p in pct]
+        # Calculate % avance (vectorizado, safe contra NaN/inf)
+        ind = pd.to_numeric(dist_provincia.get("indemniz", 0), errors="coerce").fillna(0).values
+        des = pd.to_numeric(dist_provincia.get("desembolso", 0), errors="coerce").fillna(0).values
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ratio = np.where(ind > 0, des / ind * 100, 0.0)
+        ratio = np.nan_to_num(ratio, nan=0.0, posinf=0.0, neginf=0.0)
+        dist_provincia["pct_avance"] = [f"{int(round(p))}%" for p in ratio]
     else:
         dist_provincia = pd.DataFrame()
 
