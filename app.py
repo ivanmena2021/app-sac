@@ -30,6 +30,7 @@ from batch_reports import render_batch_tab
 from comparativo_departamentos import render_comparativo_departamentos
 from data_processor import filter_by_date_range
 from calendario_agricola import render_calendario_tab
+from clima_riesgo import render_clima_tab
 
 # ═══════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN DE PÁGINA
@@ -1063,7 +1064,7 @@ else:
     # SECCIÓN 1: ANÁLISIS INTERACTIVO
     # ═══════════════════════════════════════════════════════════════════
     with tab_analisis:
-        sub_chat, sub_mapa, sub_compar, sub_dept_comp, sub_explorar, sub_quality, sub_calendario = st.tabs([
+        sub_chat, sub_mapa, sub_compar, sub_dept_comp, sub_explorar, sub_quality, sub_calendario, sub_clima = st.tabs([
             "💬 Consultas",
             "🗺️ Mapa de Calor",
             "📈 Comparativo Campañas",
@@ -1071,6 +1072,7 @@ else:
             "🔍 Explorar Datos",
             "📋 Calidad de Datos",
             "🌱 Calendario Agrícola",
+            "🌦️ Clima y Riesgo",
         ])
 
         # ─── Sub-tab: Consultas ───
@@ -1468,6 +1470,9 @@ else:
         # ── Sub-tab: Calendario Agrícola ──
         with sub_calendario:
             render_calendario_tab(datos)
+
+        with sub_clima:
+            render_clima_tab(datos)
 
     # ═══════════════════════════════════════════════════════════════════
     # SECCIÓN 2: GENERAR REPORTES
