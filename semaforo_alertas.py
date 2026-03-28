@@ -541,6 +541,26 @@ def render_semaforo_tab(datos):
     </div>
     """, unsafe_allow_html=True)
 
+    # ── Explicación de criterios ──
+    with st.expander("ℹ️ ¿Cómo funciona el Semáforo? — Criterios y plazos por etapa", expanded=False):
+        st.markdown("""
+**El semáforo clasifica cada aviso de siniestro según la etapa en la que se encuentra dentro del flujo SAC.** Cada etapa tiene plazos regulados; al superarlos, el aviso cambia de verde → ámbar → rojo.
+
+**Columna de referencia:** Se evalúan las fechas de cada proceso (`FECHA_AVISO`, `FECHA_ATENCION`, `FECHA_PROGRAMACION_AJUSTE`, etc.).
+**Avisos excluidos:** Los que tienen observación "AVISO NULO" no se evalúan.
+
+| # | Etapa | Columnas evaluadas | 🟢 Verde | 🟡 Ámbar | 🔴 Rojo |
+|---|-------|-------------------|----------|----------|---------|
+| 1 | **Atención** | `FECHA_AVISO` → `FECHA_ATENCION` | Faltan ≥8 días para el plazo (16 días) | Faltan 1-7 días | Plazo vencido (>16 días sin atención) |
+| 2 | **Programación** | `FECHA_ATENCION` → `FECHA_PROGRAMACION_AJUSTE` | ≤10 días desde atención | 11-14 días | ≥15 días sin programar ajuste |
+| 3 | **Ajuste** | `FECHA_PROGRAMACION_AJUSTE` → `FECHA_AJUSTE_ACTA_1` | ≤12 días desde programación | 13-15 días | ≥16 días sin acta de ajuste |
+| 4 | **Reprogramación** | `FECHA_REPROGRAMACION_01/02/03` | 1er ciclo ≤7 días | 1er ciclo >7 días | 2do o 3er ciclo de reprogramación |
+| 5 | **Padrón y Validación** | `FECHA_ENVIO_DRAS` → `FECHA_VALIDACION` | ≤7 días desde envío | 8-14 días | ≥15 días o sin envío a DRAS |
+| 6 | **Pago SAC** | `FECHA_VALIDACION` → `FECHA_DESEMBOLSO` | ≤10 días desde validación | 11-14 días | ≥15 días sin desembolso |
+
+**Nota:** Cada aviso aparece en **una sola etapa** (la primera incompleta en el flujo). Si todas las etapas están completas, el aviso se marca como "completado" y no aparece en el semáforo.
+        """)
+
     df = datos.get("midagri")
     if df is None or df.empty:
         st.warning("No hay datos cargados.")

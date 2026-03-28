@@ -923,6 +923,10 @@ else:
                 max_date = valid_dates.max().date()
                 with st.sidebar:
                     st.markdown("#### 📅 Filtro de Fechas")
+                    _ref_col_label = "Fecha de Siniestro" if date_col == "FECHA_SINIESTRO" else "Fecha de Aviso"
+                    st.caption(f"Filtra los datos usando la columna **{_ref_col_label}** "
+                               f"(`{date_col}`). Rango disponible: "
+                               f"{min_date.strftime('%d/%m/%Y')} — {max_date.strftime('%d/%m/%Y')}")
                     preset = st.radio("Período", ["Todo", "Últimos 30 días", "Últimos 90 días",
                                                    "Este año", "Personalizado"],
                                        key="date_preset", horizontal=True, label_visibility="collapsed")
