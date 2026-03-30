@@ -1,6 +1,10 @@
 """
 Agricultural calendar showing crop planting, harvesting, and risk periods
-for Peru departments. Includes cross-referencing with actual SAC siniestros data.
+for Peru departments. Uses historical data from 5 SAC campaigns (2020-2025)
+with 66,000+ real siniestro records.
+
+Data source: static_data/calendario_cultivos_historico.json
+Methodology: static_data/METODOLOGIA_DATOS.md
 """
 
 import json
@@ -13,102 +17,67 @@ import plotly.graph_objects as go
 import streamlit as st
 
 
-# ── Static crop calendar data ──────────────────────────────────────────────
-CALENDARIO_CULTIVOS = {
-    "PIURA": {
-        "ARROZ": {"siembra": [1, 2, 3, 7, 8], "cosecha": [5, 6, 7, 11, 12], "riesgo": ["SEQUIA", "INUNDACION"]},
-        "MAIZ AMARILLO DURO": {"siembra": [1, 2, 12], "cosecha": [5, 6, 7], "riesgo": ["SEQUIA"]},
-    },
-    "LAMBAYEQUE": {
-        "ARROZ": {"siembra": [1, 2, 3], "cosecha": [6, 7, 8], "riesgo": ["SEQUIA", "INUNDACION"]},
-        "CANA DE AZUCAR": {"siembra": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["HELADA"]},
-    },
-    "SAN MARTIN": {
-        "ARROZ": {"siembra": [1, 2, 3, 8, 9], "cosecha": [5, 6, 7, 12, 1], "riesgo": ["INUNDACION", "SEQUIA"]},
-        "CAFE": {"siembra": [10, 11, 12], "cosecha": [4, 5, 6, 7], "riesgo": ["LLUVIA INTENSA"]},
-        "CACAO": {"siembra": [10, 11, 12], "cosecha": [4, 5, 6, 7, 8], "riesgo": ["LLUVIA INTENSA"]},
-    },
-    "CAJAMARCA": {
-        "ARROZ": {"siembra": [12, 1, 2], "cosecha": [5, 6, 7], "riesgo": ["HELADA", "SEQUIA"]},
-        "PAPA": {"siembra": [10, 11, 12], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA"]},
-        "MAIZ AMILACEO": {"siembra": [10, 11], "cosecha": [4, 5, 6], "riesgo": ["HELADA", "SEQUIA"]},
-    },
-    "JUNIN": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA"]},
-        "CAFE": {"siembra": [10, 11, 12], "cosecha": [3, 4, 5, 6, 7], "riesgo": ["LLUVIA INTENSA"]},
-        "MAIZ AMILACEO": {"siembra": [9, 10, 11], "cosecha": [4, 5, 6], "riesgo": ["HELADA"]},
-    },
-    "PUNO": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA"]},
-        "QUINUA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA", "SEQUIA"]},
-        "CEBADA": {"siembra": [10, 11], "cosecha": [4, 5], "riesgo": ["HELADA"]},
-    },
-    "CUSCO": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA"]},
-        "MAIZ AMILACEO": {"siembra": [9, 10, 11], "cosecha": [3, 4, 5, 6], "riesgo": ["HELADA"]},
-    },
-    "AYACUCHO": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "SEQUIA"]},
-        "QUINUA": {"siembra": [10, 11], "cosecha": [4, 5], "riesgo": ["HELADA"]},
-    },
-    "HUANCAVELICA": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA"]},
-        "CEBADA": {"siembra": [10, 11], "cosecha": [4, 5], "riesgo": ["HELADA"]},
-    },
-    "APURIMAC": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA"]},
-        "MAIZ AMILACEO": {"siembra": [10, 11], "cosecha": [4, 5, 6], "riesgo": ["HELADA"]},
-    },
-    "ANCASH": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA"]},
-        "MAIZ AMARILLO DURO": {"siembra": [9, 10], "cosecha": [3, 4, 5], "riesgo": ["SEQUIA"]},
-    },
-    "AREQUIPA": {
-        "ARROZ": {"siembra": [8, 9, 10], "cosecha": [1, 2, 3, 4], "riesgo": ["HELADA"]},
-        "AJO": {"siembra": [3, 4], "cosecha": [10, 11], "riesgo": ["HELADA"]},
-    },
-    "HUANUCO": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "LLUVIA INTENSA"]},
-        "CAFE": {"siembra": [10, 11, 12], "cosecha": [4, 5, 6, 7], "riesgo": ["LLUVIA INTENSA"]},
-    },
-    "ICA": {
-        "ALGODON": {"siembra": [8, 9, 10], "cosecha": [2, 3, 4], "riesgo": ["SEQUIA"]},
-        "ESPARRAGO": {"siembra": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["SEQUIA"]},
-    },
-    "LA LIBERTAD": {
-        "ARROZ": {"siembra": [12, 1, 2], "cosecha": [5, 6, 7], "riesgo": ["INUNDACION"]},
-        "CANA DE AZUCAR": {"siembra": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["INUNDACION"]},
-    },
-    "AMAZONAS": {
-        "ARROZ": {"siembra": [1, 2, 3], "cosecha": [6, 7, 8], "riesgo": ["INUNDACION", "LLUVIA INTENSA"]},
-        "CAFE": {"siembra": [10, 11, 12], "cosecha": [4, 5, 6, 7], "riesgo": ["LLUVIA INTENSA"]},
-    },
-    "LORETO": {
-        "ARROZ": {"siembra": [1, 2, 6, 7], "cosecha": [5, 6, 10, 11], "riesgo": ["INUNDACION"]},
-        "PLATANO": {"siembra": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["INUNDACION"]},
-    },
-    "MADRE DE DIOS": {
-        "ARROZ": {"siembra": [1, 2, 3], "cosecha": [6, 7, 8], "riesgo": ["INUNDACION"]},
-        "PLATANO": {"siembra": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["INUNDACION"]},
-    },
-    "PASCO": {
-        "PAPA": {"siembra": [10, 11], "cosecha": [3, 4, 5], "riesgo": ["HELADA", "GRANIZADA"]},
-    },
-    "TUMBES": {
-        "ARROZ": {"siembra": [1, 2, 3], "cosecha": [6, 7, 8], "riesgo": ["INUNDACION"]},
-        "PLATANO": {"siembra": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["INUNDACION"]},
-    },
-    "MOQUEGUA": {
-        "ALFALFA": {"siembra": [3, 4], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["HELADA", "SEQUIA"]},
-    },
-    "TACNA": {
-        "OLIVO": {"siembra": [7, 8, 9], "cosecha": [3, 4, 5], "riesgo": ["HELADA"]},
-    },
-    "UCAYALI": {
-        "ARROZ": {"siembra": [1, 2, 3], "cosecha": [6, 7, 8], "riesgo": ["INUNDACION"]},
-        "PLATANO": {"siembra": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "cosecha": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "riesgo": ["INUNDACION"]},
-    },
-}
+# ── Load historical calendar from JSON ─────────────────────────────────────
+_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static_data")
+_CAL_PATH = os.path.join(_STATIC_DIR, "calendario_cultivos_historico.json")
+
+_CALENDARIO_RAW = {}
+if os.path.exists(_CAL_PATH):
+    with open(_CAL_PATH, "r", encoding="utf-8") as f:
+        _CALENDARIO_RAW = json.load(f)
+
+
+def _build_calendario_cultivos():
+    """Convert JSON historical data to the format used by the rest of the module.
+
+    Input JSON format (per dept/crop):
+        {"avisos": {"meses_riesgo":[], "riesgos":[], "meses_siembra":[], "meses_cosecha":[], "total":N},
+         "indemnizados": {...}, "perdida_total": {...}}
+
+    Output format (compatible with legacy CALENDARIO_CULTIVOS):
+        {"siembra": [months], "cosecha": [months], "riesgo": [risk_names],
+         "meses_riesgo": [months], "total_avisos": N, "total_indemnizados": N,
+         "riesgos_indemnizados": [...], "riesgos_perdida_total": [...]}
+
+    Data hierarchy for choosing values:
+        - siembra: from avisos.meses_siembra (real FECHA_SIEMBRA data)
+        - cosecha: from avisos.meses_cosecha (FECHA_AJUSTE where fenologia=MADURACION)
+        - riesgo: from indemnizados.riesgos if available, else avisos.riesgos
+          (indemnizados are more rigorous — events that actually exceeded the damage threshold)
+        - meses_riesgo: from avisos.meses_riesgo (when events occurred)
+    """
+    cal = {}
+    for dept, crops in _CALENDARIO_RAW.items():
+        cal[dept] = {}
+        for cult, layers in crops.items():
+            avisos = layers.get("avisos", {})
+            indemn = layers.get("indemnizados", {})
+            ptotal = layers.get("perdida_total", {})
+
+            entry = {
+                "siembra": avisos.get("meses_siembra", []),
+                "cosecha": avisos.get("meses_cosecha", []),
+                # Prefer indemnizados riesgos (certified) over avisos (general)
+                "riesgo": indemn.get("riesgos", avisos.get("riesgos", [])),
+                "meses_riesgo": avisos.get("meses_riesgo", []),
+                "grupos_climaticos": avisos.get("grupos_climaticos", []),
+                "total_avisos": avisos.get("total", 0),
+                "total_indemnizados": indemn.get("total", 0),
+                "total_perdida_total": ptotal.get("total", 0),
+                "riesgos_avisos": avisos.get("riesgos", []),
+                "riesgos_indemnizados": indemn.get("riesgos", []),
+                "riesgos_perdida_total": ptotal.get("riesgos", []),
+            }
+
+            # If no siembra/cosecha from data, use meses_riesgo as fallback
+            if not entry["siembra"] and not entry["cosecha"]:
+                entry["siembra"] = entry["meses_riesgo"]
+
+            cal[dept][cult] = entry
+    return cal
+
+
+CALENDARIO_CULTIVOS = _build_calendario_cultivos()
 
 MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
                "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
@@ -145,6 +114,10 @@ def get_department_list():
 def get_current_risk_crops(depto, month=None):
     """Return list of crops currently in a risk-prone period for the department.
 
+    Uses historical data: a crop is at risk if the current month appears in its
+    meses_riesgo (months where siniestros historically occurred), or if it's in
+    siembra/cosecha period.
+
     Parameters
     ----------
     depto : str
@@ -155,7 +128,9 @@ def get_current_risk_crops(depto, month=None):
     Returns
     -------
     list of dict
-        Each dict: {"cultivo": str, "riesgos": list[str]}
+        Each dict: {"cultivo": str, "riesgos": list[str], "en_siembra": bool,
+                     "en_cosecha": bool, "grupos_climaticos": list[str],
+                     "total_avisos": int}
     """
     if month is None:
         month = datetime.now().month
@@ -165,16 +140,21 @@ def get_current_risk_crops(depto, month=None):
 
     at_risk = []
     for crop_name, info in crops.items():
-        # A crop is at risk if current month is in siembra or cosecha period
-        # and the crop has associated risks
         in_siembra = month in info.get("siembra", [])
         in_cosecha = month in info.get("cosecha", [])
-        if (in_siembra or in_cosecha) and info.get("riesgo"):
+        in_riesgo = month in info.get("meses_riesgo", [])
+
+        # A crop is at risk if this month has historical siniestros,
+        # or if it's in siembra/cosecha period with associated risks
+        if (in_riesgo or in_siembra or in_cosecha) and info.get("riesgo"):
             at_risk.append({
                 "cultivo": crop_name,
                 "riesgos": info["riesgo"],
                 "en_siembra": in_siembra,
                 "en_cosecha": in_cosecha,
+                "en_riesgo_historico": in_riesgo,
+                "grupos_climaticos": info.get("grupos_climaticos", []),
+                "total_avisos": info.get("total_avisos", 0),
             })
 
     return at_risk
@@ -245,7 +225,7 @@ def generate_calendar_chart(depto):
                 ),
             ))
 
-    # Risk markers (red diamonds) on all risk-relevant months
+    # Risk markers (red diamonds) on historical risk months
     risk_x = []
     risk_y = []
     risk_text = []
@@ -253,12 +233,15 @@ def generate_calendar_chart(depto):
         riesgos = info.get("riesgo", [])
         if not riesgos:
             continue
-        # Risk months = union of siembra + cosecha
-        risk_months = set(info.get("siembra", [])) | set(info.get("cosecha", []))
+        # Use actual historical risk months if available, else siembra+cosecha
+        risk_months = info.get("meses_riesgo", [])
+        if not risk_months:
+            risk_months = list(set(info.get("siembra", [])) | set(info.get("cosecha", [])))
         for m in risk_months:
             risk_x.append(m)
             risk_y.append(crop_name)
-            risk_text.append(", ".join(riesgos))
+            n_avisos = info.get("total_avisos", 0)
+            risk_text.append(f"{', '.join(riesgos)} ({n_avisos} avisos hist.)")
 
     if risk_x:
         fig.add_trace(go.Scatter(
@@ -376,8 +359,13 @@ def _cross_reference_siniestros(datos, depto):
 
         if cultivo_upper in calendar_crops:
             en_calendario = "Si"
-            expected_risks = [r.upper() for r in calendar_crops[cultivo_upper].get("riesgo", [])]
-            if tipo_upper in expected_risks:
+            # Check across all risk layers (avisos, indemnizados, perdida_total)
+            all_risks = set()
+            for r in calendar_crops[cultivo_upper].get("riesgo", []):
+                all_risks.add(r.upper())
+            for r in calendar_crops[cultivo_upper].get("riesgos_avisos", []):
+                all_risks.add(r.upper())
+            if tipo_upper in all_risks:
                 coincide = "Si - Riesgo esperado"
             else:
                 coincide = "No - Riesgo no esperado"

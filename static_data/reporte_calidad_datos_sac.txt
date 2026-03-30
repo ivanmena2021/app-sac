@@ -1,0 +1,609 @@
+# REPORTE DE CALIDAD DE DATOS - SAC HISTORICO (5 CAMPANAS)
+# Generado para preparar publicacion como datos abiertos del gobierno
+================================================================================
+
+================================================================================
+CAMPANA 2020-2021
+Archivo: Dashboard SAC 20-21 Aviso Siniestro Agricola_Consolidado_25.10.21.xlsx
+Hoja: AVISOS | Filas: 11868 | Columnas: 49
+================================================================================
+
+## 1. ESTRUCTURA DE COLUMNAS
+  [OK] DEPARTAMENTO
+  [OK] PROVINCIA
+  [OK] DISTRITO
+  [OK] TIPO_CULTIVO
+  [OK] TIPO_SINIESTRO
+  [OK] FECHA_SINIESTRO
+  [OK] DICTAMEN
+  [OK] ESTADO_INSPECCION
+  [---] FENOLOGIA (no disponible en esta campana)
+  [---] FECHA_SIEMBRA (no disponible en esta campana)
+  [---] TIPO_COBERTURA (no disponible en esta campana)
+  [OK] FECHA_AJUSTE (opcional)
+  [OK] SECTOR (opcional)
+
+## 2. VALORES NULOS
+  [OK] DEPARTAMENTO: sin nulos
+  [BAJO] PROVINCIA: 4 nulos (0.0%)
+  [BAJO] DISTRITO: 4 nulos (0.0%)
+  [BAJO] TIPO_CULTIVO: 4 nulos (0.0%)
+  [BAJO] TIPO_SINIESTRO: 4 nulos (0.0%)
+  [BAJO] FECHA_SINIESTRO: 2 nulos (0.0%)
+  [BAJO] DICTAMEN: 4 nulos (0.0%)
+  [BAJO] ESTADO_INSPECCION: 4 nulos (0.0%)
+  [BAJO] FECHA_AJUSTE: 2 nulos (0.0%)
+  [BAJO] SECTOR: 2 nulos (0.0%)
+
+## 3. DUPLICADOS
+  [WARN] CODIGO_AVISO: 1 duplicados
+
+## 4. TIPO_CULTIVO
+  Valores unicos: 38
+
+## 5. TIPO_SINIESTRO
+  Valores unicos: 15
+    "ALTAS TEMPERATURAS": 16
+    "ENFERMEDADES": 1167
+    "ERUPCION VOLCANICA": 1
+    "EXCESO DE HUMEDAD": 607
+    "FALTA DE PISO PARA COSECHAR": 8
+    "GRANIZO": 2583
+    "HELADA Y BAJAS TEMPERATURAS": 4236
+    "HUAYCO Y DESLIZAMIENTOS": 34
+    "INCENDIO": 3
+    "INUNDACION": 404
+    "LLUVIAS EXCESIVAS O INOPORTUNAS": 302
+    "PLAGAS Y DEPREDADORES": 275
+    "SEQUIA": 1967
+    "TERREMOTO": 4
+    "VIENTOS FUERTES": 259
+
+## 6. DICTAMEN
+  "INDEMNIZABLE": 1114
+  "NO INDEMNIZABLE": 10752
+
+## 7. ESTADO_INSPECCION
+  "AJUSTADO": 7166
+  "CERRADO": 1316
+  "DESESTIMADO": 2448
+  "LIQUIDADO": 936
+
+## 8. FENOLOGIA
+  [---] No disponible en esta campana
+
+## 9. TIPO_COBERTURA
+  [---] No disponible en esta campana
+
+## 10. INCONSISTENCIAS LOGICAS
+  [OK] Perdida total siempre indemnizable
+  [OK] SUP_INDEMNIZADA coherente con DICTAMEN
+  [WARN] INDEMNIZABLE pero monto indemnizacion=0: 1 casos (puede ser proceso en curso)
+
+## 11. FECHAS
+  [ERROR] 2 fechas no parseables
+  Rango: 2020-05-09 a 2021-07-30
+  [WARN] 12 siniestros ANTES de ago-2020 (min: 2020-05-09)
+
+## 12. RESUMEN DE HALLAZGOS - 2020-2021
+  1. Nulos en PROVINCIA: 4 (0.0%)
+  2. Nulos en DISTRITO: 4 (0.0%)
+  3. Nulos en TIPO_CULTIVO: 4 (0.0%)
+  4. Nulos en TIPO_SINIESTRO: 4 (0.0%)
+  5. Nulos en FECHA_SINIESTRO: 2 (0.0%)
+  6. Nulos en DICTAMEN: 4 (0.0%)
+  7. Nulos en ESTADO_INSPECCION: 4 (0.0%)
+  8. Nulos en FECHA_AJUSTE: 2 (0.0%)
+  9. Nulos en SECTOR: 2 (0.0%)
+  10. CODIGO_AVISO con 1 duplicados
+  11. FECHA_SINIESTRO: 2 no parseables
+  12. Fechas antes de campaña: 12
+
+================================================================================
+CAMPANA 2021-2022
+Archivo: Dashboard SAC 21-22 Aviso Siniestro Agricola_Consolidado_06.09.22.xlsx
+Hoja: AVISOS | Filas: 7675 | Columnas: 38
+================================================================================
+
+## 1. ESTRUCTURA DE COLUMNAS
+  [OK] DEPARTAMENTO
+  [OK] PROVINCIA
+  [OK] DISTRITO
+  [OK] TIPO_CULTIVO
+  [OK] TIPO_SINIESTRO
+  [OK] FECHA_SINIESTRO
+  [OK] DICTAMEN
+  [OK] ESTADO_INSPECCION
+  [OK] FENOLOGIA (opcional)
+  [OK] FECHA_SIEMBRA (opcional)
+  [OK] TIPO_COBERTURA (opcional)
+  [OK] FECHA_AJUSTE (opcional)
+  [OK] SECTOR (opcional)
+
+## 2. VALORES NULOS
+  [OK] DEPARTAMENTO: sin nulos
+  [BAJO] PROVINCIA: 2 nulos (0.0%)
+  [BAJO] DISTRITO: 2 nulos (0.0%)
+  [BAJO] TIPO_CULTIVO: 2 nulos (0.0%)
+  [BAJO] TIPO_SINIESTRO: 2 nulos (0.0%)
+  [BAJO] FECHA_SINIESTRO: 1 nulos (0.0%)
+  [BAJO] DICTAMEN: 2 nulos (0.0%)
+  [BAJO] ESTADO_INSPECCION: 2 nulos (0.0%)
+  [BAJO] FENOLOGIA: 2 nulos (0.0%)
+  [BAJO] FECHA_SIEMBRA: 1 nulos (0.0%)
+  [CRITICO] TIPO_COBERTURA: 13362 nulos (174.1%)
+  [BAJO] FECHA_AJUSTE: 1 nulos (0.0%)
+  [BAJO] SECTOR: 1 nulos (0.0%)
+
+## 3. DUPLICADOS
+  [OK] CODIGO_AVISO: sin duplicados
+
+## 4. TIPO_CULTIVO
+  Valores unicos: 51
+
+## 5. TIPO_SINIESTRO
+  Valores unicos: 15
+    "ALTAS TEMPERATURAS": 11
+    "ENFERMEDADES": 843
+    "EXCESO DE HUMEDAD": 796
+    "FALTA DE PISO PARA COSECHAR": 4
+    "GRANIZO Y NIEVE": 2292
+    "HELADA Y BAJAS TEMPERATURAS": 1135
+    "HUAYCO, AVALANCHA, O DESLIZAMIENTOS": 153
+    "INCENDIO": 2
+    "INUNDACION": 641
+    "LLUVIA EXCESIVAS O EXTEMPORANEA": 473
+    "PLAGAS Y DEPREDADORES": 221
+    "SEQUIA": 914
+    "SEQUIA CULT RIEGO": 21
+    "TERREMOTO": 1
+    "VIENTO FUERTE": 167
+
+## 6. DICTAMEN
+  "INDEMNIZABLE": 994
+  "NO INDEMNIZABLE": 6680
+
+## 7. ESTADO_INSPECCION
+  "AJUSTADO": 736
+  "DESESTIMADO": 6170
+  "SINIESTRO CON PERDIDA TOTAL": 768
+
+## 8. FENOLOGIA
+  Valores unicos: 21
+    "APERTURA DE BELLOTAS": 3
+    "CRECIMIENTO VEGETATIVO": 2383
+    "ESPIGA": 152
+    "ETAPA LECHOSA": 429
+    "ETAPA PASTOSA": 305
+    "FLORACION": 21
+    "FLORACIÓN": 1767
+    "FORMACION DE BELLOTAS": 2
+    "FORMACION Y LLENADO DE VAINAS": 20
+    "FORMACION Y LLENADO VAINAS": 1
+    "FORMACIÓN ESTOLONES": 212
+    "FORMACIÓN Y LLENADO DE VAINAS": 283
+    "FRUCTIFICACIÓN": 61
+    "GERMINACION (SEMILLA) O BROTAMIENTO (PARTE VEGETATIVA)": 2
+    "GERMINACIÓN (SEMILLA) O BROTAMIENTO (PARTE VEGETATIVA)": 138
+    "MACOLLAMIENTO (CEREALES)": 207
+    "MADURACION": 132
+    "MADURACIÓN": 1048
+    "PANOJA": 202
+    "TUBERIZACIÓN": 305
+    "[SELECCIONE]": 1
+
+## 9. TIPO_COBERTURA
+  "COBERTURA COMPLEMENTARIA POR LOTES": 252
+  "COBERTURA CONVENCIONAL 11 PUNTOS": 742
+  [WARN] 13362 sin tipo de cobertura asignado
+
+## 10. INCONSISTENCIAS LOGICAS
+  [OK] Complementaria siempre tiene DICTAMEN=INDEMNIZABLE
+  [OK] Perdida total siempre indemnizable
+  [OK] SUP_INDEMNIZADA coherente con DICTAMEN
+
+## 11. FECHAS
+  [ERROR] 1 fechas no parseables
+  Rango: 2021-08-14 a 2022-07-30
+
+## 12. RESUMEN DE HALLAZGOS - 2021-2022
+  1. Nulos en PROVINCIA: 2 (0.0%)
+  2. Nulos en DISTRITO: 2 (0.0%)
+  3. Nulos en TIPO_CULTIVO: 2 (0.0%)
+  4. Nulos en TIPO_SINIESTRO: 2 (0.0%)
+  5. Nulos en FECHA_SINIESTRO: 1 (0.0%)
+  6. Nulos en DICTAMEN: 2 (0.0%)
+  7. Nulos en ESTADO_INSPECCION: 2 (0.0%)
+  8. Nulos en FENOLOGIA: 2 (0.0%)
+  9. Nulos en FECHA_SIEMBRA: 1 (0.0%)
+  10. Nulos en TIPO_COBERTURA: 13362 (174.1%)
+  11. Nulos en FECHA_AJUSTE: 1 (0.0%)
+  12. Nulos en SECTOR: 1 (0.0%)
+  13. FECHA_SINIESTRO: 1 no parseables
+
+================================================================================
+CAMPANA 2022-2023
+Archivo: Dashboard SAC 22-23 Aviso Siniestro Agricola_Consolidado 23.10.23.xlsx
+Hoja: AVISOS | Filas: 16139 | Columnas: 41
+================================================================================
+
+## 1. ESTRUCTURA DE COLUMNAS
+  [OK] DEPARTAMENTO
+  [OK] PROVINCIA
+  [OK] DISTRITO
+  [OK] TIPO_CULTIVO
+  [OK] TIPO_SINIESTRO
+  [OK] FECHA_SINIESTRO
+  [OK] DICTAMEN
+  [OK] ESTADO_INSPECCION
+  [OK] FENOLOGIA (opcional)
+  [OK] FECHA_SIEMBRA (opcional)
+  [OK] TIPO_COBERTURA (opcional)
+  [OK] FECHA_AJUSTE (opcional)
+  [OK] SECTOR (opcional)
+
+## 2. VALORES NULOS
+  [OK] DEPARTAMENTO: sin nulos
+  [OK] PROVINCIA: sin nulos
+  [OK] DISTRITO: sin nulos
+  [OK] TIPO_CULTIVO: sin nulos
+  [OK] TIPO_SINIESTRO: sin nulos
+  [OK] FECHA_SINIESTRO: sin nulos
+  [OK] DICTAMEN: sin nulos
+  [OK] ESTADO_INSPECCION: sin nulos
+  [OK] FENOLOGIA: sin nulos
+  [OK] FECHA_SIEMBRA: sin nulos
+  [CRITICO] TIPO_COBERTURA: 26902 nulos (166.7%)
+  [OK] FECHA_AJUSTE: sin nulos
+  [OK] SECTOR: sin nulos
+
+## 3. DUPLICADOS
+  [WARN] CODIGO_AVISO: 62 duplicados
+
+## 4. TIPO_CULTIVO
+  Valores unicos: 102
+
+## 5. TIPO_SINIESTRO
+  Valores unicos: 17
+    "ALTAS TEMPERATURAS": 154
+    "ENFERMEDADES": 600
+    "ERUPCION VOLCANICA": 28
+    "EXCESO DE HUMEDAD": 404
+    "FALTA DE PISO PARA COSECHAR": 37
+    "GRANIZO Y NIEVE": 3629
+    "HELADA Y BAJAS TEMPERATURAS": 3050
+    "HUAYCO, AVALANCHA, O DESLIZAMIENTOS": 741
+    "INCENDIO": 100
+    "INUNDACION": 1376
+    "LLUVIA EXCESIVAS O EXTEMPORANEA": 687
+    "PLAGAS Y DEPREDADORES": 175
+    "SEQUIA": 4144
+    "SEQUIA CULTIVOS CON RIEGO": 3
+    "TAPONAMIENTO O NO NACENCIA": 588
+    "TERREMOTO": 4
+    "VIENTO FUERTE": 419
+
+## 6. DICTAMEN
+  "INDEMNIZABLE": 2688
+  "NO INDEMNIZABLE": 13451
+
+## 7. ESTADO_INSPECCION
+  "AJUSTADO": 4485
+  "DESESTIMADO": 9526
+  "SINIESTRO CON PERDIDA TOTAL": 2128
+
+## 8. FENOLOGIA
+  Valores unicos: 15
+    "APERTURA DE BELLOTAS": 26
+    "CRECIMIENTO VEGETATIVO": 7431
+    "ESPIGA": 308
+    "ETAPA LECHOSA": 586
+    "ETAPA PASTOSA": 335
+    "FLORACION": 1970
+    "FORMACION DE BELLOTAS": 39
+    "FORMACION ESTOLONES": 281
+    "FORMACION Y LLENADO DE VAINAS": 518
+    "FRUCTIFICACION": 370
+    "GERMINACION (SEMILLA) O BROTAMIENTO (PARTE VEGETATIVA)": 1264
+    "MACOLLAMIENTO (CEREALES)": 194
+    "MADURACION": 2467
+    "PANOJA": 75
+    "TUBERIZACION": 275
+
+## 9. TIPO_COBERTURA
+  "COBERTURA COMPLEMENTARIA POR LOTES": 720
+  "COBERTURA CONVENCIONAL 11 PUNTOS": 1968
+  [WARN] 26902 sin tipo de cobertura asignado
+
+## 10. INCONSISTENCIAS LOGICAS
+  [OK] Complementaria siempre tiene DICTAMEN=INDEMNIZABLE
+  [OK] Perdida total siempre indemnizable
+  [OK] SUP_INDEMNIZADA coherente con DICTAMEN
+
+## 11. FECHAS
+  Rango: 2021-10-15 a 2023-09-15
+  [WARN] 2 siniestros ANTES de ago-2022 (min: 2021-10-15)
+  [INFO] 1 siniestros DESPUES de jul-2023 (max: 2023-09-15) - posible cobertura extendida a cosecha
+
+## 12. RESUMEN DE HALLAZGOS - 2022-2023
+  1. Nulos en TIPO_COBERTURA: 26902 (166.7%)
+  2. CODIGO_AVISO con 62 duplicados
+  3. Fechas antes de campaña: 2
+
+================================================================================
+CAMPANA 2023-2024
+Archivo: Dashboard SAC 23-24 Aviso Siniestro Agricola 19.12.24.xlsx
+Hoja: AVISOS | Filas: 11438 | Columnas: 42
+================================================================================
+
+## 1. ESTRUCTURA DE COLUMNAS
+  [OK] DEPARTAMENTO
+  [OK] PROVINCIA
+  [OK] DISTRITO
+  [OK] TIPO_CULTIVO
+  [OK] TIPO_SINIESTRO
+  [OK] FECHA_SINIESTRO
+  [OK] DICTAMEN
+  [OK] ESTADO_INSPECCION
+  [OK] FENOLOGIA (opcional)
+  [OK] FECHA_SIEMBRA (opcional)
+  [OK] TIPO_COBERTURA (opcional)
+  [OK] FECHA_AJUSTE (opcional)
+  [OK] SECTOR (opcional)
+
+## 2. VALORES NULOS
+  [OK] DEPARTAMENTO: sin nulos
+  [BAJO] PROVINCIA: 1 nulos (0.0%)
+  [OK] DISTRITO: sin nulos
+  [OK] TIPO_CULTIVO: sin nulos
+  [OK] TIPO_SINIESTRO: sin nulos
+  [OK] FECHA_SINIESTRO: sin nulos
+  [OK] DICTAMEN: sin nulos
+  [OK] ESTADO_INSPECCION: sin nulos
+  [OK] FENOLOGIA: sin nulos
+  [OK] FECHA_SIEMBRA: sin nulos
+  [CRITICO] TIPO_COBERTURA: 16056 nulos (140.4%)
+  [OK] FECHA_AJUSTE: sin nulos
+  [OK] SECTOR: sin nulos
+
+## 3. DUPLICADOS
+  [OK] CODIGO_AVISO: sin duplicados
+
+## 4. TIPO_CULTIVO
+  [ERROR] 1 valores con espacios sobrantes (trailing spaces)
+  Valores unicos: 133
+
+## 5. TIPO_SINIESTRO
+  Valores unicos: 18
+    "ALTAS TEMPERATURAS": 133
+    "CONTAMINACIÓN AMBIENTAL": 1
+    "DESLIZAMIENTOS": 149
+    "ENFERMEDADES": 2754
+    "ERUPCIÓN VOLCÁNICA": 6
+    "FALTA DE PISO PARA COSECHAR": 18
+    "GRANIZO": 1597
+    "HELADA": 781
+    "HUAYCO": 446
+    "INCENDIO": 205
+    "INUNDACIÓN": 1501
+    "LLUVIAS EXCESIVAS O EXTEMPORANEA": 892
+    "NIEVE": 5
+    "PLAGAS Y DEPREDADORES": 1057
+    "SEQUIA": 932
+    "SEQUIA PARA CULTIVOS DE RIEGO": 135
+    "TAPONAMIENTO O NO NACENCIA": 10
+    "VIENTOS FUERTES": 816
+
+## 6. DICTAMEN
+  "INDEMNIZABLE": 3409
+  "NO INDEMNIZABLE": 8029
+
+## 7. ESTADO_INSPECCION
+  "CERRADO": 11438
+
+## 8. FENOLOGIA
+  Valores unicos: 15
+    "APERTURA DE BELLOTAS": 16
+    "CRECIMIENTO VEGETATIVO": 3310
+    "ESPIGA": 142
+    "ETAPA LECHOSA": 334
+    "ETAPA PASTOSA": 425
+    "FLORACIÓN": 1996
+    "FORMACION Y LLENADO VAINAS": 293
+    "FORMACIÓN DE BELLOTAS": 42
+    "FORMACIÓN ESTOLONES": 189
+    "FRUCTIFICACIÓN": 676
+    "GERMINACIÓN (SEMILLA) O BROTAMIENTO (PARTE VEGETATIVA)": 136
+    "MACOLLAMIENTO (CEREALES)": 147
+    "MADURACIÓN": 3276
+    "PANOJA": 49
+    "TUBERIZACIÓN": 407
+
+## 9. TIPO_COBERTURA
+  "COBERTURA COMPLEMENTARIA POR LOTES": 2073
+  "COBERTURA CONVENCIONAL 11 PUNTOS": 1337
+  [WARN] 16056 sin tipo de cobertura asignado
+
+## 10. INCONSISTENCIAS LOGICAS
+  [ERROR] Cobertura Complementaria + DICTAMEN=NO INDEMNIZABLE: 1 casos
+  [OK] Perdida total siempre indemnizable
+  [OK] SUP_INDEMNIZADA coherente con DICTAMEN
+
+## 11. FECHAS
+  Rango: 2023-02-20 a 2024-11-22
+  [WARN] 1 siniestros ANTES de ago-2023 (min: 2023-02-20)
+  [INFO] 309 siniestros DESPUES de jul-2024 (max: 2024-11-22) - posible cobertura extendida a cosecha
+
+## 12. RESUMEN DE HALLAZGOS - 2023-2024
+  1. Nulos en PROVINCIA: 1 (0.0%)
+  2. Nulos en TIPO_COBERTURA: 16056 (140.4%)
+  3. TIPO_CULTIVO: 1 valores con trailing spaces
+  4. Complementaria + NO INDEMNIZABLE: 1 casos
+  5. Fechas antes de campaña: 1
+
+================================================================================
+CAMPANA 2024-2025
+Archivo: Dashboard SAC 24-25 Aviso Siniestro Agricola 02.02.26.xlsx
+Hoja: AVISOS | Filas: 19229 | Columnas: 53
+================================================================================
+
+## 1. ESTRUCTURA DE COLUMNAS
+  [OK] DEPARTAMENTO
+  [OK] PROVINCIA
+  [OK] DISTRITO
+  [OK] TIPO_CULTIVO
+  [OK] TIPO_SINIESTRO
+  [OK] FECHA_SINIESTRO
+  [OK] DICTAMEN
+  [OK] ESTADO_INSPECCION
+  [OK] FENOLOGIA (opcional)
+  [OK] FECHA_SIEMBRA (opcional)
+  [OK] TIPO_COBERTURA (opcional)
+  [OK] FECHA_AJUSTE (opcional)
+  [OK] SECTOR (opcional)
+
+## 2. VALORES NULOS
+  [OK] DEPARTAMENTO: sin nulos
+  [OK] PROVINCIA: sin nulos
+  [OK] DISTRITO: sin nulos
+  [BAJO] TIPO_CULTIVO: 2 nulos (0.0%)
+  [OK] TIPO_SINIESTRO: sin nulos
+  [OK] FECHA_SINIESTRO: sin nulos
+  [OK] DICTAMEN: sin nulos
+  [OK] ESTADO_INSPECCION: sin nulos
+  [BAJO] FENOLOGIA: 6 nulos (0.0%)
+  [BAJO] FECHA_SIEMBRA: 65 nulos (0.3%)
+  [CRITICO] TIPO_COBERTURA: 28322 nulos (147.3%)
+  [OK] FECHA_AJUSTE: sin nulos
+  [OK] SECTOR: sin nulos
+
+## 3. DUPLICADOS
+  [WARN] CODIGO_AVISO: 27 duplicados
+
+## 4. TIPO_CULTIVO
+  [ERROR] 126 valores con espacios sobrantes (trailing spaces)
+  Valores unicos: 189
+
+## 5. TIPO_SINIESTRO
+  Valores unicos: 18
+    "ALTAS TEMPERATURAS": 155
+    "DESLIZAMIENTOS": 750
+    "ENFERMEDADES": 2884
+    "ERUPCIÓN VOLCÁNICA": 4
+    "FALTA DE PISO PARA COSECHAR": 3
+    "GRANIZO": 2453
+    "HELADA": 3158
+    "HUAYCO": 776
+    "INCENDIO": 714
+    "INUNDACIÓN": 3283
+    "LLUVIAS EXCESIVAS O EXTEMPORANEA": 1957
+    "NIEVE": 252
+    "PLAGAS Y DEPREDADORES": 994
+    "SEQUÍA": 1106
+    "SEQUÍA PARA CULTIVO CON RIEGO": 27
+    "SISMO": 1
+    "TAPONAMIENTO O NO NACENCIA": 8
+    "VIENTOS FUERTES": 704
+
+## 6. DICTAMEN
+  "INDEMNIZABLE": 5068
+  "NO INDEMNIZABLE": 14161
+
+## 7. ESTADO_INSPECCION
+  "CERRADO": 19229
+
+## 8. FENOLOGIA
+  Valores unicos: 20
+    "APERTURA DE BELLOTAS": 5
+    "CRECIMIENTO VEGETATIVO": 7378
+    "DESARROLLO VEGETATIVO": 1
+    "EMERGENCIA": 1
+    "ESPIGA": 75
+    "ETAPA LECHOSA": 660
+    "ETAPA PASTOSA": 312
+    "FLORACIÓN": 1643
+    "FORMACIÓN DE BELLOTAS": 31
+    "FORMACIÓN ESTOLONES": 211
+    "FORMACIÓN Y LLENADO VAINAS": 478
+    "FRUCTIFICACIÓN": 235
+    "GERMINACIÓN (SEMILLA) O BROTAMIENTO (PARTE VEGETATIVA)": 268
+    "LIMPIEZA / DORMANCIA": 13
+    "MACOLLAMIENTO (CEREALES)": 80
+    "MADURACIÓN": 4720
+    "MADUREZ": 18
+    "PANOJA": 49
+    "REPRODUCTIVO": 2496
+    "TUBERIZACIÓN": 552
+
+## 9. TIPO_COBERTURA
+  "COBERTURA CATASTRÓFICA": 1315
+  "COBERTURA COMPLEMENTARIA": 3753
+  [WARN] 28322 sin tipo de cobertura asignado
+
+## 10. INCONSISTENCIAS LOGICAS
+  [OK] Complementaria siempre tiene DICTAMEN=INDEMNIZABLE
+  [OK] Perdida total siempre indemnizable
+  [OK] SUP_INDEMNIZADA coherente con DICTAMEN
+
+## 11. FECHAS
+  Rango: 2024-04-02 a 2025-12-15
+  [WARN] 21 siniestros ANTES de ago-2024 (min: 2024-04-02)
+  [INFO] 149 siniestros DESPUES de jul-2025 (max: 2025-12-15) - posible cobertura extendida a cosecha
+
+## 12. RESUMEN DE HALLAZGOS - 2024-2025
+  1. Nulos en TIPO_CULTIVO: 2 (0.0%)
+  2. Nulos en FENOLOGIA: 6 (0.0%)
+  3. Nulos en FECHA_SIEMBRA: 65 (0.3%)
+  4. Nulos en TIPO_COBERTURA: 28322 (147.3%)
+  5. CODIGO_AVISO con 27 duplicados
+  6. TIPO_CULTIVO: 126 valores con trailing spaces
+  7. Fechas antes de campaña: 21
+
+================================================================================
+HALLAZGOS TRANSVERSALES (ENTRE CAMPANAS)
+================================================================================
+
+## A. CAMBIOS DE NOMENCLATURA EN TIPO_SINIESTRO
+  Los nombres cambian entre campanas, lo que dificulta la comparabilidad:
+  - 'GRANIZO' (2020) -> 'GRANIZO Y NIEVE' (2021-2023) -> 'GRANIZO'+'NIEVE' separados (2024)
+  - 'HELADA Y BAJAS TEMPERATURAS' (2020-2023) -> 'HELADA' (2024)
+  - 'HUAYCO Y DESLIZAMIENTOS' (2020) -> 'HUAYCO, AVALANCHA, O DESLIZAMIENTOS' (2021-2023) -> 'HUAYCO'+'DESLIZAMIENTOS' (2024)
+  - 'LLUVIAS EXCESIVAS O INOPORTUNAS' (2020) -> 'LLUVIA EXCESIVAS O EXTEMPORANEA' (2021+)
+  - 'TERREMOTO' (2020-2023) -> 'SISMO' (2024)
+  RECOMENDACION: Estandarizar nombres con un catalogo unico para datos abiertos
+
+## B. CAMBIOS DE NOMENCLATURA EN TIPO_COBERTURA
+  - 'COBERTURA CONVENCIONAL 11 PUNTOS' (2021-2023) -> 'COBERTURA CATASTROFICA' (2024)
+  - 'COBERTURA COMPLEMENTARIA POR LOTES' (2021-2023) -> 'COBERTURA COMPLEMENTARIA' (2024)
+  RECOMENDACION: Estandarizar con nombres de la normativa vigente
+
+## C. COLUMNAS FALTANTES EN CAMPANAS ANTIGUAS
+  2020-2021 NO tiene: FENOLOGIA, FECHA_SIEMBRA, TIPO_COBERTURA, FECHA_REPROGRAMACION
+  Esto limita el analisis de etapa fenologica y tipo de cobertura para esa campana
+  RECOMENDACION: Si es posible, completar retroactivamente desde fuentes primarias
+
+## D. INCONSISTENCIA EN DICTAMEN
+  2020-2021: 5 variantes por mezcla de mayusculas ('Indemnizable', 'INDEMNIZABLE', 'No Indemnizable', etc.)
+  2021+: 2 variantes correctas (INDEMNIZABLE, NO INDEMNIZABLE)
+  RECOMENDACION: Normalizar 2020-2021 a mayusculas antes de publicar
+
+## E. INCONSISTENCIA EN ESTADO_INSPECCION
+  2020-2021: Mezcla mayusculas/minusculas ('AJUSTADO' vs 'Ajustado', 'Desestimado' vs 'DESESTIMADO')
+  2021-2022: Introduce 'SINIESTRO CON PERDIDA TOTAL' (no existia en 2020)
+  2023-2024: Solo 'Cerrado' (mixto) - pierde granularidad vs campanas anteriores
+  RECOMENDACION: Estandarizar a mayusculas y mantener categorias consistentes
+
+## F. TIPO_CULTIVO CON TRAILING SPACES
+  Especialmente en 2024-2025: muchos cultivos con espacios al final del nombre
+  Causa duplicados espurios (ej: 'ARROZ' vs 'ARROZ ')
+  RECOMENDACION: Aplicar TRIM a todos los valores antes de publicar
+
+## G. CAMPANA 2023-2024: ARCHIVO INCOMPLETO
+  Originalmente solo se disponia del archivo de desembolsos (3,409 registros = solo indemnizables)
+  Se agrego posteriormente el archivo completo de avisos (11,438 registros)
+  RECOMENDACION: Verificar que el archivo de avisos este completo y actualizado
+
+## H. NUEVO TIPO_SINIESTRO EN 2023-2024
+  Aparece 'CONTAMINACION AMBIENTAL' (1 caso)
+  No existia en campanas anteriores
+  RECOMENDACION: Documentar en el catalogo de riesgos

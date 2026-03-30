@@ -10,6 +10,7 @@ Fallback automático a nivel departamental si no hay datos distritales.
 """
 
 import json
+import os
 import time
 import urllib.request
 import urllib.error
@@ -23,6 +24,41 @@ import streamlit as st
 from gen_mapa_calor import DEPT_COORDS, _jitter_coords
 from calendario_agricola import get_current_risk_crops
 from data_processor import LLUVIA_TYPES
+
+# ═══════════════════════════════════════════════════════════════════
+# PERFIL HISTORICO DISTRITAL (de 5 campanas, 66K+ avisos)
+# Ver METODOLOGIA_DATOS.md para detalles de normalizacion
+# ═══════════════════════════════════════════════════════════════════
+
+_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static_data")
+_PERFIL_PATH = os.path.join(_STATIC_DIR, "perfil_riesgo_distrital.json")
+
+_PERFIL_DISTRITAL = {}
+if os.path.exists(_PERFIL_PATH):
+    with open(_PERFIL_PATH, "r", encoding="utf-8") as f:
+        _PERFIL_DISTRITAL = json.load(f)
+
+
+def _get_district_historical_profile(dept, prov=None, dist=None):
+    """Get historical risk profile for a district, province, or department.
+
+    Returns dict with keys: grupos_climaticos, meses_riesgo, avisos_hist
+    Uses the 'indemnizados' layer preferentially (certified damage),
+    falls back to 'avisos' layer (general reports).
+    """
+    if dist and prov:
+        key = f"{dept}|{prov}|{dist}"
+        profile = _PERFIL_DISTRITAL.get(key, {})
+        # Prefer indemnizados (certified), fallback to avisos (general)
+        layer = profile.get("indemnizados", profile.get("avisos", {}))
+        if layer:
+            return {
+                "grupos_climaticos": layer.get("grupos", []),
+                "meses_riesgo": layer.get("meses", []),
+                "riesgos": layer.get("riesgos", []),
+                "avisos_hist": layer.get("avisos_hist", 0),
+            }
+    return None
 
 # ═══════════════════════════════════════════════════════════════════
 # CONSTANTES
@@ -285,9 +321,12 @@ def _max_nivel(*niveles):
     return max(niveles, key=lambda n: order.get(n, 0))
 
 
-def compute_department_risk(dept, forecast):
+def compute_department_risk(dept, forecast, prov=None, dist=None):
     """Calcula riesgo para una ubicación a partir de su forecast.
-    `dept` se usa para el cruce con calendario agrícola."""
+
+    Si prov/dist se proveen, usa perfil histórico distrital (66K+ avisos de 5 campañas).
+    Si no, usa calendario departamental. Ver METODOLOGIA_DATOS.md.
+    """
     if not forecast or not forecast.get("time"):
         return {
             "nivel": "verde", "score": 0,
@@ -328,18 +367,45 @@ def compute_department_risk(dept, forecast):
     score_temp = _nivel_to_score(nivel_temp) * 0.30
     score_viento = _nivel_to_score(nivel_viento) * 0.15
 
+    # Historical risk bonus — uses district profile if available,
+    # else falls back to department-level calendar.
+    # See METODOLOGIA_DATOS.md section 4 for grupo_climatico mapping.
     calendar_bonus = 0
     try:
-        risk_crops = get_current_risk_crops(dept)
-        crop_risks = set()
-        for c in risk_crops:
-            crop_risks.update(c.get("riesgos", []))
-        if crop_risks & WEATHER_TO_SINIESTRO["heavy_rain"] and nivel_lluvia in ("ambar", "rojo"):
-            calendar_bonus = 15
-        elif crop_risks & WEATHER_TO_SINIESTRO["frost"] and nivel_temp in ("ambar", "rojo"):
-            calendar_bonus = 15
-        elif crop_risks & WEATHER_TO_SINIESTRO["drought"] and precip_7d < 5:
-            calendar_bonus = 10
+        hist = _get_district_historical_profile(dept, prov, dist) if (prov and dist) else None
+
+        if hist and hist.get("grupos_climaticos"):
+            # District-level: use historical groups directly
+            current_month = datetime.now().month
+            in_risk_month = current_month in hist.get("meses_riesgo", [])
+            grupos = set(hist["grupos_climaticos"])
+
+            if in_risk_month:
+                if "PRECIP_EXTREMA" in grupos and nivel_lluvia in ("ambar", "rojo"):
+                    calendar_bonus = 15
+                elif "TEMP_BAJA" in grupos and nivel_temp in ("ambar", "rojo"):
+                    calendar_bonus = 15
+                elif "DEFICIT_HIDRICO" in grupos and precip_7d < 5:
+                    calendar_bonus = 10
+                elif "VIENTO" in grupos and nivel_viento in ("ambar", "rojo"):
+                    calendar_bonus = 10
+                elif "TEMP_ALTA" in grupos and max_temp and max_temp > 36:
+                    calendar_bonus = 10
+                else:
+                    # In a historical risk month but forecast doesn't match — small bonus
+                    calendar_bonus = 5
+        else:
+            # Department-level fallback (calendar agrícola)
+            risk_crops = get_current_risk_crops(dept)
+            crop_risks = set()
+            for c in risk_crops:
+                crop_risks.update(c.get("riesgos", []))
+            if crop_risks & WEATHER_TO_SINIESTRO["heavy_rain"] and nivel_lluvia in ("ambar", "rojo"):
+                calendar_bonus = 15
+            elif crop_risks & WEATHER_TO_SINIESTRO["frost"] and nivel_temp in ("ambar", "rojo"):
+                calendar_bonus = 15
+            elif crop_risks & WEATHER_TO_SINIESTRO["drought"] and precip_7d < 5:
+                calendar_bonus = 10
     except Exception:
         pass
 
@@ -359,12 +425,12 @@ def compute_department_risk(dept, forecast):
 
 
 def _compute_district_risks(district_forecasts, district_coords):
-    """Calcula riesgo para cada distrito. Hereda calendario del depto padre."""
+    """Calcula riesgo para cada distrito usando perfil histórico distrital."""
     risks = {}
     for key in district_coords:
-        dept = key[0]  # (dept, prov, dist)
+        dept, prov, dist = key[0], key[1], key[2]
         forecast = district_forecasts.get(key)
-        risks[key] = compute_department_risk(dept, forecast)
+        risks[key] = compute_department_risk(dept, forecast, prov=prov, dist=dist)
     return risks
 
 

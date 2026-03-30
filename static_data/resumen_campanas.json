@@ -1,0 +1,67 @@
+{
+  "2020-2021": {
+    "total_avisos": 11866,
+    "indemnizables": 1114,
+    "perdida_total": 0,
+    "pct_indemnizable": 9.4,
+    "pct_perdida_total": 0.0,
+    "departamentos": 22,
+    "distritos": 641,
+    "cultivos": 38,
+    "tiene_siembra": false,
+    "tiene_fenologia": false,
+    "rango_fechas": "2020-05-09 a 2021-07-30"
+  },
+  "2021-2022": {
+    "total_avisos": 7674,
+    "indemnizables": 994,
+    "perdida_total": 858,
+    "pct_indemnizable": 13.0,
+    "pct_perdida_total": 11.2,
+    "departamentos": 23,
+    "distritos": 588,
+    "cultivos": 51,
+    "tiene_siembra": true,
+    "tiene_fenologia": true,
+    "rango_fechas": "2021-08-14 a 2022-07-30"
+  },
+  "2022-2023": {
+    "total_avisos": 16139,
+    "indemnizables": 2688,
+    "perdida_total": 2271,
+    "pct_indemnizable": 16.7,
+    "pct_perdida_total": 14.1,
+    "departamentos": 24,
+    "distritos": 1016,
+    "cultivos": 102,
+    "tiene_siembra": true,
+    "tiene_fenologia": true,
+    "rango_fechas": "2021-10-15 a 2023-09-15"
+  },
+  "2023-2024": {
+    "total_avisos": 11438,
+    "indemnizables": 3409,
+    "perdida_total": 2073,
+    "pct_indemnizable": 29.8,
+    "pct_perdida_total": 18.1,
+    "departamentos": 24,
+    "distritos": 1072,
+    "cultivos": 133,
+    "tiene_siembra": true,
+    "tiene_fenologia": true,
+    "rango_fechas": "2023-02-20 a 2024-11-22"
+  },
+  "2024-2025": {
+    "total_avisos": 19229,
+    "indemnizables": 5068,
+    "perdida_total": 3753,
+    "pct_indemnizable": 26.4,
+    "pct_perdida_total": 19.5,
+    "departamentos": 24,
+    "distritos": 1225,
+    "cultivos": 189,
+    "tiene_siembra": true,
+    "tiene_fenologia": true,
+    "rango_fechas": "2024-04-02 a 2025-12-15"
+  }
+}
