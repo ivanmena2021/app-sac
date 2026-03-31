@@ -1,0 +1,50 @@
+"""Componentes UI reutilizables del dashboard SAC."""
+import streamlit as st
+
+
+def render_metric(label, value, delta=None, accent="blue"):
+    """Renderiza una tarjeta de métrica KPI."""
+    delta_html = ""
+    if delta:
+        delta_html = f'<div class="delta delta-positive">{delta}</div>'
+    return (
+        f'<div class="metric-card-v2 accent-{accent}">'
+        f'  <div class="label">{label}</div>'
+        f'  <div class="value">{value}</div>'
+        f'  {delta_html}'
+        f'</div>'
+    )
+
+
+def render_stepper(steps):
+    """Renderiza indicador de progreso por pasos."""
+    html = '<div class="stepper">'
+    for i, (label, status) in enumerate(steps):
+        icon = {"done": "&#10003;", "active": "&#9679;", "error": "&#10007;"}.get(status, str(i + 1))
+        html += f'<div class="step step-{status}"><div class="step-circle">{icon}</div><div class="step-label">{label}</div></div>'
+        if i < len(steps) - 1:
+            conn_cls = "done" if status == "done" else ""
+            html += f'<div class="step-connector {conn_cls}"></div>'
+    html += '</div>'
+    return html
+
+
+def page_header(title, description="", breadcrumb="SAC 2025-2026"):
+    """Renderiza el header de cada página con breadcrumb."""
+    st.markdown(f"""
+    <div class="page-header">
+        <div class="breadcrumb">{breadcrumb}</div>
+        <h1>{title}</h1>
+        <p class="page-desc">{description}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def footer():
+    """Renderiza el footer estándar MIDAGRI."""
+    st.markdown("""
+    <div class="footer">
+        SAC 2025-2026 · Dirección de Seguro y Fomento del Financiamiento Agrario · MIDAGRI<br>
+        Sistema automatizado para la gestión de reportes del Seguro Agrícola Catastrófico
+    </div>
+    """, unsafe_allow_html=True)
