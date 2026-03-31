@@ -52,48 +52,44 @@ GLOBAL_CSS = """
     }
 
     /* ══════════════════════════════════════════
-       PAGE HEADER
+       PAGE HEADER — compacto y profesional
        ══════════════════════════════════════════ */
     .page-header {
-        background: linear-gradient(135deg, #0c2340 0%, #1a5276 35%, #2980b9 100%);
-        padding: 1.4rem 2rem;
-        border-radius: 14px;
-        margin-bottom: 1.2rem;
+        background: linear-gradient(135deg, #0c2340 0%, #1a5276 50%, #2980b9 100%);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 4px 20px rgba(12,35,64,0.2);
     }
-    .page-header::before {
-        content: '';
-        position: absolute;
-        top: -60%;
-        right: -15%;
-        width: 400px;
-        height: 400px;
-        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
-        border-radius: 50%;
+    .page-header .ph-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
     }
     .page-header h1 {
         color: #fff !important;
-        font-size: 1.5rem;
-        font-weight: 800;
-        margin: 0 0 0.15rem 0;
-        position: relative;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.3;
     }
     .page-header .page-desc {
-        color: rgba(255,255,255,0.7);
-        font-size: 0.85rem;
-        margin: 0;
-        position: relative;
+        color: rgba(255,255,255,0.65);
+        font-size: 0.78rem;
+        margin: 0.15rem 0 0;
     }
-    .page-header .breadcrumb {
-        color: rgba(255,255,255,0.5);
+    .page-header .ph-badge {
+        background: rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.85);
+        padding: 0.25rem 0.8rem;
+        border-radius: 20px;
         font-size: 0.7rem;
-        margin-bottom: 0.4rem;
-        position: relative;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
         font-weight: 500;
+        white-space: nowrap;
+        border: 1px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
     }
 
     /* ══════════════════════════════════════════

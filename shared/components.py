@@ -29,13 +29,18 @@ def render_stepper(steps):
     return html
 
 
-def page_header(title, description="", breadcrumb="SAC 2025-2026"):
-    """Renderiza el header de cada página con breadcrumb."""
+def page_header(title, description=""):
+    """Renderiza el header compacto de cada página."""
+    desc_html = f'<p class="page-desc">{description}</p>' if description else ""
     st.markdown(f"""
     <div class="page-header">
-        <div class="breadcrumb">{breadcrumb}</div>
-        <h1>{title}</h1>
-        <p class="page-desc">{description}</p>
+        <div class="ph-row">
+            <div>
+                <h1>{title}</h1>
+                {desc_html}
+            </div>
+            <div class="ph-badge">🌾 SAC 2025-2026</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
