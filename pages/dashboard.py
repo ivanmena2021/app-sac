@@ -5,7 +5,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import io
 import pandas as pd
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+TZ_PERU = timezone(timedelta(hours=-5))
 
 from shared.state import require_data, get_datos
 from shared.components import render_metric, page_header, footer
@@ -72,36 +74,39 @@ with col_ref:
         st.switch_page("pages/inicio.py")
 
 # KPIs
-st.markdown("""
-<div class="section-header">
-    <div class="icon-box" style="background:#e8f4f8;">📊</div>
-    <h3>Panel Nacional</h3>
-</div>
-""", unsafe_allow_html=True)
+try:
+    st.markdown("""
+    <div class="section-header">
+        <div class="icon-box" style="background:#e8f4f8;">📊</div>
+        <h3>Panel Nacional</h3>
+    </div>
+    """, unsafe_allow_html=True)
 
-row1 = st.columns(4)
-m1 = [
-    ("Avisos Reportados", f"{datos['total_avisos']:,}", None, "blue"),
-    ("Avance Evaluación", f"{datos['pct_ajustados']:.1f}%", f"{datos['total_ajustados']:,} cerrados", "green"),
-    ("Indemnización", f"S/ {datos['monto_indemnizado']:,.0f}", None, "amber"),
-    ("Avance Desembolso", f"{datos['pct_desembolso']:.1f}%", f"S/ {datos['monto_desembolsado']:,.0f}", "green"),
-]
-for col, (label, value, delta, accent) in zip(row1, m1):
-    with col:
-        st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
+    row1 = st.columns(4)
+    m1 = [
+        ("Avisos Reportados", f"{datos['total_avisos']:,}", None, "blue"),
+        ("Avance Evaluación", f"{datos['pct_ajustados']:.1f}%", f"{datos['total_ajustados']:,} cerrados", "green"),
+        ("Indemnización", f"S/ {datos['monto_indemnizado']:,.0f}", None, "amber"),
+        ("Avance Desembolso", f"{datos['pct_desembolso']:.1f}%", f"S/ {datos['monto_desembolsado']:,.0f}", "green"),
+    ]
+    for col, (label, value, delta, accent) in zip(row1, m1):
+        with col:
+            st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
 
-st.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
 
-row2 = st.columns(4)
-m2 = [
-    ("Ha Aseguradas", f"{datos['sup_asegurada']:,.0f}", None, "blue"),
-    ("Ha Indemnizadas", f"{datos['ha_indemnizadas']:,.0f}", None, "amber"),
-    ("Siniestralidad", f"{datos['indice_siniestralidad']:.2f}%", None, "purple"),
-    ("Productores", f"{int(datos['productores_desembolso']):,}", "beneficiados", "green"),
-]
-for col, (label, value, delta, accent) in zip(row2, m2):
-    with col:
-        st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
+    row2 = st.columns(4)
+    m2 = [
+        ("Ha Aseguradas", f"{datos['sup_asegurada']:,.0f}", None, "blue"),
+        ("Ha Indemnizadas", f"{datos['ha_indemnizadas']:,.0f}", None, "amber"),
+        ("Siniestralidad", f"{datos['indice_siniestralidad']:.2f}%", None, "purple"),
+        ("Productores", f"{int(datos['productores_desembolso']):,}", "beneficiados", "green"),
+    ]
+    for col, (label, value, delta, accent) in zip(row2, m2):
+        with col:
+            st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Error al renderizar KPIs: {e}")
 
 # Navegación rápida
 st.markdown("---")

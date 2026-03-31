@@ -4,7 +4,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import io
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# Timezone Perú (UTC-5)
+TZ_PERU = timezone(timedelta(hours=-5))
 
 from shared.components import page_header, render_stepper, footer
 from shared.data_loader import check_auto_download, check_credentials
@@ -44,7 +47,7 @@ else:
     has_all_creds = has_rimac and has_lp
 
     # Hero header
-    hora_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
+    hora_actual = datetime.now(TZ_PERU).strftime("%d/%m/%Y %H:%M")
     st.markdown(f"""
     <div class="hero">
         <div class="hero-row">
@@ -128,7 +131,7 @@ else:
                 datos = process_dynamic_data(buf_mid, buf_sin)
                 st.session_state["datos"] = datos
                 st.session_state["processed"] = True
-                st.session_state["update_timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                st.session_state["update_timestamp"] = datetime.now(TZ_PERU).strftime("%d/%m/%Y %H:%M:%S")
                 st.session_state["source"] = "auto"
                 st.session_state["rimac_rows"] = rimac_rows
                 st.session_state["lp_rows"] = lp_rows
@@ -162,7 +165,7 @@ else:
                             datos = process_dynamic_data(midagri_file, siniestros_file)
                             st.session_state["datos"] = datos
                             st.session_state["processed"] = True
-                            st.session_state["update_timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            st.session_state["update_timestamp"] = datetime.now(TZ_PERU).strftime("%d/%m/%Y %H:%M:%S")
                             st.session_state["source"] = "manual"
                             st.rerun()
                         except Exception as e:
@@ -194,7 +197,7 @@ else:
                             datos = process_dynamic_data(midagri_file, siniestros_file)
                             st.session_state["datos"] = datos
                             st.session_state["processed"] = True
-                            st.session_state["update_timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            st.session_state["update_timestamp"] = datetime.now(TZ_PERU).strftime("%d/%m/%Y %H:%M:%S")
                             st.session_state["source"] = "manual"
                             st.rerun()
                         except Exception as e:
