@@ -44,6 +44,57 @@ CAPITAL_TO_DEPTO = {
 }
 
 
+def load_primas_historicas():
+    """Carga primas netas por departamento y campaña desde Excel estático.
+
+    Fuente: Primas_Totales_SAC_2020-2026.xlsx (6 hojas, una por campaña).
+    Retorna: {campaña: {depto_upper: prima_neta_float}}
+    Ver METODOLOGIA_DATOS.md para contexto.
+    """
+    path = os.path.join(STATIC_DIR, "Primas_Totales_SAC_2020-2026.xlsx")
+    if not os.path.exists(path):
+        return {}
+
+    import openpyxl
+    wb = openpyxl.load_workbook(path, data_only=True)
+    result = {}
+
+    # Mapeo de nombre de hoja a campaña estándar
+    sheet_to_camp = {
+        "SAC 2020-2021": "2020-2021", "SAC 2021-2022": "2021-2022",
+        "SAC 2022-2023": "2022-2023", "SAC 2023-2024": "2023-2024",
+        "SAC 2024-2025": "2024-2025", "SAC 2025-2026": "2025-2026",
+    }
+
+    for sheet_name, camp in sheet_to_camp.items():
+        if sheet_name not in wb.sheetnames:
+            continue
+        ws = wb[sheet_name]
+        camp_data = {}
+
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row or not row[0]:
+                continue
+            depto_raw = str(row[0]).strip().upper()
+            if "TOTAL" in depto_raw or "REGION" in depto_raw or "DEPARTAMENTO" in depto_raw:
+                continue
+
+            # Normalizar acentos
+            for a, p in [("Á","A"),("É","E"),("Í","I"),("Ó","O"),("Ú","U"),("Ñ","N"),
+                         ("á","A"),("é","E"),("í","I"),("ó","O"),("ú","U"),("ñ","N")]:
+                depto_raw = depto_raw.replace(a, p)
+
+            # Prima neta es la última columna numérica
+            numerics = [v for v in row if isinstance(v, (int, float)) and v > 0]
+            if numerics:
+                camp_data[depto_raw] = float(numerics[-1])
+
+        result[camp] = camp_data
+
+    wb.close()
+    return result
+
+
 def load_materia_asegurada():
     """Carga Materia Asegurada (datos estáticos de póliza por departamento)."""
     from openpyxl import load_workbook

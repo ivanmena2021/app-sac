@@ -1,0 +1,8633 @@
+{
+  "por_campana": {
+    "AMAZONAS": {
+      "2020-2021": {
+        "avisos": 2,
+        "indemnizados": 0,
+        "perdida_total": 0,
+        "monto_indemnizado": 0.0,
+        "ha_indemnizadas": 0.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 2,
+        "meses_siniestro": [
+          2,
+          3
+        ],
+        "top_cultivos": [
+          [
+            "ARROZ",
+            1
+          ],
+          [
+            "YUCA",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            2
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 86,
+        "indemnizados": 11,
+        "perdida_total": 6,
+        "monto_indemnizado": 192000.0,
+        "ha_indemnizadas": 240.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 14,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          5,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "YUCA",
+            30
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            20
+          ],
+          [
+            "ARROZ",
+            19
+          ],
+          [
+            "MAIZ AMILACEO",
+            9
+          ],
+          [
+            "CACAO",
+            4
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "LLUVIA_EXCESIVA",
+            58
+          ],
+          [
+            "INUNDACION",
+            18
+          ],
+          [
+            "HUAYCO",
+            8
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            1
+          ],
+          [
+            "SISMO",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 286,
+        "indemnizados": 19,
+        "perdida_total": 8,
+        "monto_indemnizado": 180080.0,
+        "ha_indemnizadas": 225.1,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 43,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "FRIJOL GRANO SECO",
+            59
+          ],
+          [
+            "YUCA",
+            47
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            37
+          ],
+          [
+            "MAIZ AMILACEO",
+            33
+          ],
+          [
+            "PAPA",
+            29
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ALTAS_TEMPERATURAS",
+            128
+          ],
+          [
+            "INUNDACION",
+            61
+          ],
+          [
+            "SEQUIA",
+            54
+          ],
+          [
+            "GRANIZO",
+            15
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            8
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 315,
+        "indemnizados": 126,
+        "perdida_total": 108,
+        "monto_indemnizado": 1116150.8,
+        "ha_indemnizadas": 1480.11,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 43,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "CAFÉ",
+            108
+          ],
+          [
+            "MAÍZ AMARILLO DURO",
+            62
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            26
+          ],
+          [
+            "RYE GRASS",
+            20
+          ],
+          [
+            "ALFALFA",
+            19
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            176
+          ],
+          [
+            "ENFERMEDADES",
+            42
+          ],
+          [
+            "INUNDACION",
+            29
+          ],
+          [
+            "INCENDIO",
+            25
+          ],
+          [
+            "PLAGAS",
+            20
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 866,
+        "indemnizados": 305,
+        "perdida_total": 260,
+        "monto_indemnizado": 1946610.0,
+        "ha_indemnizadas": 2556.74,
+        "monto_desembolsado": 1937681.6,
+        "provincias": 8,
+        "distritos": 67,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "CAFE",
+            162
+          ],
+          [
+            "CACAO",
+            90
+          ],
+          [
+            "PAPA",
+            88
+          ],
+          [
+            "PLATANO",
+            85
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            47
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            257
+          ],
+          [
+            "INUNDACION",
+            168
+          ],
+          [
+            "INCENDIO",
+            129
+          ],
+          [
+            "ENFERMEDADES",
+            84
+          ],
+          [
+            "PLAGAS",
+            82
+          ]
+        ]
+      }
+    },
+    "ANCASH": {
+      "2020-2021": {
+        "avisos": 32,
+        "indemnizados": 7,
+        "perdida_total": 0,
+        "monto_indemnizado": 158600.0,
+        "ha_indemnizadas": 244.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 10,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          7,
+          10
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            11
+          ],
+          [
+            "MAIZ AMILACEO",
+            9
+          ],
+          [
+            "MAIZ CHOCLO",
+            4
+          ],
+          [
+            "ALFALFA",
+            2
+          ],
+          [
+            "CEBADA GRANO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            22
+          ],
+          [
+            "HELADA",
+            8
+          ],
+          [
+            "HUAYCO",
+            1
+          ],
+          [
+            "SEQUIA",
+            1
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 8,
+        "indemnizados": 0,
+        "perdida_total": 0,
+        "monto_indemnizado": 0.0,
+        "ha_indemnizadas": 0.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 2,
+        "meses_siniestro": [
+          10,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            2
+          ],
+          [
+            "TRIGO",
+            1
+          ],
+          [
+            "OLLUCO",
+            1
+          ],
+          [
+            "MAIZ CHOCLO",
+            1
+          ],
+          [
+            "HABA GRANO VERDE",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            7
+          ],
+          [
+            "HELADA",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 197,
+        "indemnizados": 57,
+        "perdida_total": 57,
+        "monto_indemnizado": 460710.19,
+        "ha_indemnizadas": 575.89,
+        "monto_desembolsado": 0.0,
+        "provincias": 14,
+        "distritos": 35,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PALTO",
+            29
+          ],
+          [
+            "PAPA",
+            26
+          ],
+          [
+            "MANGO",
+            25
+          ],
+          [
+            "MAIZ AMILACEO",
+            18
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            14
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HUAYCO",
+            91
+          ],
+          [
+            "GRANIZO",
+            57
+          ],
+          [
+            "INUNDACION",
+            19
+          ],
+          [
+            "SEQUIA",
+            12
+          ],
+          [
+            "HELADA",
+            10
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 103,
+        "indemnizados": 50,
+        "perdida_total": 10,
+        "monto_indemnizado": 542134.8,
+        "ha_indemnizadas": 686.12,
+        "monto_desembolsado": 0.0,
+        "provincias": 13,
+        "distritos": 47,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            56
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            16
+          ],
+          [
+            "TRIGO DURO",
+            6
+          ],
+          [
+            "PALTA",
+            3
+          ],
+          [
+            "ALFALFA",
+            3
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            49
+          ],
+          [
+            "GRANIZO",
+            17
+          ],
+          [
+            "INCENDIO",
+            16
+          ],
+          [
+            "SEQUIA",
+            6
+          ],
+          [
+            "VIENTO_FUERTE",
+            5
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 153,
+        "indemnizados": 71,
+        "perdida_total": 58,
+        "monto_indemnizado": 253612.8,
+        "ha_indemnizadas": 343.22,
+        "monto_desembolsado": 244894.0,
+        "provincias": 13,
+        "distritos": 41,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            38
+          ],
+          [
+            "MAIZ AMILACEO",
+            18
+          ],
+          [
+            "FRESA",
+            9
+          ],
+          [
+            "TRIGO",
+            9
+          ],
+          [
+            "OLLUCO",
+            8
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            82
+          ],
+          [
+            "HUAYCO",
+            15
+          ],
+          [
+            "HELADA",
+            14
+          ],
+          [
+            "DESLIZAMIENTO",
+            13
+          ],
+          [
+            "INUNDACION",
+            8
+          ]
+        ]
+      }
+    },
+    "APURIMAC": {
+      "2020-2021": {
+        "avisos": 1706,
+        "indemnizados": 195,
+        "perdida_total": 0,
+        "monto_indemnizado": 6800222.0,
+        "ha_indemnizadas": 10461.88,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 76,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            664
+          ],
+          [
+            "PAPA",
+            596
+          ],
+          [
+            "QUINUA",
+            155
+          ],
+          [
+            "HABA GRANO SECO",
+            92
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            79
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            570
+          ],
+          [
+            "GRANIZO",
+            402
+          ],
+          [
+            "HELADA",
+            258
+          ],
+          [
+            "ENFERMEDADES",
+            197
+          ],
+          [
+            "PLAGAS",
+            126
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 1268,
+        "indemnizados": 215,
+        "perdida_total": 215,
+        "monto_indemnizado": 5932792.08,
+        "ha_indemnizadas": 7415.99,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 76,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            484
+          ],
+          [
+            "PAPA",
+            306
+          ],
+          [
+            "HABA GRANO SECO",
+            126
+          ],
+          [
+            "TRIGO",
+            80
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            79
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            351
+          ],
+          [
+            "SEQUIA",
+            315
+          ],
+          [
+            "ENFERMEDADES",
+            198
+          ],
+          [
+            "HELADA",
+            137
+          ],
+          [
+            "PLAGAS",
+            103
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 2283,
+        "indemnizados": 312,
+        "perdida_total": 312,
+        "monto_indemnizado": 8085747.34,
+        "ha_indemnizadas": 10107.18,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 80,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            805
+          ],
+          [
+            "PAPA",
+            627
+          ],
+          [
+            "HABA GRANO SECO",
+            219
+          ],
+          [
+            "CEBADA GRANO",
+            125
+          ],
+          [
+            "QUINUA",
+            120
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            688
+          ],
+          [
+            "GRANIZO",
+            520
+          ],
+          [
+            "HELADA",
+            498
+          ],
+          [
+            "ENFERMEDADES",
+            262
+          ],
+          [
+            "VIENTO_FUERTE",
+            97
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 1460,
+        "indemnizados": 372,
+        "perdida_total": 116,
+        "monto_indemnizado": 5789600.0,
+        "ha_indemnizadas": 7246.5,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 84,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAÍZ AMILÁCEO",
+            549
+          ],
+          [
+            "PAPA",
+            411
+          ],
+          [
+            "HABA GRANO SECO",
+            124
+          ],
+          [
+            "CEBADA GRANO",
+            70
+          ],
+          [
+            "QUINUA",
+            65
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            571
+          ],
+          [
+            "GRANIZO",
+            282
+          ],
+          [
+            "VIENTO_FUERTE",
+            194
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            134
+          ],
+          [
+            "HELADA",
+            82
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 1358,
+        "indemnizados": 265,
+        "perdida_total": 116,
+        "monto_indemnizado": 3984848.0,
+        "ha_indemnizadas": 4988.56,
+        "monto_desembolsado": 3984848.0,
+        "provincias": 7,
+        "distritos": 84,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            468
+          ],
+          [
+            "PAPA",
+            342
+          ],
+          [
+            "HABA GRANO SECO",
+            165
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            76
+          ],
+          [
+            "QUINUA",
+            74
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            353
+          ],
+          [
+            "ENFERMEDADES",
+            337
+          ],
+          [
+            "VIENTO_FUERTE",
+            172
+          ],
+          [
+            "HELADA",
+            117
+          ],
+          [
+            "PLAGAS",
+            108
+          ]
+        ]
+      }
+    },
+    "AYACUCHO": {
+      "2020-2021": {
+        "avisos": 4133,
+        "indemnizados": 411,
+        "perdida_total": 0,
+        "monto_indemnizado": 16482050.0,
+        "ha_indemnizadas": 25357.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 104,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            839
+          ],
+          [
+            "PAPA",
+            803
+          ],
+          [
+            "HABA GRANO SECO",
+            694
+          ],
+          [
+            "CEBADA GRANO",
+            524
+          ],
+          [
+            "QUINUA",
+            470
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            1108
+          ],
+          [
+            "HELADA",
+            1056
+          ],
+          [
+            "ENFERMEDADES",
+            728
+          ],
+          [
+            "SEQUIA",
+            659
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            325
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 2569,
+        "indemnizados": 197,
+        "perdida_total": 197,
+        "monto_indemnizado": 4044347.12,
+        "ha_indemnizadas": 5055.43,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 91,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            612
+          ],
+          [
+            "MAIZ AMILACEO",
+            514
+          ],
+          [
+            "HABA GRANO SECO",
+            375
+          ],
+          [
+            "CEBADA GRANO",
+            310
+          ],
+          [
+            "QUINUA",
+            240
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            810
+          ],
+          [
+            "HELADA",
+            529
+          ],
+          [
+            "SEQUIA",
+            432
+          ],
+          [
+            "ENFERMEDADES",
+            319
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            302
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 2559,
+        "indemnizados": 394,
+        "perdida_total": 394,
+        "monto_indemnizado": 7327758.08,
+        "ha_indemnizadas": 9159.7,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 103,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            577
+          ],
+          [
+            "PAPA",
+            552
+          ],
+          [
+            "HABA GRANO SECO",
+            315
+          ],
+          [
+            "CEBADA GRANO",
+            245
+          ],
+          [
+            "QUINUA",
+            221
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            692
+          ],
+          [
+            "GRANIZO",
+            687
+          ],
+          [
+            "HELADA",
+            533
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            252
+          ],
+          [
+            "ENFERMEDADES",
+            142
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 1865,
+        "indemnizados": 328,
+        "perdida_total": 100,
+        "monto_indemnizado": 4393440.0,
+        "ha_indemnizadas": 5545.3,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 115,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            421
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            419
+          ],
+          [
+            "HABA GRANO SECO",
+            243
+          ],
+          [
+            "CEBADA GRANO",
+            196
+          ],
+          [
+            "QUINUA",
+            154
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            574
+          ],
+          [
+            "GRANIZO",
+            453
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            290
+          ],
+          [
+            "VIENTO_FUERTE",
+            181
+          ],
+          [
+            "HELADA",
+            168
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 2815,
+        "indemnizados": 649,
+        "perdida_total": 373,
+        "monto_indemnizado": 9143282.6,
+        "ha_indemnizadas": 11527.7,
+        "monto_desembolsado": 9143282.6,
+        "provincias": 11,
+        "distritos": 116,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            629
+          ],
+          [
+            "PAPA",
+            628
+          ],
+          [
+            "HABA GRANO SECO",
+            347
+          ],
+          [
+            "QUINUA",
+            297
+          ],
+          [
+            "CEBADA GRANO",
+            169
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            682
+          ],
+          [
+            "ENFERMEDADES",
+            636
+          ],
+          [
+            "HELADA",
+            567
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            418
+          ],
+          [
+            "VIENTO_FUERTE",
+            146
+          ]
+        ]
+      }
+    },
+    "CAJAMARCA": {
+      "2020-2021": {
+        "avisos": 85,
+        "indemnizados": 16,
+        "perdida_total": 0,
+        "monto_indemnizado": 1825200.0,
+        "ha_indemnizadas": 2808.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 15,
+        "meses_siniestro": [
+          2,
+          3,
+          5,
+          9,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            21
+          ],
+          [
+            "MAIZ AMILACEO",
+            20
+          ],
+          [
+            "MAIZ CHOCLO",
+            12
+          ],
+          [
+            "ARROZ",
+            7
+          ],
+          [
+            "ALFALFA",
+            7
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "PLAGAS",
+            32
+          ],
+          [
+            "HELADA",
+            25
+          ],
+          [
+            "GRANIZO",
+            10
+          ],
+          [
+            "INUNDACION",
+            6
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            4
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 200,
+        "indemnizados": 20,
+        "perdida_total": 6,
+        "monto_indemnizado": 326400.0,
+        "ha_indemnizadas": 408.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 51,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            44
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            28
+          ],
+          [
+            "ARVEJA GRANO SECO",
+            27
+          ],
+          [
+            "PAPA",
+            21
+          ],
+          [
+            "ARROZ",
+            18
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "EXCESO_HUMEDAD",
+            67
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            63
+          ],
+          [
+            "INUNDACION",
+            26
+          ],
+          [
+            "HUAYCO",
+            25
+          ],
+          [
+            "PLAGAS",
+            17
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 750,
+        "indemnizados": 44,
+        "perdida_total": 10,
+        "monto_indemnizado": 1221480.0,
+        "ha_indemnizadas": 1526.85,
+        "monto_desembolsado": 0.0,
+        "provincias": 13,
+        "distritos": 97,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            174
+          ],
+          [
+            "PAPA",
+            147
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            61
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            58
+          ],
+          [
+            "MAIZ CHOCLO",
+            50
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            410
+          ],
+          [
+            "INUNDACION",
+            144
+          ],
+          [
+            "GRANIZO",
+            70
+          ],
+          [
+            "HUAYCO",
+            45
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            29
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 371,
+        "indemnizados": 149,
+        "perdida_total": 131,
+        "monto_indemnizado": 1250598.0,
+        "ha_indemnizadas": 1667.15,
+        "monto_desembolsado": 0.0,
+        "provincias": 13,
+        "distritos": 56,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "MAÍZ AMILÁCEO",
+            122
+          ],
+          [
+            "PAPA",
+            77
+          ],
+          [
+            "MAÍZ AMARILLO DURO",
+            44
+          ],
+          [
+            "CAFÉ",
+            38
+          ],
+          [
+            "TRIGO DURO",
+            14
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            196
+          ],
+          [
+            "ENFERMEDADES",
+            58
+          ],
+          [
+            "VIENTO_FUERTE",
+            54
+          ],
+          [
+            "PLAGAS",
+            46
+          ],
+          [
+            "HELADA",
+            8
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 428,
+        "indemnizados": 83,
+        "perdida_total": 68,
+        "monto_indemnizado": 2844396.08,
+        "ha_indemnizadas": 3593.66,
+        "monto_desembolsado": 2843020.96,
+        "provincias": 11,
+        "distritos": 56,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "CAFE",
+            119
+          ],
+          [
+            "PAPA",
+            74
+          ],
+          [
+            "MAIZ AMILACEO",
+            54
+          ],
+          [
+            "ARROZ",
+            21
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            19
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            85
+          ],
+          [
+            "SEQUIA",
+            82
+          ],
+          [
+            "INUNDACION",
+            40
+          ],
+          [
+            "INCENDIO",
+            38
+          ],
+          [
+            "DESLIZAMIENTO",
+            37
+          ]
+        ]
+      }
+    },
+    "CUSCO": {
+      "2020-2021": {
+        "avisos": 361,
+        "indemnizados": 35,
+        "perdida_total": 0,
+        "monto_indemnizado": 1225250.0,
+        "ha_indemnizadas": 1885.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 12,
+        "distritos": 60,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            153
+          ],
+          [
+            "MAIZ AMILACEO",
+            90
+          ],
+          [
+            "AVENA FORRAJERA",
+            41
+          ],
+          [
+            "CEBADA GRANO",
+            20
+          ],
+          [
+            "HABA GRANO SECO",
+            16
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            270
+          ],
+          [
+            "GRANIZO",
+            67
+          ],
+          [
+            "SEQUIA",
+            14
+          ],
+          [
+            "ENFERMEDADES",
+            3
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            2
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 349,
+        "indemnizados": 42,
+        "perdida_total": 42,
+        "monto_indemnizado": 841237.84,
+        "ha_indemnizadas": 1051.55,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 40,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            120
+          ],
+          [
+            "CEBADA GRANO",
+            54
+          ],
+          [
+            "MAIZ AMILACEO",
+            50
+          ],
+          [
+            "AVENA FORRAJERA",
+            41
+          ],
+          [
+            "HABA GRANO SECO",
+            40
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            198
+          ],
+          [
+            "HELADA",
+            84
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            45
+          ],
+          [
+            "INUNDACION",
+            10
+          ],
+          [
+            "PLAGAS",
+            5
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 2217,
+        "indemnizados": 287,
+        "perdida_total": 287,
+        "monto_indemnizado": 5971390.4,
+        "ha_indemnizadas": 7464.24,
+        "monto_desembolsado": 0.0,
+        "provincias": 13,
+        "distritos": 91,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            315
+          ],
+          [
+            "CEBADA GRANO",
+            312
+          ],
+          [
+            "HABA GRANO SECO",
+            304
+          ],
+          [
+            "MAIZ AMILACEO",
+            280
+          ],
+          [
+            "AVENA GRANO SECO",
+            173
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            1498
+          ],
+          [
+            "SEQUIA",
+            547
+          ],
+          [
+            "HELADA",
+            132
+          ],
+          [
+            "INCENDIO",
+            23
+          ],
+          [
+            "PLAGAS",
+            7
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 693,
+        "indemnizados": 121,
+        "perdida_total": 73,
+        "monto_indemnizado": 1543749.8,
+        "ha_indemnizadas": 2074.84,
+        "monto_desembolsado": 0.0,
+        "provincias": 10,
+        "distritos": 68,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA COLOR",
+            119
+          ],
+          [
+            "PAPA NATIVA",
+            98
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            70
+          ],
+          [
+            "PAPA BLANCA",
+            59
+          ],
+          [
+            "HABA GRANO SECO",
+            52
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            261
+          ],
+          [
+            "GRANIZO",
+            174
+          ],
+          [
+            "PLAGAS",
+            67
+          ],
+          [
+            "INUNDACION",
+            54
+          ],
+          [
+            "HUAYCO",
+            50
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 1428,
+        "indemnizados": 220,
+        "perdida_total": 157,
+        "monto_indemnizado": 2098924.0,
+        "ha_indemnizadas": 2853.39,
+        "monto_desembolsado": 2098924.0,
+        "provincias": 13,
+        "distritos": 100,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA COLOR",
+            239
+          ],
+          [
+            "PAPA NATIVA",
+            231
+          ],
+          [
+            "MAIZ AMILACEO",
+            147
+          ],
+          [
+            "HABA GRANO SECO",
+            123
+          ],
+          [
+            "CAFE",
+            71
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            351
+          ],
+          [
+            "HELADA",
+            338
+          ],
+          [
+            "GRANIZO",
+            232
+          ],
+          [
+            "INUNDACION",
+            179
+          ],
+          [
+            "NIEVE",
+            55
+          ]
+        ]
+      }
+    },
+    "HUANCAVELICA": {
+      "2020-2021": {
+        "avisos": 1414,
+        "indemnizados": 177,
+        "perdida_total": 0,
+        "monto_indemnizado": 5823350.0,
+        "ha_indemnizadas": 8959.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 86,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            436
+          ],
+          [
+            "HABA GRANO SECO",
+            251
+          ],
+          [
+            "MAIZ AMILACEO",
+            223
+          ],
+          [
+            "CEBADA GRANO",
+            171
+          ],
+          [
+            "TRIGO",
+            75
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            703
+          ],
+          [
+            "GRANIZO",
+            313
+          ],
+          [
+            "SEQUIA",
+            212
+          ],
+          [
+            "ENFERMEDADES",
+            90
+          ],
+          [
+            "PLAGAS",
+            43
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 544,
+        "indemnizados": 84,
+        "perdida_total": 84,
+        "monto_indemnizado": 2155225.92,
+        "ha_indemnizadas": 2694.03,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 60,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            170
+          ],
+          [
+            "MAIZ AMILACEO",
+            124
+          ],
+          [
+            "HABA GRANO SECO",
+            100
+          ],
+          [
+            "CEBADA GRANO",
+            75
+          ],
+          [
+            "HABA GRANO VERDE",
+            25
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            152
+          ],
+          [
+            "SEQUIA",
+            121
+          ],
+          [
+            "HELADA",
+            117
+          ],
+          [
+            "GRANIZO",
+            104
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            17
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 1329,
+        "indemnizados": 299,
+        "perdida_total": 299,
+        "monto_indemnizado": 6820857.47,
+        "ha_indemnizadas": 8526.07,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 89,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            299
+          ],
+          [
+            "MAIZ AMILACEO",
+            295
+          ],
+          [
+            "CEBADA GRANO",
+            249
+          ],
+          [
+            "HABA GRANO SECO",
+            226
+          ],
+          [
+            "TRIGO",
+            56
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            473
+          ],
+          [
+            "HELADA",
+            388
+          ],
+          [
+            "GRANIZO",
+            187
+          ],
+          [
+            "ENFERMEDADES",
+            126
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            54
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 1022,
+        "indemnizados": 297,
+        "perdida_total": 216,
+        "monto_indemnizado": 2152000.0,
+        "ha_indemnizadas": 2850.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 8,
+        "distritos": 90,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            321
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            191
+          ],
+          [
+            "HABA GRANO SECO",
+            110
+          ],
+          [
+            "CEBADA GRANO",
+            85
+          ],
+          [
+            "ARVEJA GRANO VERDE",
+            65
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            428
+          ],
+          [
+            "GRANIZO",
+            155
+          ],
+          [
+            "HELADA",
+            146
+          ],
+          [
+            "VIENTO_FUERTE",
+            110
+          ],
+          [
+            "PLAGAS",
+            74
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 1651,
+        "indemnizados": 443,
+        "perdida_total": 328,
+        "monto_indemnizado": 3862885.36,
+        "ha_indemnizadas": 4927.44,
+        "monto_desembolsado": 3862885.36,
+        "provincias": 7,
+        "distritos": 95,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            489
+          ],
+          [
+            "HABA GRANO SECO",
+            258
+          ],
+          [
+            "MAIZ AMILACEO",
+            257
+          ],
+          [
+            "CEBADA GRANO",
+            182
+          ],
+          [
+            "ARVEJA GRANO VERDE",
+            101
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            541
+          ],
+          [
+            "HELADA",
+            383
+          ],
+          [
+            "GRANIZO",
+            306
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            158
+          ],
+          [
+            "VIENTO_FUERTE",
+            76
+          ]
+        ]
+      }
+    },
+    "HUANUCO": {
+      "2020-2021": {
+        "avisos": 464,
+        "indemnizados": 49,
+        "perdida_total": 0,
+        "monto_indemnizado": 1514500.0,
+        "ha_indemnizadas": 2330.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 49,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            187
+          ],
+          [
+            "MAIZ AMILACEO",
+            109
+          ],
+          [
+            "HABA GRANO SECO",
+            64
+          ],
+          [
+            "TRIGO",
+            31
+          ],
+          [
+            "OLLUCO",
+            28
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            197
+          ],
+          [
+            "GRANIZO",
+            114
+          ],
+          [
+            "SEQUIA",
+            82
+          ],
+          [
+            "ENFERMEDADES",
+            57
+          ],
+          [
+            "PLAGAS",
+            8
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 288,
+        "indemnizados": 52,
+        "perdida_total": 52,
+        "monto_indemnizado": 1178400.0,
+        "ha_indemnizadas": 1473.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 44,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            121
+          ],
+          [
+            "MAIZ AMILACEO",
+            76
+          ],
+          [
+            "HABA GRANO SECO",
+            32
+          ],
+          [
+            "TRIGO",
+            26
+          ],
+          [
+            "CEBADA GRANO",
+            17
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            187
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            41
+          ],
+          [
+            "ENFERMEDADES",
+            35
+          ],
+          [
+            "VIENTO_FUERTE",
+            9
+          ],
+          [
+            "HELADA",
+            8
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 607,
+        "indemnizados": 104,
+        "perdida_total": 104,
+        "monto_indemnizado": 1486528.0,
+        "ha_indemnizadas": 1858.16,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 60,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            283
+          ],
+          [
+            "MAIZ AMILACEO",
+            135
+          ],
+          [
+            "HABA GRANO SECO",
+            37
+          ],
+          [
+            "ARVEJA GRANO VERDE",
+            25
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            19
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            198
+          ],
+          [
+            "GRANIZO",
+            172
+          ],
+          [
+            "SEQUIA",
+            123
+          ],
+          [
+            "VIENTO_FUERTE",
+            62
+          ],
+          [
+            "HUAYCO",
+            16
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 814,
+        "indemnizados": 262,
+        "perdida_total": 111,
+        "monto_indemnizado": 3625059.84,
+        "ha_indemnizadas": 4544.63,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 76,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            259
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            134
+          ],
+          [
+            "PLÁTANO",
+            90
+          ],
+          [
+            "CEBADA GRANO",
+            50
+          ],
+          [
+            "CACAO",
+            45
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            260
+          ],
+          [
+            "INUNDACION",
+            170
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            103
+          ],
+          [
+            "GRANIZO",
+            86
+          ],
+          [
+            "SEQUIA",
+            60
+          ]
+        ]
+      }
+    },
+    "JUNIN": {
+      "2020-2021": {
+        "avisos": 773,
+        "indemnizados": 64,
+        "perdida_total": 0,
+        "monto_indemnizado": 1054950.0,
+        "ha_indemnizadas": 1623.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 8,
+        "distritos": 87,
+        "meses_siniestro": [
+          2,
+          3,
+          6,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            245
+          ],
+          [
+            "MAIZ AMILACEO",
+            111
+          ],
+          [
+            "MAIZ CHOCLO",
+            99
+          ],
+          [
+            "HABA GRANO SECO",
+            84
+          ],
+          [
+            "OLLUCO",
+            69
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            689
+          ],
+          [
+            "SEQUIA",
+            37
+          ],
+          [
+            "GRANIZO",
+            31
+          ],
+          [
+            "INUNDACION",
+            9
+          ],
+          [
+            "ALTAS_TEMPERATURAS",
+            4
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 174,
+        "indemnizados": 37,
+        "perdida_total": 37,
+        "monto_indemnizado": 149387.2,
+        "ha_indemnizadas": 186.73,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 42,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            53
+          ],
+          [
+            "MAIZ AMILACEO",
+            22
+          ],
+          [
+            "MAIZ CHOCLO",
+            14
+          ],
+          [
+            "HABA GRANO SECO",
+            9
+          ],
+          [
+            "PLATANO",
+            9
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            96
+          ],
+          [
+            "INUNDACION",
+            30
+          ],
+          [
+            "HELADA",
+            27
+          ],
+          [
+            "SEQUIA",
+            9
+          ],
+          [
+            "HUAYCO",
+            8
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 514,
+        "indemnizados": 99,
+        "perdida_total": 99,
+        "monto_indemnizado": 1729005.52,
+        "ha_indemnizadas": 2161.26,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 77,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            135
+          ],
+          [
+            "MAIZ AMILACEO",
+            88
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            59
+          ],
+          [
+            "MAIZ CHOCLO",
+            59
+          ],
+          [
+            "ARVEJA GRANO VERDE",
+            19
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            242
+          ],
+          [
+            "HELADA",
+            155
+          ],
+          [
+            "GRANIZO",
+            75
+          ],
+          [
+            "INCENDIO",
+            14
+          ],
+          [
+            "INUNDACION",
+            11
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 662,
+        "indemnizados": 224,
+        "perdida_total": 156,
+        "monto_indemnizado": 2098477.16,
+        "ha_indemnizadas": 2635.58,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 80,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            164
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            82
+          ],
+          [
+            "PLÁTANO",
+            49
+          ],
+          [
+            "MAÍZ CHOCLO",
+            39
+          ],
+          [
+            "HABA GRANO VERDE",
+            35
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            187
+          ],
+          [
+            "GRANIZO",
+            168
+          ],
+          [
+            "ENFERMEDADES",
+            71
+          ],
+          [
+            "HUAYCO",
+            67
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            51
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 956,
+        "indemnizados": 343,
+        "perdida_total": 281,
+        "monto_indemnizado": 1950315.04,
+        "ha_indemnizadas": 2471.11,
+        "monto_desembolsado": 1925489.6,
+        "provincias": 9,
+        "distritos": 75,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            107
+          ],
+          [
+            "PLATANO",
+            99
+          ],
+          [
+            "MAIZ AMILACEO",
+            70
+          ],
+          [
+            "CAFE",
+            69
+          ],
+          [
+            "CACAO",
+            60
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            219
+          ],
+          [
+            "INUNDACION",
+            213
+          ],
+          [
+            "DESLIZAMIENTO",
+            127
+          ],
+          [
+            "INCENDIO",
+            95
+          ],
+          [
+            "HELADA",
+            62
+          ]
+        ]
+      }
+    },
+    "LA LIBERTAD": {
+      "2020-2021": {
+        "avisos": 31,
+        "indemnizados": 1,
+        "perdida_total": 0,
+        "monto_indemnizado": 5200.0,
+        "ha_indemnizadas": 8.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 5,
+        "distritos": 7,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          7,
+          10
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            8
+          ],
+          [
+            "CEBADA GRANO",
+            5
+          ],
+          [
+            "TRIGO",
+            4
+          ],
+          [
+            "MAIZ AMILACEO",
+            2
+          ],
+          [
+            "ARVEJA GRANO SECO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            25
+          ],
+          [
+            "SEQUIA",
+            3
+          ],
+          [
+            "HELADA",
+            2
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            1
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 6,
+        "indemnizados": 0,
+        "perdida_total": 0,
+        "monto_indemnizado": 0.0,
+        "ha_indemnizadas": 0.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 2,
+        "meses_siniestro": [
+          2,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "TRIGO",
+            2
+          ],
+          [
+            "MAIZ AMILACEO",
+            1
+          ],
+          [
+            "OLLUCO",
+            1
+          ],
+          [
+            "HABA GRANO SECO",
+            1
+          ],
+          [
+            "PAPA",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HUAYCO",
+            3
+          ],
+          [
+            "GRANIZO",
+            3
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 181,
+        "indemnizados": 39,
+        "perdida_total": 39,
+        "monto_indemnizado": 136395.04,
+        "ha_indemnizadas": 170.49,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 31,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            38
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            23
+          ],
+          [
+            "ARROZ",
+            17
+          ],
+          [
+            "ARVEJA GRANO SECO",
+            10
+          ],
+          [
+            "CEBADA GRANO",
+            10
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "LLUVIA_EXCESIVA",
+            102
+          ],
+          [
+            "HUAYCO",
+            26
+          ],
+          [
+            "HELADA",
+            15
+          ],
+          [
+            "GRANIZO",
+            12
+          ],
+          [
+            "SEQUIA",
+            11
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 268,
+        "indemnizados": 143,
+        "perdida_total": 117,
+        "monto_indemnizado": 912272.56,
+        "ha_indemnizadas": 1194.45,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 30,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            89
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            46
+          ],
+          [
+            "TRIGO DURO",
+            25
+          ],
+          [
+            "PALTA",
+            14
+          ],
+          [
+            "ARVEJA GRANO SECO",
+            12
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            60
+          ],
+          [
+            "SEQUIA",
+            55
+          ],
+          [
+            "PLAGAS",
+            44
+          ],
+          [
+            "ENFERMEDADES",
+            41
+          ],
+          [
+            "GRANIZO",
+            25
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 436,
+        "indemnizados": 212,
+        "perdida_total": 193,
+        "monto_indemnizado": 1270772.08,
+        "ha_indemnizadas": 1597.74,
+        "monto_desembolsado": 1237622.08,
+        "provincias": 10,
+        "distritos": 39,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            90
+          ],
+          [
+            "MAIZ AMILACEO",
+            43
+          ],
+          [
+            "PALTO",
+            41
+          ],
+          [
+            "TRIGO",
+            28
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            26
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            99
+          ],
+          [
+            "PLAGAS",
+            61
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            60
+          ],
+          [
+            "INUNDACION",
+            58
+          ],
+          [
+            "DESLIZAMIENTO",
+            45
+          ]
+        ]
+      }
+    },
+    "LAMBAYEQUE": {
+      "2020-2021": {
+        "avisos": 39,
+        "indemnizados": 0,
+        "perdida_total": 0,
+        "monto_indemnizado": 0.0,
+        "ha_indemnizadas": 0.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 2,
+        "meses_siniestro": [
+          11
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            7
+          ],
+          [
+            "MAIZ CHOCLO",
+            7
+          ],
+          [
+            "MAIZ AMILACEO",
+            7
+          ],
+          [
+            "OLLUCO",
+            6
+          ],
+          [
+            "HABA GRANO SECO",
+            6
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            38
+          ],
+          [
+            "SEQUIA",
+            1
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 6,
+        "indemnizados": 2,
+        "perdida_total": 2,
+        "monto_indemnizado": 6400.0,
+        "ha_indemnizadas": 8.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 2,
+        "meses_siniestro": [
+          2,
+          3
+        ],
+        "top_cultivos": [
+          [
+            "ARROZ",
+            6
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            5
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 275,
+        "indemnizados": 34,
+        "perdida_total": 4,
+        "monto_indemnizado": 703200.0,
+        "ha_indemnizadas": 879.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 27,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          6
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            74
+          ],
+          [
+            "ARROZ",
+            54
+          ],
+          [
+            "ALGODON",
+            34
+          ],
+          [
+            "YUCA",
+            17
+          ],
+          [
+            "MAIZ CHOCLO",
+            16
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            174
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            76
+          ],
+          [
+            "HUAYCO",
+            21
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            2
+          ],
+          [
+            "GRANIZO",
+            1
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 47,
+        "indemnizados": 25,
+        "perdida_total": 18,
+        "monto_indemnizado": 294049.84,
+        "ha_indemnizadas": 377.37,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 5,
+        "meses_siniestro": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          9
+        ],
+        "top_cultivos": [
+          [
+            "MAÍZ AMARILLO DURO",
+            16
+          ],
+          [
+            "FRIJOL DE PALO GRANO VERDE",
+            10
+          ],
+          [
+            "CAMOTE",
+            6
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            4
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            3
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            36
+          ],
+          [
+            "HUAYCO",
+            10
+          ],
+          [
+            "INUNDACION",
+            1
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 43,
+        "indemnizados": 28,
+        "perdida_total": 28,
+        "monto_indemnizado": 66900.0,
+        "ha_indemnizadas": 83.62,
+        "monto_desembolsado": 66900.0,
+        "provincias": 3,
+        "distritos": 7,
+        "meses_siniestro": [
+          3,
+          4,
+          9
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            17
+          ],
+          [
+            "CAFE",
+            13
+          ],
+          [
+            "FRIJOL GRANO VERDE",
+            7
+          ],
+          [
+            "ARROZ",
+            2
+          ],
+          [
+            "PASTO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "LLUVIA_EXCESIVA",
+            22
+          ],
+          [
+            "SEQUIA",
+            15
+          ],
+          [
+            "INUNDACION",
+            2
+          ],
+          [
+            "HUAYCO",
+            2
+          ],
+          [
+            "INCENDIO",
+            2
+          ]
+        ]
+      }
+    },
+    "LIMA": {
+      "2020-2021": {
+        "avisos": 8,
+        "indemnizados": 3,
+        "perdida_total": 0,
+        "monto_indemnizado": 165100.0,
+        "ha_indemnizadas": 254.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 4,
+        "distritos": 5,
+        "meses_siniestro": [
+          2,
+          10,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            7
+          ],
+          [
+            "OLLUCO",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            8
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 11,
+        "indemnizados": 4,
+        "perdida_total": 4,
+        "monto_indemnizado": 8054.16,
+        "ha_indemnizadas": 10.07,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 3,
+        "meses_siniestro": [
+          1,
+          2,
+          8,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            5
+          ],
+          [
+            "HABA GRANO VERDE",
+            2
+          ],
+          [
+            "VID",
+            1
+          ],
+          [
+            "MELOCOTON",
+            1
+          ],
+          [
+            "CHIRIMOYA",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            6
+          ],
+          [
+            "HUAYCO",
+            4
+          ],
+          [
+            "SEQUIA",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 456,
+        "indemnizados": 197,
+        "perdida_total": 197,
+        "monto_indemnizado": 906614.52,
+        "ha_indemnizadas": 1133.27,
+        "monto_desembolsado": 0.0,
+        "provincias": 10,
+        "distritos": 56,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PALTO",
+            85
+          ],
+          [
+            "MANZANO",
+            40
+          ],
+          [
+            "ALFALFA",
+            29
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            25
+          ],
+          [
+            "MAIZ CHALA",
+            21
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HUAYCO",
+            332
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            43
+          ],
+          [
+            "SEQUIA",
+            21
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            20
+          ],
+          [
+            "HELADA",
+            16
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 455,
+        "indemnizados": 180,
+        "perdida_total": 64,
+        "monto_indemnizado": 1479469.64,
+        "ha_indemnizadas": 1921.15,
+        "monto_desembolsado": 0.0,
+        "provincias": 10,
+        "distritos": 85,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            72
+          ],
+          [
+            "PALTA",
+            67
+          ],
+          [
+            "MANZANO",
+            47
+          ],
+          [
+            "ALFALFA",
+            44
+          ],
+          [
+            "CAMOTE",
+            24
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "PLAGAS",
+            167
+          ],
+          [
+            "ENFERMEDADES",
+            118
+          ],
+          [
+            "HELADA",
+            39
+          ],
+          [
+            "ALTAS_TEMPERATURAS",
+            39
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            29
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 706,
+        "indemnizados": 247,
+        "perdida_total": 232,
+        "monto_indemnizado": 1148171.84,
+        "ha_indemnizadas": 1510.67,
+        "monto_desembolsado": 1147691.84,
+        "provincias": 11,
+        "distritos": 101,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            137
+          ],
+          [
+            "PALTO",
+            97
+          ],
+          [
+            "ALFALFA",
+            68
+          ],
+          [
+            "MAIZ AMILACEO",
+            44
+          ],
+          [
+            "OLLUCO",
+            41
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            368
+          ],
+          [
+            "INUNDACION",
+            62
+          ],
+          [
+            "PLAGAS",
+            60
+          ],
+          [
+            "ENFERMEDADES",
+            52
+          ],
+          [
+            "HUAYCO",
+            49
+          ]
+        ]
+      }
+    },
+    "LORETO": {
+      "2020-2021": {
+        "avisos": 75,
+        "indemnizados": 5,
+        "perdida_total": 0,
+        "monto_indemnizado": 547300.0,
+        "ha_indemnizadas": 842.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 22,
+        "meses_siniestro": [
+          2,
+          3,
+          6
+        ],
+        "top_cultivos": [
+          [
+            "YUCA",
+            55
+          ],
+          [
+            "ARROZ",
+            11
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            9
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            69
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            6
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 51,
+        "indemnizados": 8,
+        "perdida_total": 8,
+        "monto_indemnizado": 171200.0,
+        "ha_indemnizadas": 214.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 16,
+        "meses_siniestro": [
+          5
+        ],
+        "top_cultivos": [
+          [
+            "CACAO",
+            16
+          ],
+          [
+            "YUCA",
+            12
+          ],
+          [
+            "PLATANO",
+            12
+          ],
+          [
+            "MANI PARA FRUTA",
+            6
+          ],
+          [
+            "COCONA",
+            5
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            45
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            6
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 96,
+        "indemnizados": 10,
+        "perdida_total": 0,
+        "monto_indemnizado": 578318.19,
+        "ha_indemnizadas": 722.9,
+        "monto_desembolsado": 0.0,
+        "provincias": 5,
+        "distritos": 16,
+        "meses_siniestro": [
+          3,
+          6,
+          7
+        ],
+        "top_cultivos": [
+          [
+            "YUCA",
+            43
+          ],
+          [
+            "PLATANO",
+            36
+          ],
+          [
+            "ARROZ",
+            10
+          ],
+          [
+            "COCONA",
+            3
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            96
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 166,
+        "indemnizados": 46,
+        "perdida_total": 45,
+        "monto_indemnizado": 195508.8,
+        "ha_indemnizadas": 244.39,
+        "monto_desembolsado": 0.0,
+        "provincias": 6,
+        "distritos": 26,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          8,
+          9,
+          10,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "YUCA",
+            55
+          ],
+          [
+            "PLÁTANO",
+            54
+          ],
+          [
+            "MAÍZ AMARILLO DURO",
+            30
+          ],
+          [
+            "ARROZ",
+            14
+          ],
+          [
+            "PAPAYA",
+            4
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            140
+          ],
+          [
+            "VIENTO_FUERTE",
+            21
+          ],
+          [
+            "SEQUIA",
+            3
+          ],
+          [
+            "INCENDIO",
+            2
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 258,
+        "indemnizados": 68,
+        "perdida_total": 62,
+        "monto_indemnizado": 1374544.0,
+        "ha_indemnizadas": 1718.18,
+        "monto_desembolsado": 1374544.0,
+        "provincias": 7,
+        "distritos": 37,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          8,
+          9,
+          10
+        ],
+        "top_cultivos": [
+          [
+            "PLATANO",
+            111
+          ],
+          [
+            "YUCA",
+            89
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            15
+          ],
+          [
+            "PAPAYA",
+            11
+          ],
+          [
+            "COCONA",
+            7
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            240
+          ],
+          [
+            "VIENTO_FUERTE",
+            13
+          ],
+          [
+            "INCENDIO",
+            3
+          ],
+          [
+            "SEQUIA",
+            2
+          ]
+        ]
+      }
+    },
+    "MADRE DE DIOS": {
+      "2020-2021": {
+        "avisos": 74,
+        "indemnizados": 5,
+        "perdida_total": 0,
+        "monto_indemnizado": 85150.0,
+        "ha_indemnizadas": 131.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 6,
+        "meses_siniestro": [
+          2,
+          3,
+          10
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            27
+          ],
+          [
+            "YUCA",
+            26
+          ],
+          [
+            "ARROZ",
+            21
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            57
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            13
+          ],
+          [
+            "SEQUIA",
+            2
+          ],
+          [
+            "PLAGAS",
+            1
+          ],
+          [
+            "GRANIZO",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 17,
+        "indemnizados": 11,
+        "perdida_total": 7,
+        "monto_indemnizado": 51200.0,
+        "ha_indemnizadas": 64.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 6,
+        "meses_siniestro": [
+          2,
+          7,
+          9,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "YUCA",
+            7
+          ],
+          [
+            "PAPAYA",
+            3
+          ],
+          [
+            "PLATANO",
+            3
+          ],
+          [
+            "CACAO",
+            2
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            8
+          ],
+          [
+            "PLAGAS",
+            3
+          ],
+          [
+            "ENFERMEDADES",
+            3
+          ],
+          [
+            "VIENTO_FUERTE",
+            3
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 121,
+        "indemnizados": 70,
+        "perdida_total": 46,
+        "monto_indemnizado": 321200.0,
+        "ha_indemnizadas": 407.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 10,
+        "meses_siniestro": [
+          2,
+          8,
+          10,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "YUCA",
+            29
+          ],
+          [
+            "MAÍZ AMARILLO DURO",
+            25
+          ],
+          [
+            "PLÁTANO",
+            24
+          ],
+          [
+            "CACAO",
+            15
+          ],
+          [
+            "PAPAYA",
+            13
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            92
+          ],
+          [
+            "VIENTO_FUERTE",
+            19
+          ],
+          [
+            "INCENDIO",
+            7
+          ],
+          [
+            "PLAGAS",
+            2
+          ],
+          [
+            "ENFERMEDADES",
+            1
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 292,
+        "indemnizados": 121,
+        "perdida_total": 95,
+        "monto_indemnizado": 800807.28,
+        "ha_indemnizadas": 1158.63,
+        "monto_desembolsado": 800807.28,
+        "provincias": 3,
+        "distritos": 11,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "CACAO",
+            61
+          ],
+          [
+            "PLATANO",
+            52
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            45
+          ],
+          [
+            "YUCA",
+            34
+          ],
+          [
+            "LIMON",
+            24
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            171
+          ],
+          [
+            "INCENDIO",
+            82
+          ],
+          [
+            "PLAGAS",
+            22
+          ],
+          [
+            "ENFERMEDADES",
+            12
+          ],
+          [
+            "HUAYCO",
+            3
+          ]
+        ]
+      }
+    },
+    "MOQUEGUA": {
+      "2020-2021": {
+        "avisos": 28,
+        "indemnizados": 0,
+        "perdida_total": 0,
+        "monto_indemnizado": 0.0,
+        "ha_indemnizadas": 0.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 2,
+        "meses_siniestro": [
+          1,
+          2,
+          4
+        ],
+        "top_cultivos": [
+          [
+            "ALFALFA",
+            12
+          ],
+          [
+            "PAPA",
+            6
+          ],
+          [
+            "HABA GRANO SECO",
+            3
+          ],
+          [
+            "MAIZ AMILACEO",
+            3
+          ],
+          [
+            "QUINUA",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            16
+          ],
+          [
+            "HELADA",
+            12
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 55,
+        "indemnizados": 24,
+        "perdida_total": 24,
+        "monto_indemnizado": 157765.92,
+        "ha_indemnizadas": 197.21,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 5,
+        "meses_siniestro": [
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "top_cultivos": [
+          [
+            "ALFALFA",
+            39
+          ],
+          [
+            "MAIZ AMILACEO",
+            8
+          ],
+          [
+            "PAPA",
+            5
+          ],
+          [
+            "HABA GRANO SECO",
+            3
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            50
+          ],
+          [
+            "ALTAS_TEMPERATURAS",
+            4
+          ],
+          [
+            "HUAYCO",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 186,
+        "indemnizados": 43,
+        "perdida_total": 43,
+        "monto_indemnizado": 252960.0,
+        "ha_indemnizadas": 316.2,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 10,
+        "meses_siniestro": [
+          1,
+          4,
+          7,
+          10,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            62
+          ],
+          [
+            "MAIZ AMILACEO",
+            54
+          ],
+          [
+            "ALFALFA",
+            50
+          ],
+          [
+            "HABA GRANO SECO",
+            17
+          ],
+          [
+            "OREGANO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            156
+          ],
+          [
+            "ERUPCION_VOLCANICA",
+            28
+          ],
+          [
+            "HUAYCO",
+            2
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 75,
+        "indemnizados": 43,
+        "perdida_total": 33,
+        "monto_indemnizado": 533200.0,
+        "ha_indemnizadas": 687.5,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 15,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "top_cultivos": [
+          [
+            "ALFALFA",
+            25
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            12
+          ],
+          [
+            "OLIVO",
+            9
+          ],
+          [
+            "PALTA",
+            9
+          ],
+          [
+            "PAPA",
+            6
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            27
+          ],
+          [
+            "HUAYCO",
+            24
+          ],
+          [
+            "ALTAS_TEMPERATURAS",
+            9
+          ],
+          [
+            "VIENTO_FUERTE",
+            6
+          ],
+          [
+            "ENFERMEDADES",
+            4
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 137,
+        "indemnizados": 65,
+        "perdida_total": 58,
+        "monto_indemnizado": 404024.32,
+        "ha_indemnizadas": 518.97,
+        "monto_desembolsado": 404024.32,
+        "provincias": 2,
+        "distritos": 12,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            34
+          ],
+          [
+            "ALFALFA",
+            29
+          ],
+          [
+            "HABA GRANO SECO",
+            20
+          ],
+          [
+            "PAPA",
+            14
+          ],
+          [
+            "PALTO",
+            12
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "PLAGAS",
+            70
+          ],
+          [
+            "HELADA",
+            17
+          ],
+          [
+            "VIENTO_FUERTE",
+            17
+          ],
+          [
+            "DESLIZAMIENTO",
+            9
+          ],
+          [
+            "HUAYCO",
+            8
+          ]
+        ]
+      }
+    },
+    "PASCO": {
+      "2020-2021": {
+        "avisos": 302,
+        "indemnizados": 46,
+        "perdida_total": 0,
+        "monto_indemnizado": 2552550.0,
+        "ha_indemnizadas": 3927.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 17,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          5,
+          6,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            177
+          ],
+          [
+            "MAIZ AMILACEO",
+            60
+          ],
+          [
+            "MAIZ CHOCLO",
+            19
+          ],
+          [
+            "HABA GRANO SECO",
+            16
+          ],
+          [
+            "MACA",
+            9
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            86
+          ],
+          [
+            "ENFERMEDADES",
+            77
+          ],
+          [
+            "HELADA",
+            62
+          ],
+          [
+            "GRANIZO",
+            45
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            15
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 174,
+        "indemnizados": 34,
+        "perdida_total": 34,
+        "monto_indemnizado": 905704.0,
+        "ha_indemnizadas": 1132.13,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 18,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            64
+          ],
+          [
+            "MAIZ AMILACEO",
+            31
+          ],
+          [
+            "MAIZ CHOCLO",
+            15
+          ],
+          [
+            "HABA GRANO SECO",
+            11
+          ],
+          [
+            "CALABAZA",
+            7
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            89
+          ],
+          [
+            "GRANIZO",
+            34
+          ],
+          [
+            "HELADA",
+            19
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            10
+          ],
+          [
+            "HUAYCO",
+            9
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 246,
+        "indemnizados": 64,
+        "perdida_total": 64,
+        "monto_indemnizado": 1053119.44,
+        "ha_indemnizadas": 1316.4,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 23,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            110
+          ],
+          [
+            "MAIZ AMILACEO",
+            48
+          ],
+          [
+            "MAIZ CHOCLO",
+            11
+          ],
+          [
+            "HABA GRANO SECO",
+            9
+          ],
+          [
+            "OLLUCO",
+            9
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            70
+          ],
+          [
+            "HELADA",
+            64
+          ],
+          [
+            "SEQUIA",
+            44
+          ],
+          [
+            "PLAGAS",
+            16
+          ],
+          [
+            "INUNDACION",
+            13
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 281,
+        "indemnizados": 149,
+        "perdida_total": 78,
+        "monto_indemnizado": 2886517.16,
+        "ha_indemnizadas": 3609.82,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 22,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            92
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            42
+          ],
+          [
+            "ROCOTO",
+            19
+          ],
+          [
+            "ZAPALLO",
+            15
+          ],
+          [
+            "GRANADILLA",
+            15
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            141
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            39
+          ],
+          [
+            "INUNDACION",
+            32
+          ],
+          [
+            "PLAGAS",
+            16
+          ],
+          [
+            "VIENTO_FUERTE",
+            11
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 366,
+        "indemnizados": 112,
+        "perdida_total": 102,
+        "monto_indemnizado": 1222416.0,
+        "ha_indemnizadas": 1536.3,
+        "monto_desembolsado": 1222416.0,
+        "provincias": 3,
+        "distritos": 24,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            108
+          ],
+          [
+            "MAIZ AMILACEO",
+            63
+          ],
+          [
+            "CAFE",
+            28
+          ],
+          [
+            "GRANADILLA",
+            21
+          ],
+          [
+            "MAIZ CHOCLO",
+            15
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ENFERMEDADES",
+            99
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            79
+          ],
+          [
+            "HELADA",
+            49
+          ],
+          [
+            "GRANIZO",
+            36
+          ],
+          [
+            "INUNDACION",
+            34
+          ]
+        ]
+      }
+    },
+    "PIURA": {
+      "2020-2021": {
+        "avisos": 74,
+        "indemnizados": 0,
+        "perdida_total": 0,
+        "monto_indemnizado": 0.0,
+        "ha_indemnizadas": 0.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 6,
+        "meses_siniestro": [
+          3,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            57
+          ],
+          [
+            "ARROZ",
+            11
+          ],
+          [
+            "YUCA",
+            4
+          ],
+          [
+            "SOYA",
+            1
+          ],
+          [
+            "ALGODON",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            66
+          ],
+          [
+            "INUNDACION",
+            4
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            4
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 101,
+        "indemnizados": 16,
+        "perdida_total": 4,
+        "monto_indemnizado": 312800.0,
+        "ha_indemnizadas": 391.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 6,
+        "meses_siniestro": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          10
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            23
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            11
+          ],
+          [
+            "OLLUCO",
+            10
+          ],
+          [
+            "CAMOTE",
+            9
+          ],
+          [
+            "YUCA",
+            9
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HUAYCO",
+            59
+          ],
+          [
+            "SEQUIA",
+            14
+          ],
+          [
+            "INUNDACION",
+            12
+          ],
+          [
+            "ENFERMEDADES",
+            8
+          ],
+          [
+            "PLAGAS",
+            8
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 671,
+        "indemnizados": 41,
+        "perdida_total": 23,
+        "monto_indemnizado": 638859.82,
+        "ha_indemnizadas": 798.57,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 32,
+        "meses_siniestro": [
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            172
+          ],
+          [
+            "ALGODON",
+            66
+          ],
+          [
+            "MAIZ AMILACEO",
+            56
+          ],
+          [
+            "ARROZ",
+            45
+          ],
+          [
+            "MANGO",
+            40
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "LLUVIA_EXCESIVA",
+            311
+          ],
+          [
+            "INUNDACION",
+            217
+          ],
+          [
+            "HUAYCO",
+            72
+          ],
+          [
+            "PLAGAS",
+            27
+          ],
+          [
+            "ENFERMEDADES",
+            16
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 337,
+        "indemnizados": 110,
+        "perdida_total": 89,
+        "monto_indemnizado": 1368514.68,
+        "ha_indemnizadas": 1751.73,
+        "monto_desembolsado": 0.0,
+        "provincias": 7,
+        "distritos": 33,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10
+        ],
+        "top_cultivos": [
+          [
+            "MAÍZ AMARILLO DURO",
+            91
+          ],
+          [
+            "ARROZ",
+            68
+          ],
+          [
+            "ALGODÓN",
+            46
+          ],
+          [
+            "BANANO",
+            31
+          ],
+          [
+            "CAFÉ",
+            15
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            186
+          ],
+          [
+            "INUNDACION",
+            36
+          ],
+          [
+            "HUAYCO",
+            33
+          ],
+          [
+            "ENFERMEDADES",
+            32
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            24
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 795,
+        "indemnizados": 200,
+        "perdida_total": 167,
+        "monto_indemnizado": 2154344.2,
+        "ha_indemnizadas": 2741.97,
+        "monto_desembolsado": 2114331.85,
+        "provincias": 7,
+        "distritos": 46,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "ARROZ",
+            154
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            109
+          ],
+          [
+            "CAFE",
+            55
+          ],
+          [
+            "LIMON",
+            55
+          ],
+          [
+            "MANGO",
+            52
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            427
+          ],
+          [
+            "HUAYCO",
+            120
+          ],
+          [
+            "DESLIZAMIENTO",
+            64
+          ],
+          [
+            "INUNDACION",
+            56
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            48
+          ]
+        ]
+      }
+    },
+    "PUNO": {
+      "2020-2021": {
+        "avisos": 2101,
+        "indemnizados": 87,
+        "perdida_total": 0,
+        "monto_indemnizado": 4059250.0,
+        "ha_indemnizadas": 6245.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 11,
+        "distritos": 87,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            617
+          ],
+          [
+            "QUINUA",
+            489
+          ],
+          [
+            "AVENA FORRAJERA",
+            424
+          ],
+          [
+            "CAÑIHUA",
+            187
+          ],
+          [
+            "CEBADA GRANO",
+            179
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            908
+          ],
+          [
+            "GRANIZO",
+            429
+          ],
+          [
+            "SEQUIA",
+            228
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            210
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            185
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 1483,
+        "indemnizados": 153,
+        "perdida_total": 64,
+        "monto_indemnizado": 4764884.0,
+        "ha_indemnizadas": 5956.1,
+        "monto_desembolsado": 0.0,
+        "provincias": 12,
+        "distritos": 88,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            487
+          ],
+          [
+            "AVENA FORRAJERA",
+            357
+          ],
+          [
+            "QUINUA",
+            268
+          ],
+          [
+            "HABA GRANO SECO",
+            139
+          ],
+          [
+            "CEBADA GRANO",
+            101
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            489
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            337
+          ],
+          [
+            "INUNDACION",
+            289
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            162
+          ],
+          [
+            "HELADA",
+            102
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 2378,
+        "indemnizados": 374,
+        "perdida_total": 83,
+        "monto_indemnizado": 8586540.33,
+        "ha_indemnizadas": 10733.18,
+        "monto_desembolsado": 0.0,
+        "provincias": 13,
+        "distritos": 96,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            715
+          ],
+          [
+            "QUINUA",
+            552
+          ],
+          [
+            "AVENA FORRAJERA",
+            522
+          ],
+          [
+            "CEBADA GRANO",
+            209
+          ],
+          [
+            "HABA GRANO SECO",
+            182
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "SEQUIA",
+            822
+          ],
+          [
+            "HELADA",
+            762
+          ],
+          [
+            "TAPONAMIENTO",
+            519
+          ],
+          [
+            "GRANIZO",
+            261
+          ],
+          [
+            "ENFERMEDADES",
+            4
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 920,
+        "indemnizados": 185,
+        "perdida_total": 138,
+        "monto_indemnizado": 2122800.0,
+        "ha_indemnizadas": 2747.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 13,
+        "distritos": 90,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            282
+          ],
+          [
+            "QUINUA",
+            215
+          ],
+          [
+            "AVENA FORRAJERA",
+            181
+          ],
+          [
+            "HABA GRANO SECO",
+            60
+          ],
+          [
+            "CAÑIHUA",
+            46
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "GRANIZO",
+            204
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            165
+          ],
+          [
+            "PLAGAS",
+            161
+          ],
+          [
+            "HELADA",
+            145
+          ],
+          [
+            "INUNDACION",
+            141
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 2630,
+        "indemnizados": 278,
+        "perdida_total": 150,
+        "monto_indemnizado": 4638800.0,
+        "ha_indemnizadas": 6103.0,
+        "monto_desembolsado": 4638800.0,
+        "provincias": 13,
+        "distritos": 104,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            755
+          ],
+          [
+            "QUINUA",
+            486
+          ],
+          [
+            "AVENA FORRAJERA",
+            440
+          ],
+          [
+            "HABA GRANO SECO",
+            175
+          ],
+          [
+            "CEBADA GRANO",
+            150
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            727
+          ],
+          [
+            "HELADA",
+            720
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            548
+          ],
+          [
+            "ENFERMEDADES",
+            188
+          ],
+          [
+            "GRANIZO",
+            167
+          ]
+        ]
+      }
+    },
+    "SAN MARTIN": {
+      "2020-2021": {
+        "avisos": 89,
+        "indemnizados": 4,
+        "perdida_total": 0,
+        "monto_indemnizado": 360750.0,
+        "ha_indemnizadas": 555.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 5,
+        "distritos": 17,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          10
+        ],
+        "top_cultivos": [
+          [
+            "ARROZ",
+            74
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            9
+          ],
+          [
+            "YUCA",
+            4
+          ],
+          [
+            "FRIJOL GRANO SECO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            86
+          ],
+          [
+            "SEQUIA",
+            2
+          ],
+          [
+            "VIENTO_FUERTE",
+            1
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 74,
+        "indemnizados": 29,
+        "perdida_total": 29,
+        "monto_indemnizado": 283453.04,
+        "ha_indemnizadas": 354.32,
+        "monto_desembolsado": 0.0,
+        "provincias": 5,
+        "distritos": 11,
+        "meses_siniestro": [
+          1,
+          3,
+          5,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            30
+          ],
+          [
+            "PLATANO",
+            12
+          ],
+          [
+            "YUCA",
+            9
+          ],
+          [
+            "ARROZ",
+            6
+          ],
+          [
+            "CACAO",
+            4
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            54
+          ],
+          [
+            "SEQUIA",
+            13
+          ],
+          [
+            "HUAYCO",
+            5
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            2
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 249,
+        "indemnizados": 45,
+        "perdida_total": 45,
+        "monto_indemnizado": 432796.05,
+        "ha_indemnizadas": 541.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 37,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            72
+          ],
+          [
+            "ARROZ",
+            66
+          ],
+          [
+            "PLATANO",
+            34
+          ],
+          [
+            "YUCA",
+            24
+          ],
+          [
+            "CACAO",
+            21
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            166
+          ],
+          [
+            "HUAYCO",
+            34
+          ],
+          [
+            "ENFERMEDADES",
+            13
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            11
+          ],
+          [
+            "VIENTO_FUERTE",
+            6
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 335,
+        "indemnizados": 118,
+        "perdida_total": 106,
+        "monto_indemnizado": 1083081.44,
+        "ha_indemnizadas": 1354.77,
+        "monto_desembolsado": 0.0,
+        "provincias": 9,
+        "distritos": 51,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAÍZ AMARILLO DURO",
+            123
+          ],
+          [
+            "ARROZ",
+            69
+          ],
+          [
+            "PLÁTANO",
+            47
+          ],
+          [
+            "CACAO",
+            32
+          ],
+          [
+            "CAFÉ",
+            18
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            131
+          ],
+          [
+            "SEQUIA",
+            122
+          ],
+          [
+            "INCENDIO",
+            25
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            20
+          ],
+          [
+            "VIENTO_FUERTE",
+            16
+          ]
+        ]
+      }
+    },
+    "TACNA": {
+      "2020-2021": {
+        "avisos": 5,
+        "indemnizados": 0,
+        "perdida_total": 0,
+        "monto_indemnizado": 0.0,
+        "ha_indemnizadas": 0.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 2,
+        "meses_siniestro": [
+          1,
+          5
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ CHALA",
+            2
+          ],
+          [
+            "ALFALFA",
+            1
+          ],
+          [
+            "MAIZ AMILACEO",
+            1
+          ],
+          [
+            "PAPA",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HUAYCO",
+            3
+          ],
+          [
+            "VIENTO_FUERTE",
+            2
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 14,
+        "indemnizados": 3,
+        "perdida_total": 3,
+        "monto_indemnizado": 20000.0,
+        "ha_indemnizadas": 25.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 7,
+        "meses_siniestro": [
+          1,
+          5
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            11
+          ],
+          [
+            "MAIZ CHOCLO",
+            3
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            8
+          ],
+          [
+            "GRANIZO",
+            6
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 8,
+        "indemnizados": 2,
+        "perdida_total": 2,
+        "monto_indemnizado": 10400.0,
+        "ha_indemnizadas": 13.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 4,
+        "meses_siniestro": [
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            6
+          ],
+          [
+            "OREGANO",
+            1
+          ],
+          [
+            "HABA GRANO VERDE",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            5
+          ],
+          [
+            "GRANIZO",
+            3
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 27,
+        "indemnizados": 9,
+        "perdida_total": 7,
+        "monto_indemnizado": 246400.0,
+        "ha_indemnizadas": 319.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 4,
+        "distritos": 12,
+        "meses_siniestro": [
+          1,
+          2,
+          4,
+          6
+        ],
+        "top_cultivos": [
+          [
+            "MAÍZ AMILÁCEO",
+            21
+          ],
+          [
+            "MAÍZ CHALA",
+            2
+          ],
+          [
+            "OLIVO",
+            2
+          ],
+          [
+            "ZAPALLO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "VIENTO_FUERTE",
+            21
+          ],
+          [
+            "ALTAS_TEMPERATURAS",
+            4
+          ],
+          [
+            "HUAYCO",
+            2
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 45,
+        "indemnizados": 28,
+        "perdida_total": 28,
+        "monto_indemnizado": 85399.2,
+        "ha_indemnizadas": 106.75,
+        "monto_desembolsado": 68972.64,
+        "provincias": 4,
+        "distritos": 14,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          5,
+          6,
+          7,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            25
+          ],
+          [
+            "MAIZ CHALA",
+            4
+          ],
+          [
+            "ALFALFA",
+            3
+          ],
+          [
+            "PAPA",
+            2
+          ],
+          [
+            "MANZANO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            18
+          ],
+          [
+            "VIENTO_FUERTE",
+            9
+          ],
+          [
+            "HUAYCO",
+            8
+          ],
+          [
+            "PLAGAS",
+            5
+          ],
+          [
+            "ENFERMEDADES",
+            5
+          ]
+        ]
+      }
+    },
+    "TUMBES": {
+      "2020-2021": {
+        "avisos": 11,
+        "indemnizados": 3,
+        "perdida_total": 0,
+        "monto_indemnizado": 41600.0,
+        "ha_indemnizadas": 64.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 3,
+        "meses_siniestro": [
+          3
+        ],
+        "top_cultivos": [
+          [
+            "ARROZ",
+            6
+          ],
+          [
+            "MAIZ CHOCLO",
+            3
+          ],
+          [
+            "YUCA",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            11
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 39,
+        "indemnizados": 10,
+        "perdida_total": 10,
+        "monto_indemnizado": 103072.0,
+        "ha_indemnizadas": 128.84,
+        "monto_desembolsado": 0.0,
+        "provincias": 1,
+        "distritos": 5,
+        "meses_siniestro": [
+          3,
+          4
+        ],
+        "top_cultivos": [
+          [
+            "BANANO CONVENCIONAL",
+            14
+          ],
+          [
+            "PLATANO",
+            13
+          ],
+          [
+            "MAIZ CHOCLO",
+            6
+          ],
+          [
+            "ARROZ",
+            4
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            38
+          ],
+          [
+            "GRANIZO",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 138,
+        "indemnizados": 36,
+        "perdida_total": 36,
+        "monto_indemnizado": 1248684.84,
+        "ha_indemnizadas": 1560.86,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 9,
+        "meses_siniestro": [
+          3,
+          4,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "ARROZ",
+            38
+          ],
+          [
+            "BANANO CONVENCIONAL",
+            29
+          ],
+          [
+            "PLATANO",
+            18
+          ],
+          [
+            "LIMON SUTIL",
+            17
+          ],
+          [
+            "BANANO ORGÁNICO",
+            12
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            132
+          ],
+          [
+            "EXCESO_HUMEDAD",
+            5
+          ],
+          [
+            "INCENDIO",
+            1
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 83,
+        "indemnizados": 17,
+        "perdida_total": 15,
+        "monto_indemnizado": 177400.0,
+        "ha_indemnizadas": 225.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 8,
+        "meses_siniestro": [
+          2,
+          3,
+          5,
+          6,
+          7
+        ],
+        "top_cultivos": [
+          [
+            "PLÁTANO",
+            23
+          ],
+          [
+            "BANANO CONVENCIONAL",
+            18
+          ],
+          [
+            "LIMÓN",
+            9
+          ],
+          [
+            "ARROZ",
+            8
+          ],
+          [
+            "MAÍZ CHOCLO",
+            7
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            74
+          ],
+          [
+            "SEQUIA",
+            6
+          ],
+          [
+            "INCENDIO",
+            3
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 192,
+        "indemnizados": 79,
+        "perdida_total": 69,
+        "monto_indemnizado": 1930124.0,
+        "ha_indemnizadas": 2413.16,
+        "monto_desembolsado": 1930124.0,
+        "provincias": 3,
+        "distritos": 10,
+        "meses_siniestro": [
+          2,
+          3,
+          4
+        ],
+        "top_cultivos": [
+          [
+            "BANANO",
+            55
+          ],
+          [
+            "PLATANO",
+            38
+          ],
+          [
+            "ARROZ",
+            33
+          ],
+          [
+            "LIMON",
+            23
+          ],
+          [
+            "MAIZ CHOCLO",
+            10
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            185
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            7
+          ]
+        ]
+      }
+    },
+    "UCAYALI": {
+      "2020-2021": {
+        "avisos": 59,
+        "indemnizados": 6,
+        "perdida_total": 0,
+        "monto_indemnizado": 214500.0,
+        "ha_indemnizadas": 330.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 3,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            25
+          ],
+          [
+            "YUCA",
+            24
+          ],
+          [
+            "ARROZ",
+            10
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            49
+          ],
+          [
+            "HUAYCO",
+            7
+          ],
+          [
+            "INCENDIO",
+            2
+          ],
+          [
+            "SEQUIA",
+            1
+          ]
+        ]
+      },
+      "2021-2022": {
+        "avisos": 96,
+        "indemnizados": 36,
+        "perdida_total": 36,
+        "monto_indemnizado": 241333.73,
+        "ha_indemnizadas": 301.67,
+        "monto_desembolsado": 0.0,
+        "provincias": 4,
+        "distritos": 9,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PLATANO",
+            47
+          ],
+          [
+            "PAPAYA",
+            13
+          ],
+          [
+            "YUCA",
+            13
+          ],
+          [
+            "CACAO",
+            9
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            9
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            88
+          ],
+          [
+            "VIENTO_FUERTE",
+            4
+          ],
+          [
+            "PLAGAS",
+            1
+          ],
+          [
+            "ENFERMEDADES",
+            1
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 210,
+        "indemnizados": 58,
+        "perdida_total": 58,
+        "monto_indemnizado": 334880.47,
+        "ha_indemnizadas": 418.6,
+        "monto_desembolsado": 0.0,
+        "provincias": 4,
+        "distritos": 16,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PLATANO",
+            68
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            47
+          ],
+          [
+            "CACAO",
+            28
+          ],
+          [
+            "YUCA",
+            22
+          ],
+          [
+            "PAPAYA",
+            20
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            129
+          ],
+          [
+            "VIENTO_FUERTE",
+            57
+          ],
+          [
+            "HUAYCO",
+            11
+          ],
+          [
+            "INCENDIO",
+            9
+          ],
+          [
+            "ENFERMEDADES",
+            2
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 341,
+        "indemnizados": 131,
+        "perdida_total": 123,
+        "monto_indemnizado": 555395.36,
+        "ha_indemnizadas": 695.26,
+        "monto_desembolsado": 0.0,
+        "provincias": 4,
+        "distritos": 17,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PLÁTANO",
+            88
+          ],
+          [
+            "MAÍZ AMARILLO DURO",
+            63
+          ],
+          [
+            "YUCA",
+            48
+          ],
+          [
+            "CACAO",
+            42
+          ],
+          [
+            "ARROZ",
+            29
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            180
+          ],
+          [
+            "SEQUIA",
+            53
+          ],
+          [
+            "INCENDIO",
+            40
+          ],
+          [
+            "VIENTO_FUERTE",
+            33
+          ],
+          [
+            "DESLIZAMIENTO",
+            29
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 669,
+        "indemnizados": 128,
+        "perdida_total": 128,
+        "monto_indemnizado": 1057546.16,
+        "ha_indemnizadas": 1326.84,
+        "monto_desembolsado": 1040586.16,
+        "provincias": 3,
+        "distritos": 19,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PLATANO",
+            159
+          ],
+          [
+            "CACAO",
+            105
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            87
+          ],
+          [
+            "YUCA",
+            74
+          ],
+          [
+            "PAPAYA",
+            44
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            486
+          ],
+          [
+            "INCENDIO",
+            108
+          ],
+          [
+            "VIENTO_FUERTE",
+            33
+          ],
+          [
+            "DESLIZAMIENTO",
+            28
+          ],
+          [
+            "ENFERMEDADES",
+            8
+          ]
+        ]
+      }
+    },
+    "AREQUIPA": {
+      "2021-2022": {
+        "avisos": 73,
+        "indemnizados": 16,
+        "perdida_total": 0,
+        "monto_indemnizado": 161600.0,
+        "ha_indemnizadas": 202.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 3,
+        "distritos": 15,
+        "meses_siniestro": [
+          1,
+          3,
+          4,
+          6,
+          7
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            20
+          ],
+          [
+            "HABA GRANO VERDE",
+            20
+          ],
+          [
+            "MAIZ AMILACEO",
+            19
+          ],
+          [
+            "ARVEJA GRANO VERDE",
+            9
+          ],
+          [
+            "ALFALFA",
+            2
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            47
+          ],
+          [
+            "SEQUIA",
+            21
+          ],
+          [
+            "GRANIZO",
+            4
+          ],
+          [
+            "ENFERMEDADES",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 103,
+        "indemnizados": 27,
+        "perdida_total": 8,
+        "monto_indemnizado": 195200.0,
+        "ha_indemnizadas": 244.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 5,
+        "distritos": 20,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "HABA GRANO VERDE",
+            27
+          ],
+          [
+            "MAIZ AMILACEO",
+            26
+          ],
+          [
+            "PAPA",
+            20
+          ],
+          [
+            "ARVEJA GRANO VERDE",
+            15
+          ],
+          [
+            "ALFALFA",
+            6
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            83
+          ],
+          [
+            "INUNDACION",
+            8
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            5
+          ],
+          [
+            "HUAYCO",
+            3
+          ],
+          [
+            "PLAGAS",
+            1
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 384,
+        "indemnizados": 102,
+        "perdida_total": 80,
+        "monto_indemnizado": 1922145.2,
+        "ha_indemnizadas": 2458.58,
+        "monto_desembolsado": 0.0,
+        "provincias": 8,
+        "distritos": 46,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "OLIVO",
+            91
+          ],
+          [
+            "MAÍZ AMILÁCEO",
+            63
+          ],
+          [
+            "PAPA",
+            46
+          ],
+          [
+            "ALFALFA",
+            34
+          ],
+          [
+            "ARROZ",
+            34
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "ALTAS_TEMPERATURAS",
+            79
+          ],
+          [
+            "INUNDACION",
+            73
+          ],
+          [
+            "HUAYCO",
+            58
+          ],
+          [
+            "PLAGAS",
+            51
+          ],
+          [
+            "SEQUIA",
+            45
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 383,
+        "indemnizados": 178,
+        "perdida_total": 140,
+        "monto_indemnizado": 446004.0,
+        "ha_indemnizadas": 594.35,
+        "monto_desembolsado": 435893.12,
+        "provincias": 8,
+        "distritos": 49,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMILACEO",
+            62
+          ],
+          [
+            "ARROZ",
+            41
+          ],
+          [
+            "ALFALFA",
+            40
+          ],
+          [
+            "PAPA",
+            39
+          ],
+          [
+            "CEBADA GRANO",
+            23
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "LLUVIA_EXCESIVA",
+            120
+          ],
+          [
+            "INUNDACION",
+            89
+          ],
+          [
+            "HUAYCO",
+            71
+          ],
+          [
+            "SEQUIA",
+            41
+          ],
+          [
+            "PLAGAS",
+            19
+          ]
+        ]
+      }
+    },
+    "ICA": {
+      "2021-2022": {
+        "avisos": 5,
+        "indemnizados": 1,
+        "perdida_total": 1,
+        "monto_indemnizado": 14400.0,
+        "ha_indemnizadas": 18.0,
+        "monto_desembolsado": 0.0,
+        "provincias": 2,
+        "distritos": 3,
+        "meses_siniestro": [
+          1,
+          11
+        ],
+        "top_cultivos": [
+          [
+            "MAIZ AMARILLO DURO",
+            4
+          ],
+          [
+            "PAPA",
+            1
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "PLAGAS",
+            4
+          ],
+          [
+            "HUAYCO",
+            1
+          ]
+        ]
+      },
+      "2022-2023": {
+        "avisos": 183,
+        "indemnizados": 92,
+        "perdida_total": 92,
+        "monto_indemnizado": 635224.21,
+        "ha_indemnizadas": 794.03,
+        "monto_desembolsado": 0.0,
+        "provincias": 5,
+        "distritos": 21,
+        "meses_siniestro": [
+          2,
+          3,
+          4,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "ALGODON",
+            35
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            32
+          ],
+          [
+            "PALTO",
+            28
+          ],
+          [
+            "PALLAR GRANO SECO",
+            17
+          ],
+          [
+            "VID",
+            13
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            151
+          ],
+          [
+            "HUAYCO",
+            24
+          ],
+          [
+            "HELADA",
+            7
+          ],
+          [
+            "SEQUIA",
+            1
+          ]
+        ]
+      },
+      "2023-2024": {
+        "avisos": 293,
+        "indemnizados": 152,
+        "perdida_total": 93,
+        "monto_indemnizado": 585265.12,
+        "ha_indemnizadas": 981.58,
+        "monto_desembolsado": 0.0,
+        "provincias": 5,
+        "distritos": 31,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PECANO",
+            187
+          ],
+          [
+            "ZAPALLO",
+            16
+          ],
+          [
+            "ALGODÓN",
+            16
+          ],
+          [
+            "PALTA",
+            11
+          ],
+          [
+            "MAÍZ AMARILLO DURO",
+            7
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "PLAGAS",
+            232
+          ],
+          [
+            "INUNDACION",
+            44
+          ],
+          [
+            "SEQUIA",
+            12
+          ],
+          [
+            "ENFERMEDADES",
+            5
+          ]
+        ]
+      },
+      "2024-2025": {
+        "avisos": 679,
+        "indemnizados": 365,
+        "perdida_total": 220,
+        "monto_indemnizado": 2878398.52,
+        "ha_indemnizadas": 3629.42,
+        "monto_desembolsado": 2859598.52,
+        "provincias": 6,
+        "distritos": 37,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PECANO",
+            141
+          ],
+          [
+            "PALTO",
+            120
+          ],
+          [
+            "SANDIA",
+            46
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            46
+          ],
+          [
+            "MELON",
+            25
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "PLAGAS",
+            188
+          ],
+          [
+            "HUAYCO",
+            177
+          ],
+          [
+            "ALTAS_TEMPERATURAS",
+            73
+          ],
+          [
+            "VIENTO_FUERTE",
+            63
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            57
+          ]
+        ]
+      }
+    },
+    "HUÁNUCO": {
+      "2024-2025": {
+        "avisos": 1446,
+        "indemnizados": 402,
+        "perdida_total": 264,
+        "monto_indemnizado": 2872816.26,
+        "ha_indemnizadas": 3618.94,
+        "monto_desembolsado": 2706283.3,
+        "provincias": 14,
+        "distritos": 91,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "PAPA",
+            393
+          ],
+          [
+            "MAIZ AMILACEO",
+            216
+          ],
+          [
+            "PLATANO",
+            98
+          ],
+          [
+            "TRIGO",
+            86
+          ],
+          [
+            "CEBADA GRANO",
+            72
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "HELADA",
+            329
+          ],
+          [
+            "GRANIZO",
+            297
+          ],
+          [
+            "ENFERMEDADES",
+            246
+          ],
+          [
+            "INUNDACION",
+            220
+          ],
+          [
+            "LLUVIA_EXCESIVA",
+            165
+          ]
+        ]
+      }
+    },
+    "SAN MARTÍN": {
+      "2024-2025": {
+        "avisos": 497,
+        "indemnizados": 178,
+        "perdida_total": 176,
+        "monto_indemnizado": 1246432.48,
+        "ha_indemnizadas": 1577.67,
+        "monto_desembolsado": 1245952.48,
+        "provincias": 10,
+        "distritos": 61,
+        "meses_siniestro": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "top_cultivos": [
+          [
+            "CACAO",
+            114
+          ],
+          [
+            "PLATANO",
+            85
+          ],
+          [
+            "MAIZ AMARILLO DURO",
+            66
+          ],
+          [
+            "ARROZ",
+            58
+          ],
+          [
+            "NARANJO",
+            31
+          ]
+        ],
+        "top_siniestros": [
+          [
+            "INUNDACION",
+            194
+          ],
+          [
+            "SEQUIA",
+            156
+          ],
+          [
+            "INCENDIO",
+            109
+          ],
+          [
+            "PLAGAS",
+            18
+          ],
+          [
+            "DESLIZAMIENTO",
+            12
+          ]
+        ]
+      }
+    }
+  },
+  "top_provincias": {
+    "AMAZONAS": [
+      [
+        "UTCUBAMBA",
+        419,
+        126,
+        1452007.2
+      ],
+      [
+        "BAGUA",
+        301,
+        76,
+        533514.0
+      ],
+      [
+        "LUYA",
+        239,
+        36,
+        148889.2
+      ],
+      [
+        "CHACHAPOYAS",
+        208,
+        58,
+        122370.0
+      ],
+      [
+        "RODRIGUEZ DE MENDOZA",
+        197,
+        94,
+        710538.4
+      ],
+      [
+        "BONGARÁ",
+        89,
+        39,
+        128766.0
+      ],
+      [
+        "CONDORCANQUI",
+        79,
+        29,
+        330952.0
+      ],
+      [
+        "BONGARA",
+        23,
+        3,
+        7804.0
+      ]
+    ],
+    "ANCASH": [
+      [
+        "CARHUAZ",
+        79,
+        13,
+        114368.64
+      ],
+      [
+        "SANTA",
+        53,
+        17,
+        54942.4
+      ],
+      [
+        "HUARMEY",
+        50,
+        23,
+        85278.4
+      ],
+      [
+        "HUARAZ",
+        47,
+        26,
+        274022.4
+      ],
+      [
+        "RECUAY",
+        41,
+        14,
+        190284.0
+      ],
+      [
+        "YUNGAY",
+        36,
+        16,
+        35313.28
+      ],
+      [
+        "ANTONIO RAYMONDI",
+        34,
+        9,
+        34764.0
+      ],
+      [
+        "HUAYLAS",
+        21,
+        7,
+        5310.0
+      ],
+      [
+        "CASMA",
+        21,
+        12,
+        255152.08
+      ],
+      [
+        "POMABAMBA",
+        20,
+        14,
+        11743.2
+      ]
+    ],
+    "APURIMAC": [
+      [
+        "ANDAHUAYLAS",
+        4350,
+        691,
+        18372542.16
+      ],
+      [
+        "CHINCHEROS",
+        1015,
+        187,
+        2895310.86
+      ],
+      [
+        "AYMARAES",
+        849,
+        148,
+        2499486.0
+      ],
+      [
+        "ABANCAY",
+        766,
+        170,
+        3668609.6
+      ],
+      [
+        "COTABAMBAS",
+        631,
+        47,
+        1550142.8
+      ],
+      [
+        "GRAU",
+        244,
+        66,
+        829612.0
+      ],
+      [
+        "ANTABAMBA",
+        220,
+        50,
+        777506.0
+      ]
+    ],
+    "AREQUIPA": [
+      [
+        "CAYLLOMA",
+        230,
+        83,
+        499014.8
+      ],
+      [
+        "CONDESUYOS",
+        212,
+        51,
+        148721.52
+      ],
+      [
+        "AREQUIPA",
+        188,
+        58,
+        134612.0
+      ],
+      [
+        "ISLAY",
+        100,
+        11,
+        35348.0
+      ],
+      [
+        "CASTILLA",
+        65,
+        36,
+        87921.04
+      ],
+      [
+        "LA UNION",
+        49,
+        34,
+        57573.6
+      ],
+      [
+        "CARAVELI",
+        39,
+        21,
+        1588624.0
+      ],
+      [
+        "CAMANÁ",
+        33,
+        14,
+        139712.0
+      ],
+      [
+        "CAMANA",
+        27,
+        15,
+        33422.24
+      ]
+    ],
+    "AYACUCHO": [
+      [
+        "HUAMANGA",
+        4255,
+        475,
+        13288534.56
+      ],
+      [
+        "CANGALLO",
+        1979,
+        251,
+        6283183.16
+      ],
+      [
+        "VILCAS HUAMAN",
+        1601,
+        200,
+        4011705.68
+      ],
+      [
+        "VICTOR FAJARDO",
+        1469,
+        203,
+        3137340.24
+      ],
+      [
+        "PARINACOCHAS",
+        1383,
+        172,
+        2572930.08
+      ],
+      [
+        "LA MAR",
+        1304,
+        215,
+        5052160.52
+      ],
+      [
+        "HUANTA",
+        590,
+        150,
+        3845084.28
+      ],
+      [
+        "PAUCAR DEL SARA SARA",
+        418,
+        94,
+        527126.4
+      ],
+      [
+        "LUCANAS",
+        413,
+        129,
+        1713176.32
+      ],
+      [
+        "HUANCA SANCOS",
+        325,
+        43,
+        442945.68
+      ]
+    ],
+    "CAJAMARCA": [
+      [
+        "CHOTA",
+        489,
+        66,
+        1503180.8
+      ],
+      [
+        "JAEN",
+        223,
+        57,
+        2184484.8
+      ],
+      [
+        "CUTERVO",
+        213,
+        40,
+        723210.24
+      ],
+      [
+        "SAN MARCOS",
+        161,
+        11,
+        102852.0
+      ],
+      [
+        "SAN IGNACIO",
+        137,
+        61,
+        948900.0
+      ],
+      [
+        "SAN PABLO",
+        121,
+        6,
+        135080.0
+      ],
+      [
+        "SAN MIGUEL",
+        95,
+        7,
+        118736.0
+      ],
+      [
+        "CELENDIN",
+        88,
+        18,
+        268704.0
+      ],
+      [
+        "HUALGAYOC",
+        82,
+        11,
+        479478.0
+      ],
+      [
+        "CAJAMARCA",
+        76,
+        9,
+        371754.4
+      ]
+    ],
+    "CUSCO": [
+      [
+        "CHUMBIVILCAS",
+        1284,
+        82,
+        1967892.4
+      ],
+      [
+        "ANTA",
+        643,
+        78,
+        1064039.8
+      ],
+      [
+        "PAUCARTAMBO",
+        615,
+        76,
+        998446.0
+      ],
+      [
+        "LA CONVENCION",
+        480,
+        125,
+        1489010.4
+      ],
+      [
+        "QUISPICANCHI",
+        366,
+        30,
+        405488.56
+      ],
+      [
+        "ESPINAR",
+        324,
+        60,
+        1034100.0
+      ],
+      [
+        "CALCA",
+        287,
+        41,
+        455103.2
+      ],
+      [
+        "ACOMAYO",
+        248,
+        65,
+        731802.48
+      ],
+      [
+        "CANAS",
+        221,
+        44,
+        1054323.2
+      ],
+      [
+        "CANCHIS",
+        191,
+        27,
+        1059600.0
+      ]
+    ],
+    "HUANCAVELICA": [
+      [
+        "ACOBAMBA",
+        1108,
+        411,
+        6773700.72
+      ],
+      [
+        "HUANCAVELICA",
+        1056,
+        177,
+        2335118.48
+      ],
+      [
+        "HUAYTARA",
+        1037,
+        173,
+        1425550.8
+      ],
+      [
+        "CHURCAMPA",
+        930,
+        143,
+        3538960.6
+      ],
+      [
+        "TAYACAJA",
+        891,
+        151,
+        4292414.72
+      ],
+      [
+        "ANGARAES",
+        573,
+        177,
+        1984222.52
+      ],
+      [
+        "CASTROVIRREYNA",
+        364,
+        68,
+        464350.91
+      ],
+      [
+        "",
+        1,
+        0,
+        0.0
+      ]
+    ],
+    "HUANUCO": [
+      [
+        "HUAMALIES",
+        349,
+        65,
+        1182065.84
+      ],
+      [
+        "DOS DE MAYO",
+        236,
+        33,
+        588010.96
+      ],
+      [
+        "YAROWILCA",
+        230,
+        50,
+        1255000.0
+      ],
+      [
+        "LAURICOCHA",
+        202,
+        57,
+        1075700.0
+      ],
+      [
+        "AMBO",
+        198,
+        53,
+        787953.6
+      ],
+      [
+        "HUANUCO",
+        191,
+        37,
+        672367.6
+      ],
+      [
+        "HUACAYBAMBA",
+        184,
+        28,
+        645952.8
+      ],
+      [
+        "PACHITEA",
+        175,
+        45,
+        424470.32
+      ],
+      [
+        "MARAÑON",
+        145,
+        40,
+        915108.56
+      ],
+      [
+        "LEONCIO PRADO",
+        132,
+        48,
+        232810.24
+      ]
+    ],
+    "HUÁNUCO": [
+      [
+        "YAROWILCA",
+        200,
+        63,
+        247496.0
+      ],
+      [
+        "DOS DE MAYO",
+        190,
+        16,
+        223088.0
+      ],
+      [
+        "LEONCIO PRADO",
+        162,
+        59,
+        232355.28
+      ],
+      [
+        "HUAMALIES",
+        157,
+        48,
+        719180.0
+      ],
+      [
+        "AMBO",
+        130,
+        41,
+        145851.1
+      ],
+      [
+        "HUÁNUCO",
+        121,
+        36,
+        99667.4
+      ],
+      [
+        "HUACAYBAMBA",
+        116,
+        52,
+        465656.0
+      ],
+      [
+        "HUANUCO",
+        98,
+        25,
+        55255.44
+      ],
+      [
+        "PACHITEA",
+        81,
+        5,
+        2816.0
+      ],
+      [
+        "LAURICOCHA",
+        64,
+        21,
+        266376.0
+      ]
+    ],
+    "ICA": [
+      [
+        "ICA",
+        336,
+        188,
+        1779437.68
+      ],
+      [
+        "PALPA",
+        265,
+        167,
+        911360.21
+      ],
+      [
+        "CHINCHA",
+        215,
+        117,
+        987618.4
+      ],
+      [
+        "NASCA",
+        188,
+        63,
+        164970.52
+      ],
+      [
+        "PISCO",
+        93,
+        50,
+        139825.84
+      ],
+      [
+        "NAZCA",
+        63,
+        25,
+        130075.2
+      ]
+    ],
+    "JUNIN": [
+      [
+        "HUANCAYO",
+        672,
+        116,
+        1443065.68
+      ],
+      [
+        "JAUJA",
+        598,
+        111,
+        852726.04
+      ],
+      [
+        "SATIPO",
+        456,
+        178,
+        1759922.32
+      ],
+      [
+        "CONCEPCION",
+        359,
+        74,
+        616701.84
+      ],
+      [
+        "CHUPACA",
+        294,
+        55,
+        702484.96
+      ],
+      [
+        "TARMA",
+        289,
+        91,
+        706082.08
+      ],
+      [
+        "CHANCHAMAYO",
+        236,
+        82,
+        251597.6
+      ],
+      [
+        "YAULI",
+        105,
+        35,
+        129152.0
+      ],
+      [
+        "JUNIN",
+        48,
+        17,
+        419658.4
+      ],
+      [
+        "JUNÍN",
+        22,
+        8,
+        100744.0
+      ]
+    ],
+    "LA LIBERTAD": [
+      [
+        "VIRU",
+        197,
+        95,
+        1002058.2
+      ],
+      [
+        "SANCHEZ CARRION",
+        185,
+        72,
+        270096.04
+      ],
+      [
+        "OTUZCO",
+        157,
+        80,
+        559129.28
+      ],
+      [
+        "SANTIAGO DE CHUCO",
+        125,
+        55,
+        136099.44
+      ],
+      [
+        "JULCAN",
+        48,
+        27,
+        138896.24
+      ],
+      [
+        "CHEPEN",
+        47,
+        13,
+        52684.4
+      ],
+      [
+        "GRAN CHIMU",
+        43,
+        12,
+        35372.56
+      ],
+      [
+        "PATAZ",
+        42,
+        5,
+        14684.56
+      ],
+      [
+        "JULCÁN",
+        32,
+        20,
+        62600.0
+      ],
+      [
+        "ASCOPE",
+        21,
+        8,
+        29064.16
+      ]
+    ],
+    "LAMBAYEQUE": [
+      [
+        "FERREÑAFE",
+        186,
+        34,
+        183192.16
+      ],
+      [
+        "LAMBAYEQUE",
+        156,
+        43,
+        748957.68
+      ],
+      [
+        "CHICLAYO",
+        68,
+        12,
+        138400.0
+      ]
+    ],
+    "LIMA": [
+      [
+        "YAUYOS",
+        398,
+        94,
+        414668.94
+      ],
+      [
+        "HUARAL",
+        251,
+        67,
+        510891.86
+      ],
+      [
+        "CAÑETE",
+        238,
+        102,
+        312923.27
+      ],
+      [
+        "HUAROCHIRI",
+        153,
+        59,
+        706664.06
+      ],
+      [
+        "BARRANCA",
+        129,
+        67,
+        233729.56
+      ],
+      [
+        "CAJATAMBO",
+        121,
+        74,
+        708683.76
+      ],
+      [
+        "HUAURA",
+        105,
+        42,
+        425341.86
+      ],
+      [
+        "HUAROCHIRÍ",
+        98,
+        45,
+        128153.6
+      ],
+      [
+        "CANTA",
+        67,
+        37,
+        68229.56
+      ],
+      [
+        "LIMA",
+        40,
+        21,
+        127922.09
+      ]
+    ],
+    "LORETO": [
+      [
+        "REQUENA",
+        178,
+        36,
+        760170.4
+      ],
+      [
+        "ALTO AMAZONAS",
+        111,
+        22,
+        335501.6
+      ],
+      [
+        "UCAYALI",
+        104,
+        18,
+        211436.0
+      ],
+      [
+        "DATEM DEL MARAÑON",
+        93,
+        8,
+        757420.0
+      ],
+      [
+        "MAYNAS",
+        83,
+        29,
+        287903.2
+      ],
+      [
+        "LORETO",
+        59,
+        12,
+        432711.79
+      ],
+      [
+        "MARISCAL RAMON CASTILLA",
+        18,
+        12,
+        81728.0
+      ]
+    ],
+    "MADRE DE DIOS": [
+      [
+        "TAMBOPATA",
+        223,
+        89,
+        618109.2
+      ],
+      [
+        "MANU",
+        166,
+        67,
+        501727.36
+      ],
+      [
+        "TAHUAMANU",
+        115,
+        51,
+        138520.72
+      ]
+    ],
+    "MOQUEGUA": [
+      [
+        "GENERAL SANCHEZ CERRO",
+        421,
+        152,
+        1095279.04
+      ],
+      [
+        "MARISCAL NIETO",
+        51,
+        18,
+        27071.2
+      ],
+      [
+        "ILO",
+        9,
+        5,
+        225600.0
+      ]
+    ],
+    "PASCO": [
+      [
+        "PASCO",
+        877,
+        218,
+        5654039.0
+      ],
+      [
+        "DANIEL ALCIDES CARRION",
+        289,
+        90,
+        1913902.08
+      ],
+      [
+        "OXAPAMPA",
+        203,
+        97,
+        1052365.52
+      ]
+    ],
+    "PIURA": [
+      [
+        "PIURA",
+        846,
+        74,
+        1624043.9
+      ],
+      [
+        "AYABACA",
+        384,
+        87,
+        525272.88
+      ],
+      [
+        "HUANCABAMBA",
+        308,
+        96,
+        290422.2
+      ],
+      [
+        "MORROPON",
+        202,
+        38,
+        299258.04
+      ],
+      [
+        "SECHURA",
+        125,
+        32,
+        1078077.68
+      ],
+      [
+        "SULLANA",
+        78,
+        34,
+        635744.0
+      ],
+      [
+        "PAITA",
+        35,
+        6,
+        21700.0
+      ]
+    ],
+    "PUNO": [
+      [
+        "PUNO",
+        2163,
+        190,
+        3008800.0
+      ],
+      [
+        "MELGAR",
+        1622,
+        122,
+        2598583.6
+      ],
+      [
+        "HUANCANE",
+        1099,
+        91,
+        1818800.0
+      ],
+      [
+        "LAMPA",
+        1001,
+        173,
+        3675541.6
+      ],
+      [
+        "AZANGARO",
+        973,
+        223,
+        6041148.0
+      ],
+      [
+        "SANDIA",
+        590,
+        66,
+        1036721.93
+      ],
+      [
+        "CHUCUITO",
+        472,
+        47,
+        925888.0
+      ],
+      [
+        "SAN ROMAN",
+        391,
+        39,
+        1145721.2
+      ],
+      [
+        "EL COLLAO",
+        332,
+        42,
+        553400.0
+      ],
+      [
+        "CARABAYA",
+        319,
+        23,
+        2320370.0
+      ]
+    ],
+    "SAN MARTIN": [
+      [
+        "BELLAVISTA",
+        163,
+        42,
+        312867.62
+      ],
+      [
+        "PICOTA",
+        124,
+        39,
+        225149.6
+      ],
+      [
+        "TOCACHE",
+        112,
+        38,
+        420825.71
+      ],
+      [
+        "MOYOBAMBA",
+        92,
+        20,
+        638702.32
+      ],
+      [
+        "RIOJA",
+        84,
+        13,
+        45851.2
+      ],
+      [
+        "EL DORADO",
+        67,
+        7,
+        269153.92
+      ],
+      [
+        "SAN MARTIN",
+        63,
+        24,
+        217980.0
+      ],
+      [
+        "MARISCAL CACERES",
+        22,
+        9,
+        18245.28
+      ],
+      [
+        "HUALLAGA",
+        20,
+        4,
+        11304.88
+      ]
+    ],
+    "SAN MARTÍN": [
+      [
+        "PICOTA",
+        157,
+        44,
+        165514.0
+      ],
+      [
+        "BELLAVISTA",
+        70,
+        38,
+        409321.6
+      ],
+      [
+        "HUALLAGA",
+        61,
+        20,
+        175107.36
+      ],
+      [
+        "SAN MARTÍN",
+        49,
+        20,
+        112620.08
+      ],
+      [
+        "MARISCAL CÁCERES",
+        45,
+        11,
+        66688.0
+      ],
+      [
+        "RIOJA",
+        39,
+        6,
+        11217.6
+      ],
+      [
+        "MOYOBAMBA",
+        27,
+        4,
+        4131.84
+      ],
+      [
+        "TOCACHE",
+        21,
+        16,
+        253936.0
+      ],
+      [
+        "LAMAS",
+        16,
+        8,
+        9976.0
+      ],
+      [
+        "EL DORADO",
+        12,
+        11,
+        37920.0
+      ]
+    ],
+    "TACNA": [
+      [
+        "TARATA",
+        72,
+        27,
+        125831.2
+      ],
+      [
+        "CANDRAVE",
+        12,
+        4,
+        15472.0
+      ],
+      [
+        "TACNA",
+        7,
+        6,
+        189200.0
+      ],
+      [
+        "JORGE BASADRE",
+        6,
+        4,
+        22896.0
+      ],
+      [
+        "CANDARAVE",
+        2,
+        1,
+        8800.0
+      ]
+    ],
+    "TUMBES": [
+      [
+        "TUMBES",
+        372,
+        124,
+        3128103.02
+      ],
+      [
+        "ZARUMILLA",
+        75,
+        14,
+        313473.02
+      ],
+      [
+        "CONTRALMIRANTE VILLAR",
+        16,
+        7,
+        59304.8
+      ]
+    ],
+    "UCAYALI": [
+      [
+        "CORONEL PORTILLO",
+        772,
+        199,
+        1531493.66
+      ],
+      [
+        "PADRE ABAD",
+        349,
+        109,
+        467198.08
+      ],
+      [
+        "ATALAYA",
+        178,
+        21,
+        135429.2
+      ],
+      [
+        "PURUS",
+        76,
+        30,
+        269534.78
+      ]
+    ]
+  },
+  "estacionalidad": {
+    "AMAZONAS": {
+      "1": 202,
+      "2": 174,
+      "3": 166,
+      "4": 55,
+      "5": 97,
+      "6": 52,
+      "7": 182,
+      "8": 66,
+      "9": 309,
+      "10": 81,
+      "11": 93,
+      "12": 78
+    },
+    "ANCASH": {
+      "1": 99,
+      "2": 57,
+      "3": 187,
+      "4": 33,
+      "5": 8,
+      "6": 1,
+      "7": 17,
+      "8": 13,
+      "9": 2,
+      "10": 23,
+      "11": 13,
+      "12": 40
+    },
+    "APURIMAC": {
+      "1": 1045,
+      "2": 1428,
+      "3": 882,
+      "4": 1219,
+      "5": 1226,
+      "6": 237,
+      "7": 90,
+      "9": 17,
+      "10": 201,
+      "11": 947,
+      "12": 783
+    },
+    "AREQUIPA": {
+      "1": 87,
+      "2": 370,
+      "3": 176,
+      "4": 97,
+      "5": 32,
+      "6": 16,
+      "7": 22,
+      "8": 28,
+      "9": 21,
+      "10": 36,
+      "11": 34,
+      "12": 24
+    },
+    "AYACUCHO": {
+      "1": 1931,
+      "2": 2906,
+      "3": 2528,
+      "4": 2092,
+      "5": 1556,
+      "6": 337,
+      "7": 118,
+      "8": 31,
+      "9": 7,
+      "10": 252,
+      "11": 1047,
+      "12": 1136
+    },
+    "CAJAMARCA": {
+      "1": 43,
+      "2": 117,
+      "3": 384,
+      "4": 225,
+      "5": 162,
+      "6": 24,
+      "7": 120,
+      "8": 67,
+      "9": 163,
+      "10": 73,
+      "11": 333,
+      "12": 123
+    },
+    "CUSCO": {
+      "1": 551,
+      "2": 544,
+      "3": 939,
+      "4": 725,
+      "5": 1194,
+      "6": 72,
+      "7": 37,
+      "8": 36,
+      "9": 106,
+      "10": 125,
+      "11": 337,
+      "12": 382
+    },
+    "HUANCAVELICA": {
+      "1": 611,
+      "2": 1151,
+      "3": 562,
+      "4": 748,
+      "5": 869,
+      "6": 730,
+      "7": 437,
+      "8": 31,
+      "9": 2,
+      "10": 40,
+      "11": 300,
+      "12": 479
+    },
+    "HUANUCO": {
+      "1": 441,
+      "2": 472,
+      "3": 269,
+      "4": 151,
+      "5": 131,
+      "6": 130,
+      "7": 47,
+      "8": 31,
+      "9": 18,
+      "10": 47,
+      "11": 160,
+      "12": 276
+    },
+    "HUÁNUCO": {
+      "1": 188,
+      "2": 228,
+      "3": 165,
+      "4": 114,
+      "5": 74,
+      "6": 81,
+      "7": 373,
+      "8": 15,
+      "9": 16,
+      "10": 79,
+      "11": 66,
+      "12": 47
+    },
+    "ICA": {
+      "1": 162,
+      "2": 356,
+      "3": 217,
+      "4": 72,
+      "5": 56,
+      "6": 12,
+      "7": 58,
+      "8": 11,
+      "9": 27,
+      "10": 36,
+      "11": 82,
+      "12": 71
+    },
+    "JUNIN": {
+      "1": 343,
+      "2": 963,
+      "3": 623,
+      "4": 126,
+      "5": 41,
+      "6": 55,
+      "7": 53,
+      "8": 33,
+      "9": 108,
+      "10": 106,
+      "11": 178,
+      "12": 450
+    },
+    "LA LIBERTAD": {
+      "1": 76,
+      "2": 128,
+      "3": 285,
+      "4": 107,
+      "5": 72,
+      "6": 32,
+      "7": 90,
+      "8": 1,
+      "9": 5,
+      "10": 36,
+      "11": 48,
+      "12": 42
+    },
+    "LAMBAYEQUE": {
+      "2": 5,
+      "3": 327,
+      "4": 13,
+      "5": 15,
+      "6": 4,
+      "7": 4,
+      "9": 3,
+      "11": 39
+    },
+    "LIMA": {
+      "1": 402,
+      "2": 199,
+      "3": 488,
+      "4": 151,
+      "5": 75,
+      "6": 81,
+      "7": 73,
+      "8": 24,
+      "9": 17,
+      "10": 15,
+      "11": 53,
+      "12": 58
+    },
+    "LORETO": {
+      "1": 11,
+      "2": 66,
+      "3": 309,
+      "4": 36,
+      "5": 51,
+      "6": 29,
+      "7": 3,
+      "8": 8,
+      "9": 28,
+      "10": 8,
+      "12": 97
+    },
+    "MADRE DE DIOS": {
+      "1": 34,
+      "2": 173,
+      "3": 63,
+      "4": 74,
+      "5": 3,
+      "6": 3,
+      "7": 4,
+      "8": 81,
+      "9": 1,
+      "10": 22,
+      "11": 12,
+      "12": 34
+    },
+    "MOQUEGUA": {
+      "1": 36,
+      "2": 59,
+      "3": 44,
+      "4": 103,
+      "5": 18,
+      "6": 23,
+      "7": 76,
+      "8": 4,
+      "10": 24,
+      "12": 94
+    },
+    "PASCO": {
+      "1": 258,
+      "2": 229,
+      "3": 130,
+      "4": 124,
+      "5": 142,
+      "6": 106,
+      "7": 66,
+      "8": 6,
+      "9": 33,
+      "10": 13,
+      "11": 169,
+      "12": 93
+    },
+    "PIURA": {
+      "1": 19,
+      "2": 182,
+      "3": 728,
+      "4": 163,
+      "5": 101,
+      "6": 43,
+      "7": 41,
+      "8": 130,
+      "9": 33,
+      "10": 454,
+      "11": 82,
+      "12": 2
+    },
+    "PUNO": {
+      "1": 1898,
+      "2": 2103,
+      "3": 2897,
+      "4": 1027,
+      "5": 120,
+      "6": 29,
+      "7": 66,
+      "9": 5,
+      "10": 237,
+      "11": 871,
+      "12": 259
+    },
+    "SAN MARTIN": {
+      "1": 71,
+      "2": 31,
+      "3": 135,
+      "4": 167,
+      "5": 37,
+      "6": 9,
+      "7": 21,
+      "8": 6,
+      "9": 60,
+      "10": 64,
+      "11": 35,
+      "12": 111
+    },
+    "SAN MARTÍN": {
+      "1": 5,
+      "2": 77,
+      "3": 65,
+      "4": 9,
+      "6": 1,
+      "7": 3,
+      "8": 27,
+      "9": 205,
+      "10": 31,
+      "11": 54,
+      "12": 20
+    },
+    "TACNA": {
+      "1": 32,
+      "2": 4,
+      "3": 8,
+      "4": 2,
+      "5": 28,
+      "6": 5,
+      "7": 4,
+      "11": 12,
+      "12": 4
+    },
+    "TUMBES": {
+      "2": 117,
+      "3": 267,
+      "4": 74,
+      "5": 2,
+      "6": 1,
+      "7": 1,
+      "11": 1
+    },
+    "UCAYALI": {
+      "1": 55,
+      "2": 286,
+      "3": 512,
+      "4": 42,
+      "5": 46,
+      "6": 8,
+      "7": 27,
+      "8": 31,
+      "9": 92,
+      "10": 120,
+      "11": 61,
+      "12": 95
+    }
+  }
+}

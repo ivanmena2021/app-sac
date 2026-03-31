@@ -17,6 +17,8 @@ from gen_word_bridge_py import generate_nacional_docx, generate_departamental_do
 from gen_excel_eme import generate_reporte_eme
 from gen_word_operatividad import generate_operatividad_docx
 from gen_ppt_dinamico import generar_ppt_dinamico
+from gen_ppt_historico import generar_ppt_historico
+from data_processor import load_primas_historicas
 from query_engine import process_query, get_suggested_queries as get_suggested_basic
 from query_llm import process_query_llm, is_llm_available, get_suggested_queries as get_suggested_llm
 from gen_mapa_calor import generate_map, get_ranking_table, get_summary_cards, NIVELES, get_metricas_for_nivel
@@ -1478,13 +1480,14 @@ else:
     # SECCIÓN 2: GENERAR REPORTES
     # ═══════════════════════════════════════════════════════════════════
     with tab_reportes:
-        sub_nac, sub_depto, sub_oper, sub_eme, sub_ppt, sub_batch = st.tabs([
+        sub_nac, sub_depto, sub_oper, sub_eme, sub_ppt, sub_batch, sub_hist = st.tabs([
             "📄 Ayuda Memoria Nacional",
             "🏔️ Ayuda Memoria Departamental",
             "📋 Operatividad SAC",
             "📊 Reporte EME",
             "📊 Presentación Dinámica",
             "📦 Generar Todos",
+            "📈 Análisis Histórico",
         ])
 
         # ─── Sub-tab: Ayuda Memoria Nacional ───
@@ -1922,6 +1925,56 @@ else:
         # ── Sub-tab: Generar Todos ──
         with sub_batch:
             render_batch_tab(datos)
+
+        # ─── Sub-tab: Análisis Histórico ───
+        with sub_hist:
+            st.markdown("""
+            <div style="background:linear-gradient(135deg,#2C5F2D 0%,#1a3a1a 100%);
+                 padding:14px 20px;border-radius:10px;margin-bottom:14px;">
+                <span style="color:#fff;font-size:18px;font-weight:700;">
+                📈 Análisis Histórico de Siniestralidad</span><br>
+                <span style="color:#d4edda;font-size:12px;">
+                Genera una PPT con el análisis de siniestralidad de 5 campañas + la actual,
+                por departamento. Siniestralidad = Indemnización / Prima Neta.</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            dept_list_hist = datos.get("departamentos_list", [])
+            if dept_list_hist:
+                selected_hist_dept = st.selectbox(
+                    "Seleccione departamento:",
+                    sorted(dept_list_hist),
+                    key="hist_dept_select",
+                )
+
+                col_gen_h, col_dl_h = st.columns([1, 1])
+                with col_gen_h:
+                    if st.button("⚡ Generar PPT Histórica", type="primary", key="gen_hist_ppt"):
+                        with st.spinner(f"Generando análisis histórico de {selected_hist_dept}..."):
+                            try:
+                                primas = load_primas_historicas()
+                                ppt_bytes = generar_ppt_historico(
+                                    selected_hist_dept, datos, primas)
+                                fecha_str = datetime.now().strftime("%d_%m_%Y")
+                                fname = f"Historico_SAC_{selected_hist_dept}_{fecha_str}.pptx"
+                                st.session_state["ppt_historico"] = ppt_bytes
+                                st.session_state["ppt_historico_name"] = fname
+                                st.success(f"PPT generada: {fname}")
+                            except Exception as e:
+                                st.error(f"Error al generar PPT histórica: {e}")
+
+                with col_dl_h:
+                    if st.session_state.get("ppt_historico"):
+                        st.download_button(
+                            "⬇️ Descargar PPT Histórica",
+                            data=st.session_state["ppt_historico"],
+                            file_name=st.session_state.get("ppt_historico_name", "historico.pptx"),
+                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            use_container_width=True,
+                            key="dl_hist_ppt",
+                        )
+            else:
+                st.warning("Cargue datos primero para generar el análisis histórico.")
 
     # ═══════════════════════════════════════════════════════════════════════
     # SECCIÓN 3: SEMÁFORO DE ALERTAS
