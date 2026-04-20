@@ -512,15 +512,42 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
         midagri.reindex(columns=all_cols),
         siniestros.reindex(columns=all_cols)
     ], ignore_index=True)
-    # Re-coerción defensiva: tras reindex+concat una columna numérica puede
-    # quedar como object si uno de los DF no la tenía (se rellena con NaN
-    # object-dtype). Esto rompe comparaciones tipo `col > 0` más abajo con
+    # Re-coerción defensiva: tras reindex+concat una columna puede quedar
+    # como object con tipos mezclados si uno de los DF no la tenía (se
+    # rellena con NaN). Esto rompe .sum()/.groupby()/.sort_values() con
     # TypeError: '<' not supported between 'float' and 'str'.
-    for _num_col in ["SUP_AFECTADA", "SUP_PERDIDA", "SUP_INDEMNIZADA", "INDEMNIZACION",
+    _numeric_cols = ["SUP_AFECTADA", "SUP_PERDIDA", "SUP_INDEMNIZADA", "INDEMNIZACION",
                      "MONTO_DESEMBOLSADO", "SUP_DESEMBOLSO", "N_PRODUCTORES",
-                     "PRIMA_NETA_DPTO", "SUP_SEMBRADA", "SUP_ASEGURADA"]:
+                     "PRIMA_NETA_DPTO", "SUP_SEMBRADA", "SUP_ASEGURADA"]
+    for _num_col in _numeric_cols:
         if _num_col in combined.columns:
             combined[_num_col] = pd.to_numeric(combined[_num_col], errors="coerce")
+
+    # Columnas de texto usadas como claves de groupby/sort/filtro: si tras el
+    # concat quedan con mezcla str+NaN float, groupby/sort fallan. Forzar str
+    # y limpiar los "NAN" literales que deja astype(str) sobre NaN real.
+    _string_cols = ["DEPARTAMENTO", "PROVINCIA", "DISTRITO", "SECTOR_ESTADISTICO",
+                    "TIPO_CULTIVO", "FENOLOGIA", "TIPO_SINIESTRO", "ESTADO_SINIESTRO",
+                    "ESTADO_INSPECCION", "TIPO_COBERTURA", "DICTAMEN", "CODIGO_AVISO",
+                    "CODIGO_PADRON", "PRIORIZADO", "OBSERVACION", "CAMPAÑA", "EMPRESA"]
+    for _str_col in _string_cols:
+        if _str_col in combined.columns:
+            # fillna ANTES de astype: en pandas>=3 astype(str) sobre NaN deja
+            # <NA> en StringArray y el valor escapa como float al .tolist(),
+            # rompiendo sorted()/sort_values() río abajo.
+            combined[_str_col] = combined[_str_col].fillna("").astype(str).str.strip()
+            combined.loc[combined[_str_col].isin(["nan", "NaN", "NAN", "None", "NONE"]), _str_col] = ""
+
+    # Columnas de fecha: tras reindex+concat pueden quedar object con
+    # mezcla Timestamp+NaN float. Coercer a datetime para filtros seguros.
+    _date_cols = ["FECHA_SIEMBRA", "FECHA_COSECHA", "FECHA_SINIESTRO", "FECHA_AVISO",
+                  "FECHA_ATENCION", "FECHA_PROGRAMACION_AJUSTE", "FECHA_AJUSTE_ACTA_1",
+                  "FECHA_AJUSTE_ACTA_FINAL", "FECHA_REPROGRAMACION_01",
+                  "FECHA_REPROGRAMACION_02", "FECHA_REPROGRAMACION_03",
+                  "FECHA_ENVIO_DRAS", "FECHA_VALIDACION", "FECHA_DESEMBOLSO"]
+    for _date_col in _date_cols:
+        if _date_col in combined.columns:
+            combined[_date_col] = pd.to_datetime(combined[_date_col], errors="coerce")
     # Usar combined como el dataset principal
     midagri = combined
     siniestros = siniestros_solo
@@ -603,7 +630,7 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
     # ═══ CUADRO 2: Indemnizaciones y Desembolsos por Departamento ═══
     if "DEPARTAMENTO" in midagri.columns:
         # Filtrar solo registros con indemnización para contar productores
-        midagri_c2 = midagri.copy()
+        midagri_c2 = midagri[midagri["DEPARTAMENTO"].astype(str).str.strip() != ""].copy()
         midagri_c2["_INDEMN_NUM"] = pd.to_numeric(midagri_c2["INDEMNIZACION"], errors="coerce").fillna(0)
         midagri_c2["_PROD_NUM"] = pd.to_numeric(midagri_c2["N_PRODUCTORES"], errors="coerce").fillna(0) if "N_PRODUCTORES" in midagri_c2.columns else 0
         # Solo contar productores donde hay indemnización > 0
@@ -636,6 +663,8 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
     # ═══ CUADRO 3: Eventos de Lluvias Intensas ═══
     if "TIPO_SINIESTRO" in midagri.columns:
         lluvia_df = midagri[midagri["TIPO_SINIESTRO"].isin(LLUVIA_TYPES)]
+        if "DEPARTAMENTO" in lluvia_df.columns:
+            lluvia_df = lluvia_df[lluvia_df["DEPARTAMENTO"].astype(str).str.strip() != ""]
         total_lluvia = len(lluvia_df)
         pct_lluvia = (total_lluvia / total_avisos * 100) if total_avisos > 0 else 0
 
@@ -687,7 +716,12 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
         top3_siniestros = pd.Series()
 
     # ═══ DATOS DEPARTAMENTALES (para ayuda memoria departamental) ═══
-    departamentos_list = sorted(midagri["DEPARTAMENTO"].unique().tolist()) if "DEPARTAMENTO" in midagri.columns else []
+    if "DEPARTAMENTO" in midagri.columns:
+        departamentos_list = sorted(
+            d for d in midagri["DEPARTAMENTO"].dropna().unique().tolist() if d and str(d).strip()
+        )
+    else:
+        departamentos_list = []
 
     return {
         "fecha_corte": fecha_corte,
