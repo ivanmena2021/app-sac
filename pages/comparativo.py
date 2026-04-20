@@ -236,6 +236,272 @@ fig_sin.update_layout(
 )
 st.plotly_chart(fig_sin, use_container_width=True)
 
+
+# ═══════════════════════════════════════════════════════════════
+# SERIES TEMPORALES — Evolución mensual comparativa
+# ═══════════════════════════════════════════════════════════════
+
+st.markdown("---")
+st.markdown("### Evolución Temporal Comparativa")
+st.caption("Todas las campañas alineadas por mes agrícola (Ago → Jul) para facilitar la comparación")
+
+SERIES_PATH = os.path.join(STATIC_DIR, "series_temporales.json")
+series_data = {}
+if os.path.exists(SERIES_PATH):
+    with open(SERIES_PATH, "r", encoding="utf-8") as f:
+        series_data = json.load(f)
+
+# Orden de meses en campaña agrícola (Ago del año inicial → Jul del siguiente)
+MESES_CAMPANA = ["Ago", "Sep", "Oct", "Nov", "Dic", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"]
+
+# Colores por campaña — cada campaña un color distinto
+CAMP_COLORS = {
+    "2020-2021": "#636EFA",
+    "2021-2022": "#EF553B",
+    "2022-2023": "#00CC96",
+    "2023-2024": "#AB63FA",
+    "2024-2025": "#FFA15A",
+    "2025-2026": "#408B14",
+}
+
+
+def _period_to_campana_month(period_str, campana):
+    """Convierte '2021-03' → índice en la campaña agrícola (0=Ago, 11=Jul)."""
+    try:
+        year, month = int(period_str[:4]), int(period_str[5:7])
+    except (ValueError, IndexError):
+        return None
+    # Año inicio de la campaña
+    start_year = int(campana[:4])
+    # Ago(8)-Dic(12) del start_year → índices 0-4
+    # Ene(1)-Jul(7) del start_year+1 → índices 5-11
+    if year == start_year and 8 <= month <= 12:
+        return month - 8  # Ago=0, Sep=1, ..., Dic=4
+    elif year == start_year + 1 and 1 <= month <= 7:
+        return month + 4   # Ene=5, Feb=6, ..., Jul=11
+    return None
+
+
+def build_campaign_series(raw_dict, campana, value_key=None):
+    """Convierte dict {'2021-03': valor, ...} a array de 12 meses alineados a campaña agrícola."""
+    values = [0.0] * 12
+    for period_str, val in raw_dict.items():
+        idx = _period_to_campana_month(period_str, campana)
+        if idx is not None:
+            if value_key and isinstance(val, dict):
+                values[idx] = val.get(value_key, 0)
+            elif isinstance(val, (int, float)):
+                values[idx] = val
+            elif isinstance(val, dict):
+                values[idx] = val.get("n", 0)
+    return values
+
+
+def build_current_series_avisos(df, campana):
+    """Construye serie de avisos por mes para campaña actual desde DataFrame."""
+    date_col = None
+    for col in ["FECHA_AVISO", "FECHA_SINIESTRO"]:
+        if col in df.columns:
+            date_col = col
+            break
+    if date_col is None:
+        return [0.0] * 12
+    dates = pd.to_datetime(df[date_col], errors="coerce").dropna()
+    monthly = dates.dt.to_period("M").value_counts().sort_index()
+    raw = {str(p): int(c) for p, c in monthly.items()}
+    return build_campaign_series(raw, campana)
+
+
+def build_current_series_indemn(df, campana):
+    """Construye series de indemnizaciones por mes para campaña actual."""
+    # Buscar columna de fecha de ajuste
+    date_col = None
+    for col in ["FECHA_AJUSTE_ACTA_FINAL", "FECHA_AJUSTE_ACTA_1",
+                "FECHA_PROGRAMACION_AJUSTE", "FECHA_SINIESTRO"]:
+        if col in df.columns:
+            date_col = col
+            break
+    if date_col is None:
+        return [0.0] * 12, [0.0] * 12
+
+    # Filtrar indemnizables
+    ind_mask = pd.Series(False, index=df.index)
+    if "DICTAMEN" in df.columns:
+        dict_col = df["DICTAMEN"].astype(str).str.strip().str.upper()
+        ind_mask = (dict_col.str.contains("INDEMNIZABLE", na=False) &
+                    ~dict_col.str.contains("NO INDEMNIZABLE", na=False))
+
+    df_ind = df[ind_mask].copy()
+    if df_ind.empty:
+        return [0.0] * 12, [0.0] * 12
+
+    df_ind[date_col] = pd.to_datetime(df_ind[date_col], errors="coerce")
+    df_ind = df_ind[df_ind[date_col].notna()]
+    if df_ind.empty:
+        return [0.0] * 12, [0.0] * 12
+
+    periods = df_ind[date_col].dt.to_period("M")
+    count_m = periods.value_counts().sort_index()
+    count_raw = {str(p): int(c) for p, c in count_m.items()}
+    counts = build_campaign_series(count_raw, campana)
+
+    # Montos
+    monto_col = None
+    for mc in ["INDEMNIZACION", "MONTO_INDEMNIZADO"]:
+        if mc in df_ind.columns:
+            monto_col = mc
+            break
+
+    if monto_col:
+        df_ind["_monto"] = pd.to_numeric(df_ind[monto_col], errors="coerce").fillna(0)
+        monto_m = df_ind.groupby(periods)["_monto"].sum()
+        monto_raw = {str(p): float(v) for p, v in monto_m.items()}
+        montos = build_campaign_series(monto_raw, campana)
+    else:
+        montos = [0.0] * 12
+
+    return counts, montos
+
+
+# ── Construir datos para los gráficos ──
+
+all_avisos_series = {}
+all_indemn_count_series = {}
+all_indemn_monto_series = {}
+
+# Campañas históricas desde JSON
+for camp in CAMPANAS_HIST:
+    raw_av = series_data.get("avisos", {}).get(camp, {})
+    raw_in = series_data.get("indemnizaciones", {}).get(camp, {})
+    all_avisos_series[camp] = build_campaign_series(raw_av, camp)
+    all_indemn_count_series[camp] = build_campaign_series(raw_in, camp, value_key="n")
+    all_indemn_monto_series[camp] = build_campaign_series(raw_in, camp, value_key="monto")
+
+# Campaña actual desde datos dinámicos
+all_avisos_series[CAMPANA_ACTUAL] = build_current_series_avisos(df_actual, CAMPANA_ACTUAL)
+curr_counts, curr_montos = build_current_series_indemn(df_actual, CAMPANA_ACTUAL)
+all_indemn_count_series[CAMPANA_ACTUAL] = curr_counts
+all_indemn_monto_series[CAMPANA_ACTUAL] = curr_montos
+
+
+def make_evolution_chart(series_dict, title, yaxis_title, fmt_prefix="", cumulative=False):
+    """Crea un gráfico de líneas con 6 campañas superpuestas."""
+    fig = go.Figure()
+    for camp in all_camps:
+        vals = series_dict.get(camp, [0]*12)
+        if cumulative:
+            vals = list(np.cumsum(vals))
+        dash = "solid" if camp != CAMPANA_ACTUAL else "solid"
+        width = 2 if camp != CAMPANA_ACTUAL else 3.5
+        fig.add_trace(go.Scatter(
+            x=MESES_CAMPANA, y=vals,
+            mode="lines+markers",
+            name=camp,
+            line=dict(color=CAMP_COLORS.get(camp, "#999"), width=width, dash=dash),
+            marker=dict(size=5 if camp != CAMPANA_ACTUAL else 8),
+            hovertemplate=(
+                f"<b>{camp}</b><br>"
+                f"Mes: %{{x}}<br>"
+                f"{yaxis_title}: {fmt_prefix}%{{y:,.0f}}<extra></extra>"
+            ),
+        ))
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=14)),
+        height=420,
+        margin=dict(l=40, r=20, t=60, b=40),
+        plot_bgcolor="white", paper_bgcolor="white",
+        xaxis=dict(title="Mes de campaña agrícola", gridcolor="#f0f0f0"),
+        yaxis=dict(title=yaxis_title, gridcolor="#eee"),
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5,
+            font=dict(size=11),
+        ),
+        hovermode="x unified",
+    )
+    return fig
+
+
+# ── 4 gráficos en 2 filas de 2 columnas ──
+
+col_a, col_b = st.columns(2)
+
+with col_a:
+    st.plotly_chart(
+        make_evolution_chart(
+            all_avisos_series,
+            "Eventos Reportados por Mes",
+            "N.° de avisos",
+        ),
+        use_container_width=True, key="chart_avisos_mes"
+    )
+
+with col_b:
+    st.plotly_chart(
+        make_evolution_chart(
+            all_avisos_series,
+            "Avisos Acumulados",
+            "N.° de avisos acumulados",
+            cumulative=True,
+        ),
+        use_container_width=True, key="chart_avisos_acum"
+    )
+
+col_c, col_d = st.columns(2)
+
+with col_c:
+    st.plotly_chart(
+        make_evolution_chart(
+            all_indemn_monto_series,
+            "Indemnizaciones por Mes (S/)",
+            "Monto (S/)",
+            fmt_prefix="S/ ",
+        ),
+        use_container_width=True, key="chart_indemn_mes"
+    )
+
+with col_d:
+    st.plotly_chart(
+        make_evolution_chart(
+            all_indemn_monto_series,
+            "Indemnizaciones Acumuladas (S/)",
+            "Monto acumulado (S/)",
+            fmt_prefix="S/ ",
+            cumulative=True,
+        ),
+        use_container_width=True, key="chart_indemn_acum"
+    )
+
+# ── Gráficos adicionales de conteo de indemnizados ──
+
+st.markdown("#### Evolución de Casos Indemnizados")
+
+col_e, col_f = st.columns(2)
+
+with col_e:
+    st.plotly_chart(
+        make_evolution_chart(
+            all_indemn_count_series,
+            "Casos Indemnizados por Mes",
+            "N.° de indemnizados",
+        ),
+        use_container_width=True, key="chart_ind_count_mes"
+    )
+
+with col_f:
+    st.plotly_chart(
+        make_evolution_chart(
+            all_indemn_count_series,
+            "Indemnizados Acumulados",
+            "N.° acumulado de indemnizados",
+            cumulative=True,
+        ),
+        use_container_width=True, key="chart_ind_count_acum"
+    )
+
+st.caption("Nota: Eventos reportados se registran por FECHA_AVISO (o FECHA_SINIESTRO como proxy). "
+           "Indemnizaciones se registran por FECHA_AJUSTE (fecha de reconocimiento en evaluación). "
+           "Meses alineados al ciclo de campaña agrícola: agosto → julio.")
+
 st.caption("Fuente: Datos históricos de 5 campañas SAC (resumen_departamental.json) + "
            "Primas históricas (Primas_Totales_SAC_2020-2026.xlsx) + "
            "Campaña actual desde datos consolidados descargados de aseguradoras.")
