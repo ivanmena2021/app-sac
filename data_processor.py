@@ -512,6 +512,15 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
         midagri.reindex(columns=all_cols),
         siniestros.reindex(columns=all_cols)
     ], ignore_index=True)
+    # Re-coerción defensiva: tras reindex+concat una columna numérica puede
+    # quedar como object si uno de los DF no la tenía (se rellena con NaN
+    # object-dtype). Esto rompe comparaciones tipo `col > 0` más abajo con
+    # TypeError: '<' not supported between 'float' and 'str'.
+    for _num_col in ["SUP_AFECTADA", "SUP_PERDIDA", "SUP_INDEMNIZADA", "INDEMNIZACION",
+                     "MONTO_DESEMBOLSADO", "SUP_DESEMBOLSO", "N_PRODUCTORES",
+                     "PRIMA_NETA_DPTO", "SUP_SEMBRADA", "SUP_ASEGURADA"]:
+        if _num_col in combined.columns:
+            combined[_num_col] = pd.to_numeric(combined[_num_col], errors="coerce")
     # Usar combined como el dataset principal
     midagri = combined
     siniestros = siniestros_solo
@@ -568,7 +577,8 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
 
     # Departamentos con desembolso
     if "MONTO_DESEMBOLSADO" in midagri.columns:
-        deptos_con_desembolso = midagri[midagri["MONTO_DESEMBOLSADO"] > 0]["DEPARTAMENTO"].nunique()
+        _md = pd.to_numeric(midagri["MONTO_DESEMBOLSADO"], errors="coerce").fillna(0)
+        deptos_con_desembolso = midagri.loc[_md > 0, "DEPARTAMENTO"].nunique()
     else:
         deptos_con_desembolso = 0
 
