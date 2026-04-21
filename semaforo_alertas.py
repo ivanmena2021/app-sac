@@ -285,17 +285,33 @@ def generate_sankey_figure(df_sem):
         return None
 
     fig = go.Figure(go.Sankey(
+        arrangement="snap",
         node=dict(
-            pad=20, thickness=25,
+            pad=24, thickness=22,
             label=stage_labels,
             color=node_colors,
+            line=dict(color="rgba(0,0,0,0)", width=0),
         ),
-        link=dict(source=sources, target=targets, value=values, color=link_colors),
+        link=dict(
+            source=sources, target=targets, value=values, color=link_colors,
+            hovertemplate="<b>%{source.label}</b> → <b>%{target.label}</b><br>Avisos: %{value:,}<extra></extra>",
+        ),
     ))
     fig.update_layout(
-        title_text="Flujo de Avisos por Etapas",
-        font_size=12, height=350,
-        margin=dict(l=20, r=20, t=40, b=20),
+        title=dict(
+            text="<b>Flujo de Avisos por Etapas</b>"
+                 "<br><span style='font-size:11px;color:#64748b;font-weight:400'>"
+                 "Semáforo: 🟢 verde · 🟡 ámbar · 🔴 rojo</span>",
+            font=dict(size=16, color="#0c2340", family="Segoe UI, Arial"),
+            x=0.0, xanchor="left", y=0.97,
+        ),
+        font=dict(size=12, family="Segoe UI, Arial, sans-serif", color="#334155"),
+        height=390,
+        margin=dict(l=20, r=20, t=80, b=20),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#e2e8f0",
+                        font=dict(size=12, family="Segoe UI", color="#0c2340")),
     )
     return fig
 
@@ -599,7 +615,12 @@ def render_semaforo_tab(datos):
         fig_sankey = generate_sankey_figure(df_sem)
         if fig_sankey:
             with st.expander("📊 Diagrama de Flujo (Sankey)", expanded=False):
-                st.plotly_chart(fig_sankey, use_container_width=True)
+                try:
+                    from shared.charts import render_chart
+                    render_chart(fig_sankey, key="chart_sankey_semaforo",
+                                 filename="semaforo_flujo_avisos")
+                except ImportError:
+                    st.plotly_chart(fig_sankey, use_container_width=True)
     except Exception:
         pass
 

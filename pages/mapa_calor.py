@@ -6,6 +6,7 @@ import streamlit as st
 
 from shared.state import require_data, get_datos
 from shared.components import render_metric, page_header, footer
+from shared.charts import render_chart
 from gen_mapa_calor import generate_map, get_ranking_table, get_summary_cards, NIVELES, get_metricas_for_nivel
 
 require_data()
@@ -63,7 +64,11 @@ col_mapa, col_ranking = st.columns([3, 2])
 with col_mapa:
     try:
         fig = generate_map(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": True, "displaylogo": False})
+        _depto_str = "_".join(depto_filter).lower() if depto_filter else "peru"
+        _metrica_str = metrica_seleccionada.lower().replace(" ", "_").replace("(%)", "pct").replace("(s/)", "soles").replace("/", "_")
+        fname = f"mapa_sac_{nivel_seleccionado.lower()}_{_metrica_str}_{_depto_str}"
+        render_chart(fig, key="chart_mapa_sac", filename=fname,
+                     download_label="Descargar mapa")
     except Exception as e:
         st.error(f"Error al generar mapa: {e}")
 

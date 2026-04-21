@@ -6,6 +6,7 @@ import streamlit as st
 
 from shared.state import require_data, get_datos
 from shared.components import page_header, footer
+from shared.charts import apply_theme, render_chart, PALETTE
 from data_quality import render_quality_dashboard
 
 require_data()
@@ -29,13 +30,35 @@ with tab_data:
             st.info("No hay datos separados de siniestros (Rímac).")
 
     if "TIPO_SINIESTRO" in datos["midagri"].columns:
-        st.markdown("**Distribución por tipo de siniestro:**")
-        import plotly.express as px
+        st.markdown("**Distribución por tipo de siniestro**")
+        import plotly.graph_objects as go
         tipo_counts = datos["midagri"]["TIPO_SINIESTRO"].value_counts().head(15)
-        fig = px.bar(x=tipo_counts.values, y=tipo_counts.index, orientation="h",
-                     labels={"x": "Avisos", "y": "Tipo"}, color_discrete_sequence=["#2980b9"])
-        fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig, use_container_width=True)
+        total = int(tipo_counts.sum()) or 1
+        # Gradiente: más alto → azul más intenso
+        max_v = int(tipo_counts.max()) if len(tipo_counts) else 1
+        colors = [
+            f"rgba(26,82,118,{0.45 + 0.55 * (v / max_v):.3f})"
+            for v in tipo_counts.values
+        ]
+        fig = go.Figure(go.Bar(
+            x=tipo_counts.values, y=tipo_counts.index,
+            orientation="h",
+            marker=dict(color=colors, line=dict(width=0), cornerradius=4),
+            text=[f"{v:,} ({v/total:.0%})" for v in tipo_counts.values],
+            textposition="outside",
+            textfont=dict(size=11, color=PALETTE["text_soft"]),
+            hovertemplate="<b>%{y}</b><br>Avisos: %{x:,}<extra></extra>",
+        ))
+        fig.update_yaxes(autorange="reversed")
+        apply_theme(
+            fig,
+            title="Top 15 Tipos de Siniestro",
+            subtitle=f"De un total de {total:,} avisos",
+            height=460, show_legend=False,
+            xaxis_title="N.° de avisos", yaxis_title="",
+        )
+        render_chart(fig, key="chart_tipos_siniestro",
+                     filename="distribucion_tipos_siniestro")
 
 with tab_quality:
     render_quality_dashboard(datos)
