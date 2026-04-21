@@ -12,7 +12,7 @@ from shared.state import require_data, get_datos
 from shared.components import render_metric, page_header, footer
 from shared.charts import (
     apply_theme, render_chart, add_reference_line, style_bar, style_line,
-    PALETTE,
+    add_last_point_annotation, fmt_compact, PALETTE,
 )
 from data_processor import load_primas_historicas
 
@@ -118,15 +118,16 @@ fig.add_trace(go.Bar(
     marker=dict(
         color=colors,
         line=dict(width=0),
-        cornerradius=6,
+        cornerradius=8,
     ),
     text=[fmt.format(v) for v in values],
     textposition="outside",
-    textfont=dict(size=11, color=PALETTE["text_soft"], family="Segoe UI"),
+    textfont=dict(size=12, color=PALETTE["text_soft"], family="Segoe UI"),
     hovertemplate=(
         "<b>Campaña %{x}</b><br>"
         + metrica_sel + ": %{text}<extra></extra>"
     ),
+    showlegend=False,
 ))
 
 # Línea de promedio histórico
@@ -139,9 +140,13 @@ add_reference_line(
 apply_theme(
     fig,
     title=f"{metrica_sel} por Campaña Agrícola",
-    subtitle="5 campañas históricas + campaña actual (verde)",
-    height=440, show_legend=False, yaxis_title=metrica_sel,
+    subtitle="Azul = históricas · Verde = campaña actual · Roja = promedio",
+    height=470, show_legend=False, yaxis_title=metrica_sel,
+    legend_position="none",
 )
+# Formato compacto eje Y si es monto
+if "S/" in fmt or "monto" in key.lower() or "prima" in key.lower():
+    fig.update_yaxes(tickformat="~s", tickprefix="S/ ")
 render_chart(fig, key="chart_metrica_comp",
              filename=f"comparativo_{key}_por_campana")
 
@@ -236,22 +241,24 @@ sin_colors = [
 fig_sin = go.Figure()
 fig_sin.add_trace(go.Bar(
     x=all_camps, y=sin_vals,
-    marker=dict(color=sin_colors, line=dict(width=0), cornerradius=6),
+    marker=dict(color=sin_colors, line=dict(width=0), cornerradius=8),
     text=[f"{v:.1f}%" for v in sin_vals],
     textposition="outside",
-    textfont=dict(size=11, color=PALETTE["text_soft"]),
+    textfont=dict(size=12, color=PALETTE["text_soft"]),
     hovertemplate="<b>Campaña %{x}</b><br>Siniestralidad: %{y:.1f}%<extra></extra>",
+    showlegend=False,
 ))
 add_reference_line(fig_sin, y=70, color=PALETTE["danger"],
-                   label="Umbral alto (70%)", dash="dot")
+                   label="Alto (≥70%)", dash="dot")
 add_reference_line(fig_sin, y=50, color=PALETTE["warning"],
-                   label="Umbral medio (50%)", dash="dot")
+                   label="Medio (≥50%)", dash="dot")
 
 apply_theme(
     fig_sin,
     title="Evolución de Siniestralidad",
-    subtitle="Indemnización / Prima Neta × 100",
-    height=380, show_legend=False, yaxis_title="Siniestralidad (%)",
+    subtitle="Indemnización / Prima Neta × 100 — colores según umbral",
+    height=410, show_legend=False, yaxis_title="Siniestralidad (%)",
+    legend_position="none",
 )
 render_chart(fig_sin, key="chart_siniestralidad",
              filename="evolucion_siniestralidad_campanas")
@@ -413,37 +420,44 @@ def make_evolution_chart(series_dict, title, yaxis_title, fmt_prefix="", cumulat
         if cumulative:
             vals = list(np.cumsum(vals))
         is_current = camp == CAMPANA_ACTUAL
-        width = 3.5 if is_current else 1.8
+        width = 4 if is_current else 1.8
         fig.add_trace(go.Scatter(
             x=MESES_CAMPANA, y=vals,
             mode="lines+markers",
-            name=f"<b>{camp}</b>" if is_current else camp,
-            line=dict(color=CAMP_COLORS.get(camp, "#999"), width=width, shape="spline", smoothing=0.8),
+            name=camp,
+            line=dict(color=CAMP_COLORS.get(camp, "#999"), width=width,
+                      shape="spline", smoothing=0.8),
             marker=dict(
-                size=9 if is_current else 5,
-                line=dict(width=1.5 if is_current else 0, color="#ffffff"),
+                size=10 if is_current else 5,
+                line=dict(width=2 if is_current else 0, color="#ffffff"),
             ),
-            opacity=1.0 if is_current else 0.75,
+            opacity=1.0 if is_current else 0.65,
             hovertemplate=(
                 f"<b>{camp}</b><br>"
-                f"Mes: %{{x}}<br>"
-                f"{yaxis_title}: {fmt_prefix}%{{y:,.0f}}<extra></extra>"
+                f"%{{x}}: {fmt_prefix}%{{y:,.0f}}<extra></extra>"
             ),
         ))
+
+    # Anotación del valor actual sobre la curva de la campaña actual
+    add_last_point_annotation(
+        fig, CAMPANA_ACTUAL,
+        value=None, color=CAMP_COLORS[CAMPANA_ACTUAL],
+        currency=y_is_currency, prefix="Actual: ",
+    )
+
     apply_theme(
-        fig, title=title, subtitle=subtitle, height=430,
-        xaxis_title="Mes de campaña agrícola (Ago → Jul)",
-        yaxis_title=yaxis_title, y_is_currency=y_is_currency,
+        fig, title=title, subtitle=subtitle, height=470,
+        xaxis_title=None,
+        yaxis_title=yaxis_title, y_is_currency=False,
+        legend_position="bottom",
     )
-    fig.update_layout(
-        hovermode="x unified",
-        legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0,
-            font=dict(size=10, color=PALETTE["text_soft"]),
-            bgcolor="rgba(255,255,255,0.85)",
-            bordercolor=PALETTE["grid"], borderwidth=1,
-        ),
+    # Ticks compactos en el eje Y (ej. 15M en vez de 15,000,000)
+    fig.update_yaxes(
+        tickformat="~s",  # Plotly's SI suffixes (K, M, G)
+        tickprefix="S/ " if y_is_currency else "",
+        separatethousands=True,
     )
+    fig.update_layout(hovermode="x unified")
     return fig
 
 

@@ -67,7 +67,8 @@ FONT_FAMILY = "Segoe UI, Inter, Arial, sans-serif"
 # ═══════════════════════════════════════════════════════════════
 
 def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
-                xaxis_title=None, yaxis_title=None, y_is_currency=False):
+                xaxis_title=None, yaxis_title=None, y_is_currency=False,
+                legend_position="bottom"):
     """Aplica el tema institucional SAC a un figure Plotly.
 
     Args:
@@ -78,6 +79,9 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
         show_legend: True/False, o None para dejar el default del figure
         xaxis_title / yaxis_title: sobrescribir títulos de ejes
         y_is_currency: si True, formatea ticks del eje Y como S/
+        legend_position: "bottom" (debajo del plot, NO colisiona con título),
+            "top-right" (esquina superior derecha), "right" (columna derecha),
+            "none" (oculto)
     Returns:
         fig (mutado in-place + retornado por conveniencia)
     """
@@ -93,6 +97,10 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
         else:
             title_html = f"<b>{title}</b>"
 
+    # Márgenes + espacio reservado para leyenda bottom
+    top_margin = 75 if title else 30
+    bottom_margin = 90 if legend_position == "bottom" else 55
+
     layout_updates = dict(
         template="simple_white",
         font=dict(family=FONT_FAMILY, size=12, color=PALETTE["text_soft"]),
@@ -104,7 +112,7 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
             bordercolor=PALETTE["border"],
             font=dict(size=12, color=PALETTE["text"], family=FONT_FAMILY),
         ),
-        margin=dict(l=60, r=30, t=70 if title else 30, b=55),
+        margin=dict(l=60, r=30, t=top_margin, b=bottom_margin),
         height=height,
     )
 
@@ -112,8 +120,33 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
         layout_updates["title"] = dict(
             text=title_html,
             font=dict(size=16, color=PALETTE["text"], family=FONT_FAMILY),
-            x=0.0, xanchor="left", y=0.96, yanchor="top",
+            x=0.0, xanchor="left", y=0.98, yanchor="top", pad=dict(t=0, b=8),
         )
+
+    # Posicionamiento de la leyenda sin colisionar con título
+    if legend_position == "bottom":
+        layout_updates["legend"] = dict(
+            orientation="h", yanchor="top", y=-0.18,
+            xanchor="center", x=0.5,
+            font=dict(size=11, color=PALETTE["text_soft"], family=FONT_FAMILY),
+            bgcolor="rgba(255,255,255,0)",
+        )
+    elif legend_position == "top-right":
+        layout_updates["legend"] = dict(
+            orientation="v", yanchor="top", y=1.0,
+            xanchor="right", x=1.0,
+            font=dict(size=11, color=PALETTE["text_soft"], family=FONT_FAMILY),
+            bgcolor="rgba(255,255,255,0.85)",
+            bordercolor=PALETTE["grid"], borderwidth=1,
+        )
+    elif legend_position == "right":
+        layout_updates["legend"] = dict(
+            orientation="v", yanchor="middle", y=0.5,
+            xanchor="left", x=1.02,
+            font=dict(size=11, color=PALETTE["text_soft"], family=FONT_FAMILY),
+        )
+    elif legend_position == "none":
+        layout_updates["showlegend"] = False
 
     if show_legend is not None:
         layout_updates["showlegend"] = show_legend
@@ -268,5 +301,63 @@ def style_line(fig, marker_size=6, line_width=2.2):
         line=dict(width=line_width),
         marker=dict(size=marker_size, line=dict(width=0)),
         selector=dict(type="scatter"),
+    )
+    return fig
+
+
+def fmt_compact(value, currency=False):
+    """Formato compacto para valores grandes: 15.3M, 2.1K, S/ 15.3M."""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    prefix = "S/ " if currency else ""
+    abs_v = abs(v)
+    if abs_v >= 1_000_000_000:
+        return f"{prefix}{v/1_000_000_000:.2f}B"
+    if abs_v >= 1_000_000:
+        return f"{prefix}{v/1_000_000:.1f}M"
+    if abs_v >= 1_000:
+        return f"{prefix}{v/1_000:.1f}K"
+    return f"{prefix}{v:,.0f}"
+
+
+def add_last_point_annotation(fig, trace_name, value, color=None, currency=False,
+                               prefix=""):
+    """Añade una anotación destacada con el valor final de una traza.
+
+    Se ancla al último punto de la traza indicada (si existe).
+    """
+    target = None
+    for tr in fig.data:
+        if getattr(tr, "name", None) and trace_name in str(tr.name):
+            target = tr
+            break
+    if target is None or not hasattr(target, "x") or not hasattr(target, "y"):
+        return fig
+    try:
+        xs = list(target.x)
+        ys = list(target.y)
+        if not xs or not ys:
+            return fig
+        # Último punto no-NaN
+        last_x, last_y = None, None
+        for xv, yv in zip(xs, ys):
+            if yv is not None and not (isinstance(yv, float) and yv != yv):
+                last_x, last_y = xv, yv
+        if last_x is None:
+            return fig
+    except Exception:
+        return fig
+
+    color = color or PALETTE["midagri"]
+    label = f"<b>{prefix}{fmt_compact(last_y, currency=currency)}</b>"
+    fig.add_annotation(
+        x=last_x, y=last_y, text=label,
+        showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.5,
+        arrowcolor=color, ax=30, ay=-26,
+        bgcolor=color, bordercolor=color,
+        font=dict(color="#ffffff", size=11, family=FONT_FAMILY),
+        borderpad=4, opacity=0.95,
     )
     return fig
