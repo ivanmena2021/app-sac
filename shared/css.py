@@ -341,5 +341,11 @@ GLOBAL_CSS = """
 
 
 def inject_css():
-    """Inyecta el CSS global. Llamar una vez desde app.py."""
+    """Inyecta el CSS global. Guarda un flag en session_state para no
+    re-inyectar (el <style> ya vive en el DOM del cliente tras el primer
+    render). Esto ahorra enviar ~20 KB por cada rerun.
+    """
+    if st.session_state.get("_css_injected"):
+        return
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+    st.session_state["_css_injected"] = True

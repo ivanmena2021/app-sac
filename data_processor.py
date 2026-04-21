@@ -8,6 +8,19 @@ import numpy as np
 import os
 from datetime import datetime
 
+# Streamlit es opcional (para tests/CLI). Si no está disponible, los
+# decoradores @st.cache_data se vuelven no-ops.
+try:
+    import streamlit as st
+    _cache_data = st.cache_data
+except Exception:  # pragma: no cover
+    def _cache_data(*dargs, **dkwargs):
+        def _decorator(fn):
+            return fn
+        if dargs and callable(dargs[0]):
+            return dargs[0]
+        return _decorator
+
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static_data")
 
 # ─── Tipos de siniestro asociados a lluvias intensas ───
@@ -44,6 +57,7 @@ CAPITAL_TO_DEPTO = {
 }
 
 
+@_cache_data(show_spinner=False, ttl=86400)
 def load_primas_historicas():
     """Carga primas netas por departamento y campaña desde Excel estático.
 
@@ -95,6 +109,7 @@ def load_primas_historicas():
     return result
 
 
+@_cache_data(show_spinner=False, ttl=86400)
 def load_materia_asegurada():
     """Carga Materia Asegurada (datos estáticos de póliza por departamento)."""
     from openpyxl import load_workbook
@@ -170,6 +185,7 @@ def load_materia_asegurada():
     return df
 
 
+@_cache_data(show_spinner=False, ttl=86400)
 def load_resumen_sac():
     """Carga Resumen SAC (datos estáticos de resumen)."""
     path = os.path.join(STATIC_DIR, "Resumen_SAC_2025-2026.xlsx")
@@ -760,7 +776,24 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
     }
 
 
+@_cache_data(show_spinner=False, ttl=600)
+def _get_departamento_data_cached(_datos, depto, cache_key):
+    """Wrapper cacheado: _datos no se hashea, cache_key lo identifica."""
+    return _get_departamento_data_impl(_datos, depto)
+
+
 def get_departamento_data(datos, depto):
+    """Extrae datos de un departamento (interfaz pública, usa cache por
+    (fecha_corte, total_avisos, depto) para invalidar al recargar datos)."""
+    cache_key = (
+        datos.get("fecha_corte", ""),
+        datos.get("total_avisos", 0),
+        depto.strip().upper() if isinstance(depto, str) else str(depto),
+    )
+    return _get_departamento_data_cached(datos, depto, cache_key)
+
+
+def _get_departamento_data_impl(datos, depto):
     """Extrae datos específicos de un departamento para ayuda memoria departamental."""
     depto_upper = depto.strip().upper()
     midagri = datos["midagri"]

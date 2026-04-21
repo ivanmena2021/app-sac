@@ -11,6 +11,17 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
+try:
+    import streamlit as st
+    _cache_data = st.cache_data
+except Exception:  # pragma: no cover
+    def _cache_data(*dargs, **dkwargs):
+        def _dec(fn):
+            return fn
+        if dargs and callable(dargs[0]):
+            return dargs[0]
+        return _dec
+
 
 # ═══════════════════════════════════════════════════════════════════
 # CENTROIDES DE DEPARTAMENTOS (para fallback cuando no hay coords)
@@ -157,7 +168,21 @@ def _jitter_coords(name_str, base_lat, base_lon, spread=0.35):
 # CONSTRUCTOR DE MÉTRICAS GENÉRICO
 # ═══════════════════════════════════════════════════════════════════
 
+@_cache_data(show_spinner=False, ttl=600)
+def _build_metrics_cached(_datos, nivel_key, depto_filter_tuple, cache_key):
+    """Wrapper cacheado. _datos no se hashea; cache_key identifica la carga."""
+    depto_filter = list(depto_filter_tuple) if depto_filter_tuple else None
+    return _build_metrics_impl(_datos, nivel_key, depto_filter)
+
+
 def _build_metrics(datos, nivel_key="Departamental", depto_filter=None):
+    """Interfaz pública: añade cache_key estable derivado de los datos."""
+    cache_key = (datos.get("fecha_corte", ""), datos.get("total_avisos", 0))
+    dft = tuple(sorted(depto_filter)) if depto_filter else tuple()
+    return _build_metrics_cached(datos, nivel_key, dft, cache_key)
+
+
+def _build_metrics_impl(datos, nivel_key="Departamental", depto_filter=None):
     """
     Construye DataFrame con métricas agregadas al nivel geográfico indicado.
 
@@ -325,31 +350,41 @@ def generate_map(datos, metrica_key="Avance de Desembolso (%)",
 
     df["_size"] = size_min + (df[col] - min_val) / range_val * (size_max - size_min)
 
-    # Hover text
-    group_col = nivel["group_col"]
+    # Hover text — vectorizado (anteriormente df.apply por fila, lento con
+    # cientos/miles de distritos). Construimos cada línea como Series y
+    # concatenamos con "<br>".
+    fmt = meta["format"]
+    sfx = meta["suffix"]
+    vals = pd.to_numeric(df[col], errors="coerce")
+    # Formato por tipo (float/int) — usamos format string mini-lenguaje
+    if fmt.endswith("f"):
+        val_str = vals.map(lambda v: f"{v:{fmt}}{sfx}" if pd.notna(v) else "")
+    else:
+        val_str = vals.map(lambda v: f"{int(v):{fmt}}{sfx}" if pd.notna(v) else "")
 
-    def _hover(r):
-        try:
-            val_str = f"{r[col]:{meta['format']}}{meta['suffix']}"
-        except (ValueError, TypeError):
-            val_str = str(r[col])
-        parts = [
-            f"<b>{r['nombre']}</b>",
-        ]
-        # Agregar departamento como contexto si no es nivel departamental
-        if nivel_key != "Departamental" and "DEPARTAMENTO" in r.index:
-            parts.append(f"Dpto: {str(r['DEPARTAMENTO']).title()}")
-        parts.append(f"<b>{metrica_key}:</b> {val_str}")
-        parts.append(f"Avisos: {int(r['avisos']):,}")
-        parts.append(f"Indemnización: S/ {r['monto_indemnizado']:,.0f}")
-        parts.append(f"Desembolso: S/ {r['monto_desembolsado']:,.0f}")
-        parts.append(f"Ha indemnizadas: {r['ha_indemnizadas']:,.0f}")
-        parts.append(f"Productores: {int(r['productores']):,}")
-        if nivel_key == "Departamental":
-            parts.append(f"Empresa: {r.get('EMPRESA_ASEGURADORA', 'N/D')}")
-        return "<br>".join(parts)
+    lines = []
+    lines.append("<b>" + df["nombre"].astype(str) + "</b>")
+    if nivel_key != "Departamental" and "DEPARTAMENTO" in df.columns:
+        lines.append("Dpto: " + df["DEPARTAMENTO"].astype(str).str.title())
+    lines.append(f"<b>{metrica_key}:</b> " + val_str.astype(str))
+    lines.append("Avisos: " + pd.to_numeric(df["avisos"], errors="coerce")
+                 .fillna(0).astype(int).map("{:,}".format))
+    lines.append("Indemnización: S/ " + pd.to_numeric(df["monto_indemnizado"], errors="coerce")
+                 .fillna(0).map("{:,.0f}".format))
+    lines.append("Desembolso: S/ " + pd.to_numeric(df["monto_desembolsado"], errors="coerce")
+                 .fillna(0).map("{:,.0f}".format))
+    lines.append("Ha indemnizadas: " + pd.to_numeric(df["ha_indemnizadas"], errors="coerce")
+                 .fillna(0).map("{:,.0f}".format))
+    lines.append("Productores: " + pd.to_numeric(df["productores"], errors="coerce")
+                 .fillna(0).astype(int).map("{:,}".format))
+    if nivel_key == "Departamental" and "EMPRESA_ASEGURADORA" in df.columns:
+        lines.append("Empresa: " + df["EMPRESA_ASEGURADORA"].fillna("N/D").astype(str))
 
-    df["_hover"] = df.apply(_hover, axis=1)
+    # Concatenar todas las líneas con <br>
+    hover_series = lines[0]
+    for extra in lines[1:]:
+        hover_series = hover_series + "<br>" + extra
+    df["_hover"] = hover_series
 
     # Calcular centro del mapa
     if depto_filter and len(depto_filter) == 1:

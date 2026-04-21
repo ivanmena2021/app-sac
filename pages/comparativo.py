@@ -16,6 +16,7 @@ from shared.charts import (
     apply_theme, render_chart, add_reference_line, style_bar, style_line,
     add_last_point_annotation, fmt_compact, PALETTE,
 )
+from shared.cache import load_json_cached
 from data_processor import load_primas_historicas
 
 TZ_PERU = timezone(timedelta(hours=-5))
@@ -34,10 +35,8 @@ page_header("Comparativo de Campañas",
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static_data")
 RESUMEN_PATH = os.path.join(STATIC_DIR, "resumen_departamental.json")
 
-resumen_dept = {}
-if os.path.exists(RESUMEN_PATH):
-    with open(RESUMEN_PATH, "r", encoding="utf-8") as f:
-        resumen_dept = json.load(f)
+# Cacheado: json.load se ejecutaba en cada rerun de la página.
+resumen_dept = load_json_cached(RESUMEN_PATH)
 
 primas_hist = load_primas_historicas()
 
@@ -277,10 +276,7 @@ st.markdown("### Evolución Temporal Comparativa")
 st.caption("Todas las campañas alineadas por mes agrícola (Ago → Jul) para facilitar la comparación")
 
 SERIES_PATH = os.path.join(STATIC_DIR, "series_temporales.json")
-series_data = {}
-if os.path.exists(SERIES_PATH):
-    with open(SERIES_PATH, "r", encoding="utf-8") as f:
-        series_data = json.load(f)
+series_data = load_json_cached(SERIES_PATH)
 
 # Orden de meses en campaña agrícola (Ago del año inicial → Jul del siguiente)
 MESES_CAMPANA = ["Ago", "Sep", "Oct", "Nov", "Dic", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"]
