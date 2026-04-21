@@ -3,6 +3,8 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import json
+from datetime import datetime, timezone, timedelta
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,6 +13,8 @@ import plotly.graph_objects as go
 from shared.state import require_data, get_datos
 from shared.components import render_metric, page_header, footer
 from data_processor import load_primas_historicas
+
+TZ_PERU = timezone(timedelta(hours=-5))
 
 require_data()
 datos = get_datos()
@@ -297,23 +301,54 @@ def build_campaign_series(raw_dict, campana, value_key=None):
     return values
 
 
+def _current_campaign_month_idx(campana, today=None):
+    """Devuelve el índice 0..11 del mes vigente dentro de la campaña si está en curso.
+    None si la campaña ya terminó o aún no empezó (usamos dato completo o nada).
+    """
+    if today is None:
+        today = datetime.now(TZ_PERU).date()
+    start_year = int(campana[:4])
+    if today.year == start_year and 8 <= today.month <= 12:
+        return today.month - 8
+    if today.year == start_year + 1 and 1 <= today.month <= 7:
+        return today.month + 4
+    return None
+
+
+def _mask_future_months(series, campana):
+    """Para la campaña en curso, reemplaza meses posteriores al vigente con np.nan.
+    Así Plotly corta la línea y cumsum no inventa datos de meses que no ocurrieron.
+    """
+    idx = _current_campaign_month_idx(campana)
+    if idx is None:
+        return series  # histórica o futura: no truncar
+    out = list(series)
+    for i in range(idx + 1, 12):
+        out[i] = np.nan
+    return out
+
+
 def build_current_series_avisos(df, campana):
-    """Construye serie de avisos por mes para campaña actual desde DataFrame."""
+    """Construye serie de avisos por mes para campaña actual desde DataFrame.
+    Meses posteriores al mes vigente quedan como np.nan (aún no ocurrieron).
+    """
     date_col = None
     for col in ["FECHA_AVISO", "FECHA_SINIESTRO"]:
         if col in df.columns:
             date_col = col
             break
     if date_col is None:
-        return [0.0] * 12
+        return _mask_future_months([0.0] * 12, campana)
     dates = pd.to_datetime(df[date_col], errors="coerce").dropna()
     monthly = dates.dt.to_period("M").value_counts().sort_index()
     raw = {str(p): int(c) for p, c in monthly.items()}
-    return build_campaign_series(raw, campana)
+    return _mask_future_months(build_campaign_series(raw, campana), campana)
 
 
 def build_current_series_indemn(df, campana):
-    """Construye series de indemnizaciones por mes para campaña actual."""
+    """Construye series de indemnizaciones por mes para campaña actual.
+    Meses posteriores al mes vigente quedan como np.nan (aún no ocurrieron).
+    """
     # Buscar columna de fecha de ajuste
     date_col = None
     for col in ["FECHA_AJUSTE_ACTA_FINAL", "FECHA_AJUSTE_ACTA_1",
@@ -322,7 +357,8 @@ def build_current_series_indemn(df, campana):
             date_col = col
             break
     if date_col is None:
-        return [0.0] * 12, [0.0] * 12
+        empty = _mask_future_months([0.0] * 12, campana)
+        return empty, list(empty)
 
     # Filtrar indemnizables
     ind_mask = pd.Series(False, index=df.index)
@@ -333,17 +369,19 @@ def build_current_series_indemn(df, campana):
 
     df_ind = df[ind_mask].copy()
     if df_ind.empty:
-        return [0.0] * 12, [0.0] * 12
+        empty = _mask_future_months([0.0] * 12, campana)
+        return empty, list(empty)
 
     df_ind[date_col] = pd.to_datetime(df_ind[date_col], errors="coerce")
     df_ind = df_ind[df_ind[date_col].notna()]
     if df_ind.empty:
-        return [0.0] * 12, [0.0] * 12
+        empty = _mask_future_months([0.0] * 12, campana)
+        return empty, list(empty)
 
     periods = df_ind[date_col].dt.to_period("M")
     count_m = periods.value_counts().sort_index()
     count_raw = {str(p): int(c) for p, c in count_m.items()}
-    counts = build_campaign_series(count_raw, campana)
+    counts = _mask_future_months(build_campaign_series(count_raw, campana), campana)
 
     # Montos
     monto_col = None
@@ -356,9 +394,9 @@ def build_current_series_indemn(df, campana):
         df_ind["_monto"] = pd.to_numeric(df_ind[monto_col], errors="coerce").fillna(0)
         monto_m = df_ind.groupby(periods)["_monto"].sum()
         monto_raw = {str(p): float(v) for p, v in monto_m.items()}
-        montos = build_campaign_series(monto_raw, campana)
+        montos = _mask_future_months(build_campaign_series(monto_raw, campana), campana)
     else:
-        montos = [0.0] * 12
+        montos = _mask_future_months([0.0] * 12, campana)
 
     return counts, montos
 
@@ -500,7 +538,8 @@ with col_f:
 
 st.caption("Nota: Eventos reportados se registran por FECHA_AVISO (o FECHA_SINIESTRO como proxy). "
            "Indemnizaciones se registran por FECHA_AJUSTE (fecha de reconocimiento en evaluación). "
-           "Meses alineados al ciclo de campaña agrícola: agosto → julio.")
+           "Meses alineados al ciclo de campaña agrícola: agosto → julio. "
+           "La campaña en curso se corta en el mes vigente (Perú UTC-5); los meses siguientes no se grafican.")
 
 st.caption("Fuente: Datos históricos de 5 campañas SAC (resumen_departamental.json) + "
            "Primas históricas (Primas_Totales_SAC_2020-2026.xlsx) + "
