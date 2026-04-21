@@ -12,6 +12,10 @@ import plotly.graph_objects as go
 
 from shared.state import require_data, get_datos
 from shared.components import render_metric, page_header, footer
+from shared.charts import (
+    apply_theme, render_chart, add_reference_line, style_bar, style_line,
+    add_last_point_annotation, fmt_compact, PALETTE,
+)
 from data_processor import load_primas_historicas
 
 TZ_PERU = timezone(timedelta(hours=-5))
@@ -109,33 +113,46 @@ st.caption(desc)
 # ═══════════════════════════════════════════════════════════════
 
 values = [all_data[c][key] for c in all_camps]
-colors = ["#2980b9"] * 5 + ["#408B14"]  # Azul para históricas, verde MIDAGRI para actual
+# Históricas en azul corporativo, actual en verde MIDAGRI (resaltado)
+colors = [PALETTE["primary_mid"]] * 5 + [PALETTE["midagri"]]
 
 fig = go.Figure()
 fig.add_trace(go.Bar(
     x=all_camps, y=values,
-    marker_color=colors,
+    marker=dict(
+        color=colors,
+        line=dict(width=0),
+        cornerradius=8,
+    ),
     text=[fmt.format(v) for v in values],
     textposition="outside",
-    textfont=dict(size=11),
+    textfont=dict(size=12, color=PALETTE["text_soft"], family="Segoe UI"),
+    hovertemplate=(
+        "<b>Campaña %{x}</b><br>"
+        + metrica_sel + ": %{text}<extra></extra>"
+    ),
+    showlegend=False,
 ))
 
 # Línea de promedio histórico
 avg_hist = np.mean([all_data[c][key] for c in CAMPANAS_HIST])
-fig.add_hline(y=avg_hist, line_dash="dash", line_color="#e74c3c", line_width=1.5,
-              annotation_text=f"Prom. histórico: {fmt.format(avg_hist)}",
-              annotation_position="top left",
-              annotation_font_color="#e74c3c")
-
-fig.update_layout(
-    title=dict(text=f"{metrica_sel} por Campaña Agrícola", font=dict(size=16)),
-    xaxis_title="", yaxis_title=metrica_sel,
-    height=420, margin=dict(l=40, r=20, t=60, b=40),
-    plot_bgcolor="white", paper_bgcolor="white",
-    yaxis=dict(gridcolor="#eee"),
-    showlegend=False,
+add_reference_line(
+    fig, y=avg_hist, color=PALETTE["danger"],
+    label=f"Promedio histórico: {fmt.format(avg_hist)}",
 )
-st.plotly_chart(fig, use_container_width=True)
+
+apply_theme(
+    fig,
+    title=f"{metrica_sel} por Campaña Agrícola",
+    subtitle="Azul = históricas · Verde = campaña actual · Roja = promedio",
+    height=470, show_legend=False, yaxis_title=metrica_sel,
+    legend_position="none",
+)
+# Formato compacto eje Y si es monto
+if "S/" in fmt or "monto" in key.lower() or "prima" in key.lower():
+    fig.update_yaxes(tickformat="~s", tickprefix="S/ ")
+render_chart(fig, key="chart_metrica_comp",
+             filename=f"comparativo_{key}_por_campana")
 
 # ═══════════════════════════════════════════════════════════════
 # TABLA RESUMEN — 6 campañas
@@ -220,25 +237,35 @@ if dept_list:
 st.markdown("#### Evolución de Siniestralidad")
 
 sin_vals = [all_data[c]["siniestralidad"] for c in all_camps]
-sin_colors = ["#e74c3c" if v > 70 else ("#f39c12" if v > 50 else "#27ae60") for v in sin_vals]
+sin_colors = [
+    PALETTE["danger"] if v > 70 else (PALETTE["warning"] if v > 50 else PALETTE["success"])
+    for v in sin_vals
+]
 
 fig_sin = go.Figure()
 fig_sin.add_trace(go.Bar(
     x=all_camps, y=sin_vals,
-    marker_color=sin_colors,
+    marker=dict(color=sin_colors, line=dict(width=0), cornerradius=8),
     text=[f"{v:.1f}%" for v in sin_vals],
     textposition="outside",
+    textfont=dict(size=12, color=PALETTE["text_soft"]),
+    hovertemplate="<b>Campaña %{x}</b><br>Siniestralidad: %{y:.1f}%<extra></extra>",
+    showlegend=False,
 ))
-fig_sin.add_hline(y=70, line_dash="dot", line_color="#e74c3c", line_width=1,
-                  annotation_text="Umbral alto (70%)", annotation_position="top right",
-                  annotation_font_color="#e74c3c", annotation_font_size=10)
-fig_sin.update_layout(
-    title=dict(text="Siniestralidad = Indemnización / Prima Neta (%)", font=dict(size=14)),
-    height=350, margin=dict(l=40, r=20, t=50, b=40),
-    plot_bgcolor="white", paper_bgcolor="white",
-    yaxis=dict(gridcolor="#eee", title="Siniestralidad (%)"),
+add_reference_line(fig_sin, y=70, color=PALETTE["danger"],
+                   label="Alto (≥70%)", dash="dot")
+add_reference_line(fig_sin, y=50, color=PALETTE["warning"],
+                   label="Medio (≥50%)", dash="dot")
+
+apply_theme(
+    fig_sin,
+    title="Evolución de Siniestralidad",
+    subtitle="Indemnización / Prima Neta × 100 — colores según umbral",
+    height=410, show_legend=False, yaxis_title="Siniestralidad (%)",
+    legend_position="none",
 )
-st.plotly_chart(fig_sin, use_container_width=True)
+render_chart(fig_sin, key="chart_siniestralidad",
+             filename="evolucion_siniestralidad_campanas")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -422,40 +449,53 @@ all_indemn_count_series[CAMPANA_ACTUAL] = curr_counts
 all_indemn_monto_series[CAMPANA_ACTUAL] = curr_montos
 
 
-def make_evolution_chart(series_dict, title, yaxis_title, fmt_prefix="", cumulative=False):
-    """Crea un gráfico de líneas con 6 campañas superpuestas."""
+def make_evolution_chart(series_dict, title, yaxis_title, fmt_prefix="", cumulative=False,
+                          subtitle=None, y_is_currency=False):
+    """Crea un gráfico de líneas con 6 campañas superpuestas, tema SAC."""
     fig = go.Figure()
     for camp in all_camps:
         vals = series_dict.get(camp, [0]*12)
         if cumulative:
             vals = list(np.cumsum(vals))
-        dash = "solid" if camp != CAMPANA_ACTUAL else "solid"
-        width = 2 if camp != CAMPANA_ACTUAL else 3.5
+        is_current = camp == CAMPANA_ACTUAL
+        width = 4 if is_current else 1.8
         fig.add_trace(go.Scatter(
             x=MESES_CAMPANA, y=vals,
             mode="lines+markers",
             name=camp,
-            line=dict(color=CAMP_COLORS.get(camp, "#999"), width=width, dash=dash),
-            marker=dict(size=5 if camp != CAMPANA_ACTUAL else 8),
+            line=dict(color=CAMP_COLORS.get(camp, "#999"), width=width,
+                      shape="spline", smoothing=0.8),
+            marker=dict(
+                size=10 if is_current else 5,
+                line=dict(width=2 if is_current else 0, color="#ffffff"),
+            ),
+            opacity=1.0 if is_current else 0.65,
             hovertemplate=(
                 f"<b>{camp}</b><br>"
-                f"Mes: %{{x}}<br>"
-                f"{yaxis_title}: {fmt_prefix}%{{y:,.0f}}<extra></extra>"
+                f"%{{x}}: {fmt_prefix}%{{y:,.0f}}<extra></extra>"
             ),
         ))
-    fig.update_layout(
-        title=dict(text=title, font=dict(size=14)),
-        height=420,
-        margin=dict(l=40, r=20, t=60, b=40),
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(title="Mes de campaña agrícola", gridcolor="#f0f0f0"),
-        yaxis=dict(title=yaxis_title, gridcolor="#eee"),
-        legend=dict(
-            orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5,
-            font=dict(size=11),
-        ),
-        hovermode="x unified",
+
+    # Anotación del valor actual sobre la curva de la campaña actual
+    add_last_point_annotation(
+        fig, CAMPANA_ACTUAL,
+        value=None, color=CAMP_COLORS[CAMPANA_ACTUAL],
+        currency=y_is_currency, prefix="Actual: ",
     )
+
+    apply_theme(
+        fig, title=title, subtitle=subtitle, height=470,
+        xaxis_title=None,
+        yaxis_title=yaxis_title, y_is_currency=False,
+        legend_position="bottom",
+    )
+    # Ticks compactos en el eje Y (ej. 15M en vez de 15,000,000)
+    fig.update_yaxes(
+        tickformat="~s",  # Plotly's SI suffixes (K, M, G)
+        tickprefix="S/ " if y_is_currency else "",
+        separatethousands=True,
+    )
+    fig.update_layout(hovermode="x unified")
     return fig
 
 
@@ -464,49 +504,55 @@ def make_evolution_chart(series_dict, title, yaxis_title, fmt_prefix="", cumulat
 col_a, col_b = st.columns(2)
 
 with col_a:
-    st.plotly_chart(
+    render_chart(
         make_evolution_chart(
             all_avisos_series,
             "Eventos Reportados por Mes",
             "N.° de avisos",
+            subtitle="Avisos nuevos registrados cada mes",
         ),
-        use_container_width=True, key="chart_avisos_mes"
+        key="chart_avisos_mes", filename="avisos_por_mes_campanas",
     )
 
 with col_b:
-    st.plotly_chart(
+    render_chart(
         make_evolution_chart(
             all_avisos_series,
             "Avisos Acumulados",
             "N.° de avisos acumulados",
             cumulative=True,
+            subtitle="Acumulado desde el inicio de la campaña (agosto)",
         ),
-        use_container_width=True, key="chart_avisos_acum"
+        key="chart_avisos_acum", filename="avisos_acumulados_campanas",
     )
 
 col_c, col_d = st.columns(2)
 
 with col_c:
-    st.plotly_chart(
+    render_chart(
         make_evolution_chart(
             all_indemn_monto_series,
-            "Indemnizaciones por Mes (S/)",
+            "Indemnizaciones por Mes",
             "Monto (S/)",
             fmt_prefix="S/ ",
+            subtitle="Monto reconocido en cada mes (fecha de ajuste)",
+            y_is_currency=True,
         ),
-        use_container_width=True, key="chart_indemn_mes"
+        key="chart_indemn_mes", filename="indemnizaciones_por_mes_campanas",
     )
 
 with col_d:
-    st.plotly_chart(
+    render_chart(
         make_evolution_chart(
             all_indemn_monto_series,
-            "Indemnizaciones Acumuladas (S/)",
+            "Indemnizaciones Acumuladas",
             "Monto acumulado (S/)",
             fmt_prefix="S/ ",
             cumulative=True,
+            subtitle="Acumulado desde el inicio de la campaña (agosto)",
+            y_is_currency=True,
         ),
-        use_container_width=True, key="chart_indemn_acum"
+        key="chart_indemn_acum", filename="indemnizaciones_acumuladas_campanas",
     )
 
 # ── Gráficos adicionales de conteo de indemnizados ──
@@ -516,24 +562,26 @@ st.markdown("#### Evolución de Casos Indemnizados")
 col_e, col_f = st.columns(2)
 
 with col_e:
-    st.plotly_chart(
+    render_chart(
         make_evolution_chart(
             all_indemn_count_series,
             "Casos Indemnizados por Mes",
             "N.° de indemnizados",
+            subtitle="Avisos con dictamen INDEMNIZABLE por mes",
         ),
-        use_container_width=True, key="chart_ind_count_mes"
+        key="chart_ind_count_mes", filename="casos_indemnizados_por_mes",
     )
 
 with col_f:
-    st.plotly_chart(
+    render_chart(
         make_evolution_chart(
             all_indemn_count_series,
             "Indemnizados Acumulados",
             "N.° acumulado de indemnizados",
             cumulative=True,
+            subtitle="Acumulado desde el inicio de la campaña (agosto)",
         ),
-        use_container_width=True, key="chart_ind_count_acum"
+        key="chart_ind_count_acum", filename="casos_indemnizados_acumulados",
     )
 
 st.caption("Nota: Eventos reportados se registran por FECHA_AVISO (o FECHA_SINIESTRO como proxy). "

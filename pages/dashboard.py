@@ -11,6 +11,7 @@ TZ_PERU = timezone(timedelta(hours=-5))
 
 from shared.state import require_data, get_datos
 from shared.components import render_metric, page_header, footer
+from data_processor import get_departamento_data
 
 require_data()
 datos = get_datos()
@@ -107,6 +108,105 @@ try:
             st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
 except Exception as e:
     st.error(f"Error al renderizar KPIs: {e}")
+
+# ═══════════════════════════════════════════════════════════════
+# PANEL DEPARTAMENTAL — mismo formato que Panel Nacional
+# ═══════════════════════════════════════════════════════════════
+st.markdown('<div style="height: 1rem;"></div>', unsafe_allow_html=True)
+
+try:
+    depto_list = sorted(datos.get("departamentos_list", []))
+    if depto_list:
+        # Header + selector lado a lado
+        col_hdr, col_sel = st.columns([2.2, 1.3])
+        with col_hdr:
+            st.markdown("""
+            <div class="section-header">
+                <div class="icon-box" style="background:#e8f8ec;">🗺️</div>
+                <h3>Panel Departamental</h3>
+            </div>
+            """, unsafe_allow_html=True)
+        with col_sel:
+            # Default: primer departamento con mayor cantidad de avisos
+            try:
+                mid = datos["midagri"]
+                if "DEPARTAMENTO" in mid.columns:
+                    _top = mid["DEPARTAMENTO"].value_counts()
+                    _default_dept = next((d for d in _top.index if d in depto_list), depto_list[0])
+                    _default_idx = depto_list.index(_default_dept)
+                else:
+                    _default_idx = 0
+            except Exception:
+                _default_idx = 0
+            depto_sel = st.selectbox(
+                "Departamento", options=depto_list, index=_default_idx,
+                format_func=lambda d: d.title() if d else d,
+                key="dash_depto_sel", label_visibility="collapsed",
+            )
+
+        # Calcular métricas para el departamento
+        dd = get_departamento_data(datos, depto_sel)
+
+        # % Evaluación desde estados
+        _estados = dd.get("estados")
+        _cerrados = 0
+        try:
+            if _estados is not None and len(_estados) > 0:
+                _cerrados = int(sum(v for k, v in _estados.items()
+                                     if str(k).strip().upper() in ("CERRADO", "CONCRETADO")))
+        except Exception:
+            _cerrados = 0
+        _avisos = int(dd.get("total_avisos", 0))
+        _pct_eval = (100 * _cerrados / _avisos) if _avisos > 0 else 0.0
+
+        # % Desembolso
+        _indemn = float(dd.get("monto_indemnizado", 0) or 0)
+        _desemb = float(dd.get("monto_desembolsado", 0) or 0)
+        _pct_desemb = (100 * _desemb / _indemn) if _indemn > 0 else 0.0
+
+        # Siniestralidad departamental = indemnización / prima neta × 100
+        _prima = float(dd.get("prima_neta", 0) or 0)
+        _siniestr = (100 * _indemn / _prima) if _prima > 0 else 0.0
+
+        # Empresa aseguradora como caption contextual
+        _empresa = dd.get("empresa", "N/D")
+        st.markdown(
+            f"<div style='margin:-0.3rem 0 0.8rem 0;color:#64748b;font-size:0.82rem;'>"
+            f"Aseguradora: <b style='color:#0c2340'>{_empresa}</b> · "
+            f"Corte: {dd.get('fecha_corte','—')}</div>",
+            unsafe_allow_html=True,
+        )
+
+        # Fila 1
+        drow1 = st.columns(4)
+        dm1 = [
+            ("Avisos Reportados", f"{_avisos:,}", None, "blue"),
+            ("Avance Evaluación", f"{_pct_eval:.1f}%", f"{_cerrados:,} cerrados", "green"),
+            ("Indemnización", f"S/ {_indemn:,.0f}", None, "amber"),
+            ("Avance Desembolso", f"{_pct_desemb:.1f}%", f"S/ {_desemb:,.0f}", "green"),
+        ]
+        for col, (label, value, delta, accent) in zip(drow1, dm1):
+            with col:
+                st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
+
+        st.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
+
+        # Fila 2
+        _sup_aseg = float(dd.get("sup_asegurada", 0) or 0)
+        _ha_indemn = float(dd.get("ha_indemnizadas", 0) or 0)
+        _prod = int(dd.get("productores_desembolso", 0) or 0)
+        drow2 = st.columns(4)
+        dm2 = [
+            ("Ha Aseguradas", f"{_sup_aseg:,.0f}", None, "blue"),
+            ("Ha Indemnizadas", f"{_ha_indemn:,.0f}", None, "amber"),
+            ("Siniestralidad", f"{_siniestr:.2f}%", None, "purple"),
+            ("Productores", f"{_prod:,}", "beneficiados", "green"),
+        ]
+        for col, (label, value, delta, accent) in zip(drow2, dm2):
+            with col:
+                st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Error al renderizar Panel Departamental: {e}")
 
 # Navegación rápida
 st.markdown("---")

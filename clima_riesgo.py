@@ -546,21 +546,31 @@ def _render_risk_map(risks, coords, view_level="departamento",
     fig = go.Figure(go.Scattermapbox(
         lat=lats, lon=lons,
         mode="markers+text",
-        marker=dict(size=sizes, color=mcolors, opacity=0.85),
+        marker=dict(size=sizes, color=mcolors, opacity=0.88),
         text=names,
         textposition="top center",
-        textfont=dict(size=8 if view_level == "distrito" else 9, color="#333"),
+        textfont=dict(size=8 if view_level == "distrito" else 9, color="#0c2340"),
         hovertext=hovers,
         hoverinfo="text",
     ))
     fig.update_layout(
-        mapbox=dict(style="open-street-map",
+        mapbox=dict(style="carto-positron",
                     center=dict(lat=center_lat, lon=center_lon), zoom=zoom),
         margin=dict(l=0, r=0, t=0, b=0),
-        height=520,
+        height=540,
+        paper_bgcolor="#ffffff",
+        font=dict(family="Segoe UI, Arial, sans-serif", color="#334155"),
+        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#e2e8f0",
+                        font=dict(size=12, family="Segoe UI", color="#0c2340")),
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        from shared.charts import render_chart
+        render_chart(fig, key=f"chart_clima_mapa_{view_level}",
+                     filename=f"mapa_clima_riesgo_{view_level}",
+                     download_label="Descargar mapa")
+    except ImportError:
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def _render_forecast_table(location_label, forecast):
@@ -766,15 +776,27 @@ def _render_correlation(datos, historical_grid, district_to_grid=None,
         )
 
     title_suffix = f"por {geo_label.capitalize()}"
-    fig.update_layout(
-        title=f"Correlación: Precipitación Mensual vs. Siniestros ({title_suffix})",
-        xaxis_title="Precipitación mensual (mm)",
-        yaxis_title="Cantidad de siniestros",
-        height=400,
-        showlegend=False,
-        margin=dict(l=40, r=20, t=50, b=40),
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        from shared.charts import apply_theme, render_chart
+        apply_theme(
+            fig,
+            title=f"Correlación Precipitación vs. Siniestros",
+            subtitle=f"Agregado {title_suffix}",
+            xaxis_title="Precipitación mensual (mm)",
+            yaxis_title="Cantidad de siniestros",
+            height=420, show_legend=False,
+        )
+        render_chart(fig, key=f"chart_corr_precip_{geo_label}",
+                     filename=f"correlacion_precip_siniestros_{geo_label}")
+    except ImportError:
+        fig.update_layout(
+            title=f"Correlación: Precipitación Mensual vs. Siniestros ({title_suffix})",
+            xaxis_title="Precipitación mensual (mm)",
+            yaxis_title="Cantidad de siniestros",
+            height=400, showlegend=False,
+            margin=dict(l=40, r=20, t=50, b=40),
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════

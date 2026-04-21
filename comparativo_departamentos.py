@@ -190,34 +190,31 @@ def generate_comparison_chart(datos, deptos, metric_key):
     fig.add_trace(go.Bar(
         x=dept_names,
         y=values,
-        marker_color=colors,
+        marker=dict(color=colors, line=dict(width=0), cornerradius=6),
         text=hover_texts,
         textposition="outside",
-        textfont=dict(size=12, color="#333"),
-        hovertemplate="%{x}: %{text}<extra></extra>",
+        textfont=dict(size=11, color="#334155", family="Segoe UI"),
+        hovertemplate="<b>%{x}</b><br>" + config["label"] + ": %{text}<extra></extra>",
     ))
 
-    fig.update_layout(
-        title=dict(
-            text=config["label"],
-            font=dict(size=16, color="#0c2340"),
-            x=0.5,
-        ),
-        xaxis=dict(
-            title="Departamento",
-            tickfont=dict(size=11),
-        ),
-        yaxis=dict(
-            title=config["label"],
-            gridcolor="rgba(0,0,0,0.08)",
-            tickfont=dict(size=11),
-        ),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        margin=dict(l=60, r=30, t=60, b=60),
-        height=420,
-        showlegend=False,
-    )
+    try:
+        from shared.charts import apply_theme
+        apply_theme(
+            fig, title=config["label"],
+            subtitle=f"Comparación entre {len(dept_names)} departamentos",
+            height=440, show_legend=False,
+            xaxis_title="Departamento", yaxis_title=config["label"],
+        )
+    except ImportError:
+        fig.update_layout(
+            title=dict(text=config["label"],
+                       font=dict(size=16, color="#0c2340"), x=0.5),
+            xaxis=dict(title="Departamento", tickfont=dict(size=11)),
+            yaxis=dict(title=config["label"], gridcolor="rgba(0,0,0,0.08)",
+                       tickfont=dict(size=11)),
+            plot_bgcolor="white", paper_bgcolor="white",
+            margin=dict(l=60, r=30, t=60, b=60), height=420, showlegend=False,
+        )
 
     return fig
 
@@ -329,4 +326,10 @@ def render_comparativo_departamentos(datos):
     # ─── Bar chart ───
     st.markdown("#### Gráfico Comparativo")
     fig = generate_comparison_chart(datos, selected_deptos, selected_metric)
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        from shared.charts import render_chart
+        _slug = selected_metric.lower().replace(" ", "_").replace("/", "").replace("(", "").replace(")", "")
+        render_chart(fig, key=f"chart_comp_deptos_{_slug}",
+                     filename=f"comparativo_departamentos_{_slug}")
+    except ImportError:
+        st.plotly_chart(fig, use_container_width=True)

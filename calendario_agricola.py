@@ -270,24 +270,37 @@ def generate_calendar_chart(depto):
 
     # Layout
     fig.update_layout(
-        title=dict(text=f"Calendario Agricola - {depto}", font=dict(size=16)),
+        title=dict(
+            text=(f"<b>Calendario Agrícola — {depto}</b>"
+                  "<br><span style='font-size:11px;color:#64748b;font-weight:400'>"
+                  "🟢 Siembra · 🟡 Cosecha · 🔶 Traslape · ♦ Riesgo histórico</span>"),
+            font=dict(size=16, color="#0c2340", family="Segoe UI, Arial"),
+            x=0.0, xanchor="left", y=0.97,
+        ),
         xaxis=dict(
             tickmode="array",
             tickvals=list(range(1, 13)),
             ticktext=MONTH_NAMES,
             range=[0.5, 12.5],
             title="",
-            gridcolor="#ecf0f1",
+            showgrid=False,
+            showline=True, linewidth=1, linecolor="#e2e8f0",
+            tickfont=dict(size=11, color="#64748b"),
         ),
         yaxis=dict(
             title="",
             autorange="reversed",
+            gridcolor="#f1f5f9",
+            tickfont=dict(size=11, color="#334155"),
         ),
         barmode="overlay",
-        height=max(250, 60 * len(crop_names) + 100),
-        margin=dict(l=10, r=10, t=50, b=30),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
+        height=max(280, 62 * len(crop_names) + 110),
+        margin=dict(l=10, r=20, t=80, b=40),
+        plot_bgcolor="#ffffff",
+        paper_bgcolor="#ffffff",
+        font=dict(family="Segoe UI, Inter, Arial, sans-serif"),
+        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#e2e8f0",
+                        font=dict(size=12, family="Segoe UI", color="#0c2340")),
     )
 
     return fig
@@ -445,7 +458,14 @@ def render_calendario_tab(datos):
     # 3. Calendar Gantt chart
     fig = generate_calendar_chart(selected_dept)
     if fig is not None:
-        st.plotly_chart(fig, use_container_width=True)
+        try:
+            from shared.charts import render_chart
+            render_chart(
+                fig, key=f"chart_calendario_{selected_dept.lower().replace(' ', '_')}",
+                filename=f"calendario_agricola_{selected_dept.lower().replace(' ', '_')}",
+            )
+        except ImportError:
+            st.plotly_chart(fig, use_container_width=True)
     else:
         st.info(f"No hay datos de calendario disponibles para {selected_dept}.")
 

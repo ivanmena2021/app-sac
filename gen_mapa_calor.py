@@ -406,19 +406,24 @@ def generate_map(datos, metrica_key="Avance de Desembolso (%)",
 
     fig.update_layout(
         mapbox=dict(
-            style="open-street-map",
+            style="carto-positron",  # Estilo limpio y profesional
             center=dict(lat=center_lat, lon=center_lon),
             zoom=zoom,
         ),
-        margin=dict(l=0, r=0, t=35, b=0),
-        height=620,
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Segoe UI, Arial, sans-serif"),
+        margin=dict(l=0, r=0, t=55, b=0),
+        height=640,
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(family="Segoe UI, Inter, Arial, sans-serif", color="#334155"),
+        hoverlabel=dict(
+            bgcolor="#ffffff", bordercolor="#e2e8f0",
+            font=dict(family="Segoe UI, Arial", size=12, color="#0c2340"),
+        ),
         showlegend=False,
         title=dict(
-            text=titulo,
-            font=dict(size=13, color="#0c2340", family="Segoe UI, Arial"),
-            x=0.5, xanchor="center",
+            text=f"<b>{titulo}</b>",
+            font=dict(size=14, color="#0c2340", family="Segoe UI, Arial"),
+            x=0.01, xanchor="left", y=0.97,
         ),
     )
 

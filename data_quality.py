@@ -184,8 +184,32 @@ def render_quality_dashboard(datos: dict):
     _section("Distribucion por Empresa")
     if "EMPRESA" in df.columns:
         counts = df["EMPRESA"].value_counts()
-        chart_df = pd.DataFrame({"Empresa": counts.index, "Registros": counts.values})
-        st.bar_chart(chart_df, x="Empresa", y="Registros", color="#2980b9")
+        try:
+            import plotly.graph_objects as go
+            from shared.charts import apply_theme, render_chart, PALETTE
+            total = int(counts.sum()) or 1
+            pal = [PALETTE["primary_mid"], PALETTE["midagri"], PALETTE["accent"],
+                   PALETTE["warning"], PALETTE["info"]]
+            colors = [pal[i % len(pal)] for i in range(len(counts))]
+            fig = go.Figure(go.Bar(
+                x=list(counts.index), y=list(counts.values),
+                marker=dict(color=colors, line=dict(width=0), cornerradius=6),
+                text=[f"{v:,} ({v/total:.0%})" for v in counts.values],
+                textposition="outside",
+                textfont=dict(size=11, color=PALETTE["text_soft"]),
+                hovertemplate="<b>%{x}</b><br>Registros: %{y:,}<extra></extra>",
+            ))
+            apply_theme(
+                fig, title="Registros por Aseguradora",
+                subtitle=f"Total consolidado: {total:,} filas",
+                height=360, show_legend=False,
+                xaxis_title="", yaxis_title="Registros",
+            )
+            render_chart(fig, key="chart_quality_empresa",
+                         filename="distribucion_por_empresa")
+        except ImportError:
+            chart_df = pd.DataFrame({"Empresa": counts.index, "Registros": counts.values})
+            st.bar_chart(chart_df, x="Empresa", y="Registros", color="#2980b9")
     else:
         st.info("Columna EMPRESA no disponible en el dataset.")
 
