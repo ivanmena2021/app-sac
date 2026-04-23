@@ -278,6 +278,12 @@ st.caption("Todas las campañas alineadas por mes agrícola (Ago → Jul) para f
 SERIES_PATH = os.path.join(STATIC_DIR, "series_temporales.json")
 series_data = load_json_cached(SERIES_PATH)
 
+# Series temporales POR DEPARTAMENTO — generadas con gen_series_temporales_dept.py
+# desde los Excel de la carpeta comportamiento_historico_sac_2020_xxxx/.
+# Formato: {"por_dept": {DEPT: {"avisos": {camp: {YYYY-MM: n}}, "indemnizaciones": {camp: {YYYY-MM: {n,monto}}}}}}
+SERIES_DEPT_PATH = os.path.join(STATIC_DIR, "series_temporales_dept.json")
+series_dept_data = load_json_cached(SERIES_DEPT_PATH)
+
 # Orden de meses en campaña agrícola (Ago del año inicial → Jul del siguiente)
 MESES_CAMPANA = ["Ago", "Sep", "Oct", "Nov", "Dic", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"]
 
@@ -812,71 +818,128 @@ if dept_sel:
         filename=f"siniestralidad_{dept_sel.lower().replace(' ', '_')}",
     )
 
-    # ── Evolución mensual de la campaña actual (solo) filtrada al dept ──
-    st.markdown(f"#### Evolución Mensual · Campaña 2025-2026 · {dept_sel.title()}")
-    st.caption("Solo la campaña actual: las campañas históricas no tienen series mensuales "
-               "por departamento en los datos disponibles. Línea cortada = mes no vigente aún.")
+    # ══════════════════════════════════════════════════════════════
+    # ── Evolución Temporal Comparativa — 6 campañas para el dept ──
+    # ══════════════════════════════════════════════════════════════
+    st.markdown(f"#### Evolución Mensual Comparativa · {dept_sel.title()}")
+    st.caption("Todas las campañas alineadas por mes agrícola (Ago → Jul) para comparar "
+               "el comportamiento del departamento año tras año. "
+               "La campaña en curso se corta en el mes vigente (Perú UTC-5).")
 
-    avisos_m_dept = build_current_series_avisos(df_dept_sel, CAMPANA_ACTUAL)
-    ind_count_dept, ind_monto_dept = build_current_series_indemn(df_dept_sel, CAMPANA_ACTUAL)
+    # Construir las 3 series (avisos, indemnizados count, indemnizados monto)
+    # para las 6 campañas del departamento seleccionado
+    _dept_hist_block = series_dept_data.get("por_dept", {}).get(dept_sel, {})
+    _hist_avisos = _dept_hist_block.get("avisos", {})
+    _hist_indemn = _dept_hist_block.get("indemnizaciones", {})
 
-    fig_evol_d = go.Figure()
-    fig_evol_d.add_trace(go.Scatter(
-        x=MESES_CAMPANA, y=avisos_m_dept,
-        name="Avisos / mes", mode="lines+markers",
-        line=dict(color=PALETTE["midagri"], width=3),
-        marker=dict(size=8),
-        hovertemplate="<b>%{x}</b><br>Avisos: %{y:,.0f}<extra></extra>",
-    ))
-    fig_evol_d.add_trace(go.Scatter(
-        x=MESES_CAMPANA, y=ind_count_dept,
-        name="Indemnizados / mes", mode="lines+markers",
-        line=dict(color=PALETTE["success"], width=2, dash="dash"),
-        marker=dict(size=6),
-        hovertemplate="<b>%{x}</b><br>Indemnizados: %{y:,.0f}<extra></extra>",
-    ))
-    apply_theme(
-        fig_evol_d,
-        title=f"Avisos e Indemnizados por mes — {dept_sel.title()}",
-        subtitle="Mes agrícola: Ago → Jul · Corte en mes vigente (Perú UTC-5)",
-        height=360, yaxis_title="N.° de casos",
-        legend_position="top-right",
-    )
-    render_chart(
-        fig_evol_d, key="chart_evol_mensual_dept",
-        filename=f"evolucion_mensual_{dept_sel.lower().replace(' ', '_')}",
-    )
+    all_avisos_dept = {}
+    all_ind_count_dept = {}
+    all_ind_monto_dept = {}
 
-    # Segundo gráfico: monto indemnizado mensual del dept
-    fig_monto_d = go.Figure()
-    fig_monto_d.add_trace(go.Scatter(
-        x=MESES_CAMPANA, y=ind_monto_dept,
-        name="Monto indemnizado / mes",
-        mode="lines+markers",
-        line=dict(color=PALETTE["primary_mid"], width=3),
-        marker=dict(size=7),
-        fill="tozeroy",
-        fillcolor="rgba(31, 108, 184, 0.12)",
-        hovertemplate="<b>%{x}</b><br>Monto: S/ %{y:,.0f}<extra></extra>",
-    ))
-    apply_theme(
-        fig_monto_d,
-        title=f"Monto Indemnizado por mes — {dept_sel.title()}",
-        subtitle="Reconocido por FECHA_AJUSTE · Corte en mes vigente",
-        height=340, yaxis_title="Monto (S/)",
-        legend_position="none",
-    )
-    fig_monto_d.update_yaxes(tickformat="~s", tickprefix="S/ ")
-    render_chart(
-        fig_monto_d, key="chart_evol_monto_dept",
-        filename=f"evolucion_monto_{dept_sel.lower().replace(' ', '_')}",
-    )
+    # Campañas históricas desde el JSON por depto
+    for camp in CAMPANAS_HIST:
+        raw_av = _hist_avisos.get(camp, {})
+        raw_in = _hist_indemn.get(camp, {})
+        all_avisos_dept[camp] = build_campaign_series(raw_av, camp)
+        all_ind_count_dept[camp] = build_campaign_series(raw_in, camp, value_key="n")
+        all_ind_monto_dept[camp] = build_campaign_series(raw_in, camp, value_key="monto")
+
+    # Campaña actual desde el df filtrado al dept (con corte al mes vigente)
+    all_avisos_dept[CAMPANA_ACTUAL] = build_current_series_avisos(df_dept_sel, CAMPANA_ACTUAL)
+    _cact, _mact = build_current_series_indemn(df_dept_sel, CAMPANA_ACTUAL)
+    all_ind_count_dept[CAMPANA_ACTUAL] = _cact
+    all_ind_monto_dept[CAMPANA_ACTUAL] = _mact
+
+    _dept_slug = dept_sel.lower().replace(" ", "_")
+
+    # 6 gráficos en 3 filas de 2 columnas (mismo layout que la sección nacional)
+    col_dav1, col_dav2 = st.columns(2)
+    with col_dav1:
+        render_chart(
+            make_evolution_chart(
+                all_avisos_dept,
+                f"Eventos Reportados por Mes — {dept_sel.title()}",
+                "N.° de avisos",
+                subtitle="Avisos por FECHA_AVISO",
+            ),
+            key="chart_dept_avisos_mes",
+            filename=f"avisos_mes_{_dept_slug}",
+        )
+    with col_dav2:
+        render_chart(
+            make_evolution_chart(
+                all_avisos_dept,
+                f"Avisos Acumulados — {dept_sel.title()}",
+                "N.° de avisos acumulados",
+                cumulative=True,
+                subtitle="Acumulado desde agosto",
+            ),
+            key="chart_dept_avisos_acum",
+            filename=f"avisos_acum_{_dept_slug}",
+        )
+
+    col_dmo1, col_dmo2 = st.columns(2)
+    with col_dmo1:
+        render_chart(
+            make_evolution_chart(
+                all_ind_monto_dept,
+                f"Indemnizaciones por Mes (S/) — {dept_sel.title()}",
+                "Monto (S/)",
+                fmt_prefix="S/ ",
+                y_is_currency=True,
+                subtitle="Reconocidas por FECHA_AJUSTE",
+            ),
+            key="chart_dept_monto_mes",
+            filename=f"monto_indemn_mes_{_dept_slug}",
+        )
+    with col_dmo2:
+        render_chart(
+            make_evolution_chart(
+                all_ind_monto_dept,
+                f"Indemnizaciones Acumuladas (S/) — {dept_sel.title()}",
+                "Monto acumulado (S/)",
+                fmt_prefix="S/ ",
+                cumulative=True,
+                y_is_currency=True,
+                subtitle="Acumulado desde agosto",
+            ),
+            key="chart_dept_monto_acum",
+            filename=f"monto_indemn_acum_{_dept_slug}",
+        )
+
+    col_dic1, col_dic2 = st.columns(2)
+    with col_dic1:
+        render_chart(
+            make_evolution_chart(
+                all_ind_count_dept,
+                f"Casos Indemnizados por Mes — {dept_sel.title()}",
+                "N.° de indemnizados",
+                subtitle="Avisos con dictamen INDEMNIZABLE",
+            ),
+            key="chart_dept_ind_count_mes",
+            filename=f"casos_indemnizados_mes_{_dept_slug}",
+        )
+    with col_dic2:
+        render_chart(
+            make_evolution_chart(
+                all_ind_count_dept,
+                f"Indemnizados Acumulados — {dept_sel.title()}",
+                "N.° acumulado",
+                cumulative=True,
+                subtitle="Acumulado desde agosto",
+            ),
+            key="chart_dept_ind_count_acum",
+            filename=f"casos_indemnizados_acum_{_dept_slug}",
+        )
 
     st.caption(
-        f"Fuente: histórico de 5 campañas (resumen_departamental.json, filtrado a {dept_sel.title()}) + "
-        f"primas (Primas_Totales_SAC_2020-2026.xlsx) + campaña actual desde consolidado dinámico "
-        f"filtrado a DEPARTAMENTO = '{dept_sel}'. No hay series mensuales históricas por departamento: "
-        f"la evolución mensual solo se grafica para la campaña 2025-2026."
+        f"Fuente histórica por depto: archivos Dashboard SAC 2020-2025 a nivel aviso "
+        f"(comportamiento_historico_sac_2020_xxxx/, hoja AVISOS), agregados por "
+        f"DEPARTAMENTO y mes con `gen_series_temporales_dept.py`. "
+        f"Campaña actual: consolidado dinámico filtrado a DEPARTAMENTO = '{dept_sel}'. "
+        f"Indemnizaciones se cuentan donde DICTAMEN = INDEMNIZABLE y se fechan por "
+        f"FECHA DE AJUSTE (ACTA > COSECHA > PROGRAMACION AJUSTE). "
+        f"Validado contra totales del JSON nacional (diff = 0 en las 5 campañas)."
     )
 
 footer()
