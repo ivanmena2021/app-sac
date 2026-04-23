@@ -489,7 +489,7 @@ def render_calendario_tab(datos):
         st.info(f"No hay datos de siniestros disponibles para {selected_dept}.")
 
     # 5. Legend
-    st.markdown("---")
+    st.divider()
     st.markdown("**Leyenda:**")
     legend_cols = st.columns(4)
     with legend_cols[0]:

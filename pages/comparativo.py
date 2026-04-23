@@ -271,7 +271,7 @@ render_chart(fig_sin, key="chart_siniestralidad",
 # SERIES TEMPORALES — Evolución mensual comparativa
 # ═══════════════════════════════════════════════════════════════
 
-st.markdown("---")
+st.divider()
 st.markdown("### Evolución Temporal Comparativa")
 st.caption("Todas las campañas alineadas por mes agrícola (Ago → Jul) para facilitar la comparación")
 
@@ -600,7 +600,7 @@ st.caption("Fuente: Datos históricos de 5 campañas SAC (resumen_departamental.
 # COMPARATIVO POR DEPARTAMENTO — un dept × 6 campañas
 # ═══════════════════════════════════════════════════════════════
 
-st.markdown("---")
+st.divider()
 
 # Normalizar nombres de departamento: el JSON histórico tiene HUÁNUCO y
 # SAN MARTÍN con tildes en algunas entradas y sin tildes en otras (duplicados).

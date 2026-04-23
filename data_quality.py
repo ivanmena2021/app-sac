@@ -144,7 +144,7 @@ def render_quality_dashboard(datos: dict):
     for col, (lbl, val, clr) in zip(cols, cards):
         col.markdown(_metric_card(lbl, val, clr), unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.divider()
 
     # --- Valores faltantes ---
     _section("Valores Faltantes")

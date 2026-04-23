@@ -204,7 +204,7 @@ else:
                             st.error(f"Error: {e}")
 
     # Info cards
-    st.markdown("---")
+    st.divider()
     st.markdown('<h3 style="text-align:center; color:#1a5276;">¿Qué reportes genera esta app?</h3>', unsafe_allow_html=True)
     st.markdown("")
     c1, c2 = st.columns(2)

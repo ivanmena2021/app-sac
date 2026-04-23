@@ -624,7 +624,7 @@ def render_semaforo_tab(datos):
     except Exception:
         pass
 
-    st.markdown("---")
+    st.divider()
 
     # ── Filtros ──
     st.markdown("#### Filtros")
@@ -730,7 +730,7 @@ def render_semaforo_tab(datos):
             st.markdown(f"**Promedio de días en esta etapa:** {avg_days:.1f} días")
 
     # ── Exportar ──
-    st.markdown("---")
+    st.divider()
     col_exp1, col_exp2 = st.columns([1, 3])
     with col_exp1:
         if st.button("Generar Excel Semáforo", key="sem_gen_excel", type="primary"):

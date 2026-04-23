@@ -45,7 +45,7 @@ for i, sug in enumerate(suggested[:8]):
         if st.button(sug, key=f"sug_{i}", use_container_width=True):
             st.session_state["query_input"] = sug
 
-st.markdown("---")
+st.divider()
 
 query_text = st.text_area(
     "Escriba su consulta:",
@@ -90,7 +90,7 @@ if btn_query and query_text.strip():
 
 # Mostrar respuesta
 if st.session_state.get("last_query_prose"):
-    st.markdown("---")
+    st.divider()
     engine_used = st.session_state.get("last_query_engine", "básico")
     badge_color = "#27ae60" if engine_used == "IA" else "#f39c12"
     st.markdown(

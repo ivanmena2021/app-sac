@@ -90,7 +90,7 @@ if is_data_loaded():
                     max_date = valid_dates.max().date()
 
                     with st.sidebar:
-                        st.markdown("---")
+                        st.divider()
                         st.markdown("#### Filtro de Fechas")
                         _ref_label = "Fecha de Siniestro" if date_col == "FECHA_SINIESTRO" else "Fecha de Aviso"
                         st.caption(f"Columna: **{_ref_label}** · "

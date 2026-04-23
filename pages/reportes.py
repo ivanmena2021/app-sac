@@ -64,7 +64,7 @@ with tab_nac:
         st.dataframe(datos["cuadro3"], use_container_width=True, hide_index=True)
 
     # PDF Ejecutivo
-    st.markdown("---")
+    st.divider()
     cp1, cp2 = st.columns([1, 1])
     with cp1:
         if st.button("Generar PDF Ejecutivo", key="gen_pdf_exec"):

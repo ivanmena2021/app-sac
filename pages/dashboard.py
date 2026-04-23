@@ -94,7 +94,7 @@ try:
         with col:
             st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
 
-    st.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
 
     row2 = st.columns(4)
     m2 = [
@@ -112,7 +112,7 @@ except Exception as e:
 # ═══════════════════════════════════════════════════════════════
 # PANEL DEPARTAMENTAL — mismo formato que Panel Nacional
 # ═══════════════════════════════════════════════════════════════
-st.markdown('<div style="height: 1rem;"></div>', unsafe_allow_html=True)
+st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
 
 try:
     depto_list = sorted(datos.get("departamentos_list", []))
@@ -189,7 +189,7 @@ try:
             with col:
                 st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
 
-        st.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="spacer-sm"></div>', unsafe_allow_html=True)
 
         # Fila 2
         _sup_aseg = float(dd.get("sup_asegurada", 0) or 0)
@@ -209,7 +209,7 @@ except Exception as e:
     st.error(f"Error al renderizar Panel Departamental: {e}")
 
 # Navegación rápida
-st.markdown("---")
+st.divider()
 st.markdown("**Acceso rápido:**")
 c1, c2, c3, c4 = st.columns(4)
 with c1:
