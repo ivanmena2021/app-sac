@@ -13,13 +13,14 @@ from query_llm import process_query_llm, is_llm_available, get_suggested_queries
 require_data()
 datos = get_datos()
 
-page_header("Consultas SAC",
-            "Escriba su consulta en lenguaje natural. El sistema analiza los datos y genera texto profesional.")
-
 llm_ready = is_llm_available()
 engine_label = "IA + SQL" if llm_ready else "Motor Básico"
 engine_color = "#27ae60" if llm_ready else "#f39c12"
 engine_icon = "🤖" if llm_ready else "⚙️"
+
+page_header("Consultas SAC",
+            "Escriba su consulta en lenguaje natural. El sistema analiza los datos y genera texto profesional.",
+            badge=engine_label)
 
 st.markdown(f"""
 <div class="chat-header">

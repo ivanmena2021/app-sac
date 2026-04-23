@@ -17,7 +17,8 @@ require_data()
 datos = get_datos()
 
 page_header("Dashboard Nacional",
-            "Panel de indicadores clave del Seguro Agrícola Catastrófico a nivel nacional")
+            "Panel de indicadores clave del Seguro Agrícola Catastrófico a nivel nacional",
+            badge="Tiempo Real")
 
 # Status banner
 ts = st.session_state.get("update_timestamp", "---")

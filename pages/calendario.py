@@ -10,7 +10,8 @@ require_data()
 datos = get_datos()
 
 page_header("Calendario Agrícola",
-            "Períodos de siembra, cosecha y riesgo por departamento — basado en datos históricos de 5 campañas SAC")
+            "Períodos de siembra, cosecha y riesgo por departamento — basado en datos históricos de 5 campañas SAC",
+            badge="Ciclo Agrícola")
 
 render_calendario_tab(datos)
 footer()

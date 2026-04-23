@@ -19,7 +19,8 @@ require_data()
 datos = get_datos()
 
 page_header("Generar Reportes",
-            "Documentos Word, Excel y PowerPoint del Seguro Agrícola Catastrófico")
+            "Documentos Word, Excel y PowerPoint del Seguro Agrícola Catastrófico",
+            badge="Generadores")
 
 tab_nac, tab_depto, tab_oper, tab_eme, tab_ppt, tab_batch, tab_hist = st.tabs([
     "Nacional",

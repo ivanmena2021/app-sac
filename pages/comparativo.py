@@ -26,7 +26,8 @@ datos = get_datos()
 df_actual = datos["midagri"]
 
 page_header("Comparativo de Campañas",
-            "Evolución de indicadores SAC: 5 campañas históricas + campaña actual 2025-2026")
+            "Evolución de indicadores SAC: 5 campañas históricas + campaña actual 2025-2026",
+            badge="Histórico 2020 — 2026")
 
 # ═══════════════════════════════════════════════════════════════
 # CARGAR DATOS HISTÓRICOS

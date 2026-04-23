@@ -13,7 +13,8 @@ require_data()
 datos = get_datos()
 
 page_header("Mapa de Calor SAC",
-            f"Visualización geográfica interactiva de los indicadores del SAC · Corte {datos['fecha_corte']}")
+            f"Visualización geográfica interactiva de los indicadores del SAC · Corte {datos['fecha_corte']}",
+            badge="Geografía")
 
 # Controles
 col1, col2 = st.columns([1, 2])

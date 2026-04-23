@@ -10,7 +10,8 @@ require_data()
 datos = get_datos()
 
 page_header("Comparar Departamentos",
-            "Análisis comparativo de indicadores SAC entre departamentos seleccionados")
+            "Análisis comparativo de indicadores SAC entre departamentos seleccionados",
+            badge="Entre Deptos")
 
 render_comparativo_departamentos(datos)
 footer()

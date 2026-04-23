@@ -13,7 +13,8 @@ require_data()
 datos = get_datos()
 
 page_header("Explorar Datos",
-            "Visualización directa de los datos consolidados y análisis de calidad")
+            "Visualización directa de los datos consolidados y análisis de calidad",
+            badge="Datos + Calidad")
 
 tab_data, tab_quality = st.tabs(["Datos Consolidados", "Calidad de Datos"])
 

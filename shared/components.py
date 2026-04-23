@@ -29,8 +29,16 @@ def render_stepper(steps):
     return html
 
 
-def page_header(title, description=""):
-    """Renderiza el header compacto de cada página."""
+def page_header(title, description="", badge="🌾 SAC 2025-2026"):
+    """Renderiza el header compacto de cada página.
+
+    Args:
+        title: Título H1 de la página.
+        description: Línea descriptiva opcional (aparece bajo el título).
+        badge: Texto del pill a la derecha. Default mantiene identidad SAC
+               (🌾 SAC 2025-2026); páginas específicas pueden pasar un
+               badge diferenciado para romper la monotonía visual.
+    """
     desc_html = f'<p class="page-desc">{description}</p>' if description else ""
     st.markdown(f"""
     <div class="page-header">
@@ -39,7 +47,7 @@ def page_header(title, description=""):
                 <h1>{title}</h1>
                 {desc_html}
             </div>
-            <div class="ph-badge">🌾 SAC 2025-2026</div>
+            <div class="ph-badge">{badge}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
