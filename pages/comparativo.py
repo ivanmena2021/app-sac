@@ -589,4 +589,294 @@ st.caption("Fuente: Datos históricos de 5 campañas SAC (resumen_departamental.
            "Primas históricas (Primas_Totales_SAC_2020-2026.xlsx) + "
            "Campaña actual desde datos consolidados descargados de aseguradoras.")
 
+
+# ═══════════════════════════════════════════════════════════════
+# COMPARATIVO POR DEPARTAMENTO — un dept × 6 campañas
+# ═══════════════════════════════════════════════════════════════
+
+st.markdown("---")
+
+# Normalizar nombres de departamento: el JSON histórico tiene HUÁNUCO y
+# SAN MARTÍN con tildes en algunas entradas y sin tildes en otras (duplicados).
+# Quitamos acentos y pasamos a mayúsculas para unificar antes del merge.
+import unicodedata as _ud
+
+def _norm_dept(name):
+    s = str(name).strip().upper()
+    # NFD separa letra base y marca diacrítica; filtramos las marcas (Mn).
+    return "".join(c for c in _ud.normalize("NFD", s) if _ud.category(c) != "Mn")
+
+# Histórico por dept normalizado: {dept: {camp: {avisos, indemnizados, monto, ha, desembolso}}}
+hist_por_dept = {}
+for dept_raw, camps in por_campana.items():
+    dept_n = _norm_dept(dept_raw)
+    if not dept_n:
+        continue
+    bucket = hist_por_dept.setdefault(dept_n, {})
+    for camp_k, vals in camps.items():
+        if camp_k in bucket:
+            # Merge sumando (para duplicados por mojibake)
+            for k, v in vals.items():
+                if isinstance(v, (int, float)):
+                    bucket[camp_k][k] = bucket[camp_k].get(k, 0) + v
+        else:
+            bucket[camp_k] = {k: v for k, v in vals.items() if isinstance(v, (int, float))}
+
+# Universo de departamentos = unión de históricos + actuales
+_depts_actuales = set()
+if "DEPARTAMENTO" in df_actual.columns:
+    _depts_actuales = set(
+        d for d in df_actual["DEPARTAMENTO"].dropna().astype(str).str.strip().str.upper().unique()
+        if d and d != "NAN"
+    )
+todos_dept = sorted(set(hist_por_dept.keys()) | _depts_actuales)
+
+# Header con selector al costado (patrón del dashboard)
+col_hdr_d, col_sel_d = st.columns([2.4, 1.2])
+with col_hdr_d:
+    st.markdown("### Comparativo por Departamento")
+    st.caption("Mismo análisis de las 6 campañas, filtrado a un departamento específico.")
+with col_sel_d:
+    if not todos_dept:
+        st.info("No hay departamentos disponibles.")
+        dept_sel = None
+    else:
+        # Default: primer dept con datos en la campaña actual (o el primero alfabético)
+        _def_idx = 0
+        for _i, _d in enumerate(todos_dept):
+            if _d in _depts_actuales:
+                _def_idx = _i
+                break
+        dept_sel = st.selectbox(
+            "Departamento", options=todos_dept, index=_def_idx,
+            format_func=lambda d: d.title() if d else d,
+            key="comp_dept_selector", label_visibility="collapsed",
+        )
+
+if dept_sel:
+    # Calcular las métricas del dept para las 6 campañas
+    dept_data = {}
+
+    # Históricas
+    for camp in CAMPANAS_HIST:
+        dc = hist_por_dept.get(dept_sel, {}).get(camp, {})
+        avisos_ = dc.get("avisos", 0)
+        indemn_ = dc.get("indemnizados", 0)
+        monto_ = dc.get("monto_indemnizado", 0)
+        ha_ = dc.get("ha_indemnizadas", 0)
+        desemb_ = dc.get("monto_desembolsado", 0)
+        prima_ = primas_hist.get(camp, {}).get(dept_sel, 0)
+        sin_ = round(100 * monto_ / prima_, 1) if prima_ > 0 else 0
+        dept_data[camp] = {
+            "avisos": avisos_, "indemnizados": indemn_,
+            "monto": monto_, "ha": ha_, "desembolso": desemb_,
+            "prima_neta": prima_, "siniestralidad": sin_,
+        }
+
+    # Campaña actual: filtrar el DataFrame por DEPARTAMENTO
+    if "DEPARTAMENTO" in df_actual.columns:
+        _dept_col = df_actual["DEPARTAMENTO"].astype(str).str.strip().str.upper()
+        df_dept_sel = df_actual[_dept_col == dept_sel]
+    else:
+        df_dept_sel = df_actual.iloc[0:0]
+
+    avisos_act = len(df_dept_sel)
+    indemn_act = 0
+    if "DICTAMEN" in df_dept_sel.columns:
+        _dc = df_dept_sel["DICTAMEN"].astype(str).str.strip().str.upper()
+        indemn_act = int(
+            (_dc.str.contains("INDEMNIZABLE", na=False) &
+             ~_dc.str.contains("NO INDEMNIZABLE", na=False)).sum()
+        )
+    def _safe_sum(col):
+        if col not in df_dept_sel.columns:
+            return 0.0
+        return float(pd.to_numeric(df_dept_sel[col], errors="coerce").fillna(0).sum())
+    monto_act = _safe_sum("INDEMNIZACION")
+    ha_act = _safe_sum("SUP_INDEMNIZADA")
+    desemb_act = _safe_sum("MONTO_DESEMBOLSADO")
+    prima_act = primas_hist.get(CAMPANA_ACTUAL, {}).get(dept_sel, 0)
+    sin_act = round(100 * monto_act / prima_act, 1) if prima_act > 0 else 0
+    dept_data[CAMPANA_ACTUAL] = {
+        "avisos": avisos_act, "indemnizados": indemn_act,
+        "monto": monto_act, "ha": ha_act, "desembolso": desemb_act,
+        "prima_neta": prima_act, "siniestralidad": sin_act,
+    }
+
+    # Selector de métrica (mismo dict METRICAS usado en el comparativo nacional)
+    metrica_sel_d = st.radio(
+        "Métrica:", options=list(METRICAS.keys()),
+        horizontal=True, key="metrica_comp_dept",
+    )
+    key_d, fmt_d, desc_d = METRICAS[metrica_sel_d]
+    st.caption(desc_d)
+
+    # ── Gráfico de barras 6 campañas para el dept ──
+    vals_d = [dept_data[c][key_d] for c in all_camps]
+    colors_d = [PALETTE["primary_mid"]] * 5 + [PALETTE["midagri"]]
+
+    fig_d = go.Figure()
+    fig_d.add_trace(go.Bar(
+        x=all_camps, y=vals_d,
+        marker=dict(color=colors_d, line=dict(width=0), cornerradius=8),
+        text=[fmt_d.format(v) for v in vals_d],
+        textposition="outside",
+        textfont=dict(size=12, color=PALETTE["text_soft"], family="Segoe UI"),
+        hovertemplate=(
+            "<b>Campaña %{x}</b><br>"
+            + metrica_sel_d + ": %{text}<extra></extra>"
+        ),
+        showlegend=False,
+    ))
+    avg_hist_d = float(np.mean([dept_data[c][key_d] for c in CAMPANAS_HIST])) if CAMPANAS_HIST else 0
+    add_reference_line(
+        fig_d, y=avg_hist_d, color=PALETTE["danger"],
+        label=f"Promedio histórico: {fmt_d.format(avg_hist_d)}",
+    )
+    apply_theme(
+        fig_d,
+        title=f"{metrica_sel_d} — {dept_sel.title()}",
+        subtitle="Azul = históricas · Verde = campaña actual · Roja = promedio",
+        height=450, show_legend=False, yaxis_title=metrica_sel_d,
+        legend_position="none",
+    )
+    if "S/" in fmt_d or "monto" in key_d.lower() or "prima" in key_d.lower():
+        fig_d.update_yaxes(tickformat="~s", tickprefix="S/ ")
+    render_chart(
+        fig_d, key="chart_dept_comp",
+        filename=f"comparativo_{key_d}_{dept_sel.lower().replace(' ', '_')}",
+    )
+
+    # ── Tabla resumen 6 campañas para el dept ──
+    st.markdown("#### Tabla Comparativa del Departamento")
+    rows_d = []
+    for c in all_camps:
+        d = dept_data[c]
+        sin_color = "🔴" if d["siniestralidad"] > 70 else ("🟡" if d["siniestralidad"] > 50 else "🟢")
+        rows_d.append({
+            "Campaña": c + (" ★" if c == CAMPANA_ACTUAL else ""),
+            "Avisos": f"{d['avisos']:,}",
+            "Indemnizados": f"{d['indemnizados']:,}",
+            "Prima Neta": f"S/ {d['prima_neta']:,.0f}" if d["prima_neta"] > 0 else "—",
+            "Indemnización": f"S/ {d['monto']:,.0f}",
+            "Siniestralidad": f"{sin_color} {d['siniestralidad']:.1f}%",
+            "Ha Indemnizadas": f"{d['ha']:,.0f}",
+            "Desembolso": f"S/ {d['desembolso']:,.0f}",
+        })
+    avg_d = {
+        k: float(np.mean([dept_data[c][k] for c in CAMPANAS_HIST]))
+        for k in ["avisos", "indemnizados", "monto", "ha", "desembolso", "prima_neta", "siniestralidad"]
+    }
+    rows_d.append({
+        "Campaña": "PROMEDIO HISTÓRICO",
+        "Avisos": f"{avg_d['avisos']:,.0f}",
+        "Indemnizados": f"{avg_d['indemnizados']:,.0f}",
+        "Prima Neta": f"S/ {avg_d['prima_neta']:,.0f}" if avg_d["prima_neta"] > 0 else "—",
+        "Indemnización": f"S/ {avg_d['monto']:,.0f}",
+        "Siniestralidad": f"📊 {avg_d['siniestralidad']:.1f}%",
+        "Ha Indemnizadas": f"{avg_d['ha']:,.0f}",
+        "Desembolso": f"S/ {avg_d['desembolso']:,.0f}",
+    })
+    st.dataframe(pd.DataFrame(rows_d), use_container_width=True, hide_index=True, height=330)
+
+    # ── Siniestralidad del dept en cada campaña ──
+    st.markdown("#### Siniestralidad del Departamento")
+    sin_vals_d = [dept_data[c]["siniestralidad"] for c in all_camps]
+    sin_colors_d = [
+        PALETTE["danger"] if v > 70 else (PALETTE["warning"] if v > 50 else PALETTE["success"])
+        for v in sin_vals_d
+    ]
+    fig_sin_d = go.Figure()
+    fig_sin_d.add_trace(go.Bar(
+        x=all_camps, y=sin_vals_d,
+        marker=dict(color=sin_colors_d, line=dict(width=0), cornerradius=8),
+        text=[f"{v:.1f}%" for v in sin_vals_d],
+        textposition="outside",
+        textfont=dict(size=12, color=PALETTE["text_soft"]),
+        hovertemplate="<b>Campaña %{x}</b><br>Siniestralidad: %{y:.1f}%<extra></extra>",
+        showlegend=False,
+    ))
+    add_reference_line(fig_sin_d, y=70, color=PALETTE["danger"],
+                       label="Alto (≥70%)", dash="dot")
+    add_reference_line(fig_sin_d, y=50, color=PALETTE["warning"],
+                       label="Medio (≥50%)", dash="dot")
+    apply_theme(
+        fig_sin_d,
+        title=f"Siniestralidad — {dept_sel.title()}",
+        subtitle="Indemnización / Prima Neta × 100 · '—' si no hay prima del dept",
+        height=380, show_legend=False, yaxis_title="Siniestralidad (%)",
+        legend_position="none",
+    )
+    render_chart(
+        fig_sin_d, key="chart_sin_dept",
+        filename=f"siniestralidad_{dept_sel.lower().replace(' ', '_')}",
+    )
+
+    # ── Evolución mensual de la campaña actual (solo) filtrada al dept ──
+    st.markdown(f"#### Evolución Mensual · Campaña 2025-2026 · {dept_sel.title()}")
+    st.caption("Solo la campaña actual: las campañas históricas no tienen series mensuales "
+               "por departamento en los datos disponibles. Línea cortada = mes no vigente aún.")
+
+    avisos_m_dept = build_current_series_avisos(df_dept_sel, CAMPANA_ACTUAL)
+    ind_count_dept, ind_monto_dept = build_current_series_indemn(df_dept_sel, CAMPANA_ACTUAL)
+
+    fig_evol_d = go.Figure()
+    fig_evol_d.add_trace(go.Scatter(
+        x=MESES_CAMPANA, y=avisos_m_dept,
+        name="Avisos / mes", mode="lines+markers",
+        line=dict(color=PALETTE["midagri"], width=3),
+        marker=dict(size=8),
+        hovertemplate="<b>%{x}</b><br>Avisos: %{y:,.0f}<extra></extra>",
+    ))
+    fig_evol_d.add_trace(go.Scatter(
+        x=MESES_CAMPANA, y=ind_count_dept,
+        name="Indemnizados / mes", mode="lines+markers",
+        line=dict(color=PALETTE["success"], width=2, dash="dash"),
+        marker=dict(size=6),
+        hovertemplate="<b>%{x}</b><br>Indemnizados: %{y:,.0f}<extra></extra>",
+    ))
+    apply_theme(
+        fig_evol_d,
+        title=f"Avisos e Indemnizados por mes — {dept_sel.title()}",
+        subtitle="Mes agrícola: Ago → Jul · Corte en mes vigente (Perú UTC-5)",
+        height=360, yaxis_title="N.° de casos",
+        legend_position="top-right",
+    )
+    render_chart(
+        fig_evol_d, key="chart_evol_mensual_dept",
+        filename=f"evolucion_mensual_{dept_sel.lower().replace(' ', '_')}",
+    )
+
+    # Segundo gráfico: monto indemnizado mensual del dept
+    fig_monto_d = go.Figure()
+    fig_monto_d.add_trace(go.Scatter(
+        x=MESES_CAMPANA, y=ind_monto_dept,
+        name="Monto indemnizado / mes",
+        mode="lines+markers",
+        line=dict(color=PALETTE["primary_mid"], width=3),
+        marker=dict(size=7),
+        fill="tozeroy",
+        fillcolor="rgba(31, 108, 184, 0.12)",
+        hovertemplate="<b>%{x}</b><br>Monto: S/ %{y:,.0f}<extra></extra>",
+    ))
+    apply_theme(
+        fig_monto_d,
+        title=f"Monto Indemnizado por mes — {dept_sel.title()}",
+        subtitle="Reconocido por FECHA_AJUSTE · Corte en mes vigente",
+        height=340, yaxis_title="Monto (S/)",
+        legend_position="none",
+    )
+    fig_monto_d.update_yaxes(tickformat="~s", tickprefix="S/ ")
+    render_chart(
+        fig_monto_d, key="chart_evol_monto_dept",
+        filename=f"evolucion_monto_{dept_sel.lower().replace(' ', '_')}",
+    )
+
+    st.caption(
+        f"Fuente: histórico de 5 campañas (resumen_departamental.json, filtrado a {dept_sel.title()}) + "
+        f"primas (Primas_Totales_SAC_2020-2026.xlsx) + campaña actual desde consolidado dinámico "
+        f"filtrado a DEPARTAMENTO = '{dept_sel}'. No hay series mensuales históricas por departamento: "
+        f"la evolución mensual solo se grafica para la campaña 2025-2026."
+    )
+
 footer()
