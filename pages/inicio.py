@@ -29,10 +29,10 @@ if is_data_loaded():
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("📊 Ir al Dashboard", type="primary", use_container_width=True, key="goto_dash"):
+        if st.button("Ir al Dashboard", type="primary", use_container_width=True, key="goto_dash"):
             st.switch_page("pages/dashboard.py")
     with c2:
-        if st.button("🔄 Recargar datos", use_container_width=True, key="reload_data"):
+        if st.button("Recargar datos", use_container_width=True, key="reload_data"):
             st.session_state["processed"] = False
             st.session_state["datos"] = None
             st.session_state["datos_filtered"] = None
@@ -73,7 +73,7 @@ else:
         st.markdown("")
         col_center = st.columns([1, 2, 1])[1]
         with col_center:
-            btn_auto = st.button("⚡ Actualizar Datos SAC", type="primary",
+            btn_auto = st.button("Actualizar Datos SAC", type="primary",
                                   use_container_width=True, key="btn_auto_main")
 
         if btn_auto:
@@ -88,7 +88,7 @@ else:
                     ("Rímac", "active"), ("La Positiva", "pending"),
                     ("Procesando", "pending"), ("Listo", "pending"),
                 ]), unsafe_allow_html=True)
-            status_ph.info("📡 Conectando con SISGAQSAC (Rímac)...")
+            status_ph.info("Conectando con SISGAQSAC (Rímac)...")
 
             try:
                 df_siniestros = descargar_rimac()
@@ -150,7 +150,7 @@ else:
 
         # Manual colapsado
         st.markdown("")
-        with st.expander("📂 Prefiero subir archivos manualmente"):
+        with st.expander("Prefiero subir archivos manualmente"):
             st.markdown("Si tiene los archivos Excel descargados, puede subirlos directamente:")
             col_up1, col_up2 = st.columns(2)
             with col_up1:
@@ -159,7 +159,7 @@ else:
                 siniestros_file = st.file_uploader("Archivo Siniestros (Rímac)", type=["xlsx"], key="siniestros_manual")
 
             if midagri_file and siniestros_file:
-                if st.button("🚀 Procesar archivos", type="primary", key="proc_manual"):
+                if st.button("Procesar archivos", type="primary", key="proc_manual"):
                     with st.spinner("Procesando archivos subidos..."):
                         try:
                             datos = process_dynamic_data(midagri_file, siniestros_file)
@@ -181,17 +181,17 @@ else:
             if not has_lp: missing.append("La Positiva")
             st.warning(f"Credenciales pendientes: {', '.join(missing)}")
 
-        st.markdown("### 📂 Cargar archivos")
+        st.markdown("### Cargar archivos")
         col_up1, col_up2 = st.columns(2)
         with col_up1:
-            midagri_file = st.file_uploader("📋 Archivo MIDAGRI (.xlsx)", type=["xlsx"], key="midagri_fb")
+            midagri_file = st.file_uploader("Archivo MIDAGRI (.xlsx)", type=["xlsx"], key="midagri_fb")
         with col_up2:
-            siniestros_file = st.file_uploader("📋 Archivo Siniestros (.xlsx)", type=["xlsx"], key="siniestros_fb")
+            siniestros_file = st.file_uploader("Archivo Siniestros (.xlsx)", type=["xlsx"], key="siniestros_fb")
 
         if midagri_file and siniestros_file:
             col_c = st.columns([1, 2, 1])[1]
             with col_c:
-                if st.button("🚀 Procesar datos", type="primary", use_container_width=True, key="proc_fb"):
+                if st.button("Procesar datos", type="primary", use_container_width=True, key="proc_fb"):
                     with st.spinner("Procesando..."):
                         try:
                             datos = process_dynamic_data(midagri_file, siniestros_file)

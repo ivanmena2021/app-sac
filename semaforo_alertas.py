@@ -614,7 +614,7 @@ def render_semaforo_tab(datos):
     try:
         fig_sankey = generate_sankey_figure(df_sem)
         if fig_sankey:
-            with st.expander("📊 Diagrama de Flujo (Sankey)", expanded=False):
+            with st.expander("Diagrama de Flujo (Sankey)", expanded=False):
                 try:
                     from shared.charts import render_chart
                     render_chart(fig_sankey, key="chart_sankey_semaforo",
@@ -627,7 +627,7 @@ def render_semaforo_tab(datos):
     st.markdown("---")
 
     # ── Filtros ──
-    st.markdown("#### 🔎 Filtros")
+    st.markdown("#### Filtros")
     c1, c2, c3, c4 = st.columns(4)
 
     deptos_list = sorted(df_sem["DEPARTAMENTO"].dropna().unique().tolist()) if "DEPARTAMENTO" in df_sem.columns else []
@@ -663,7 +663,7 @@ def render_semaforo_tab(datos):
                 f"(de {kpis['total']:,} totales)")
 
     # ── Tabla detalle ──
-    st.markdown("#### 📋 Detalle de Alertas")
+    st.markdown("#### Detalle de Alertas")
 
     display_cols = ["CODIGO_AVISO", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
                     "SECTOR_ESTADISTICO", "TIPO_CULTIVO", "EMPRESA",
@@ -696,7 +696,7 @@ def render_semaforo_tab(datos):
     )
 
     # ── Drill-down por etapa ──
-    st.markdown("#### 📊 Análisis por Etapa")
+    st.markdown("#### Análisis por Etapa")
 
     for s in STAGES:
         k = s["key"]
@@ -721,7 +721,7 @@ def render_semaforo_tab(datos):
                 top_total = (sub.groupby("DEPARTAMENTO").size()
                              .sort_values(ascending=False).head(5))
                 if not top_total.empty:
-                    st.markdown('<div class="sem-drilldown-title">📊 Top 5 departamentos por volumen</div>',
+                    st.markdown('<div class="sem-drilldown-title">Top 5 departamentos por volumen</div>',
                                 unsafe_allow_html=True)
                     for depto, cnt in top_total.items():
                         st.markdown(f"&nbsp;&nbsp;&nbsp;**{depto}**: {cnt} avisos")
@@ -733,7 +733,7 @@ def render_semaforo_tab(datos):
     st.markdown("---")
     col_exp1, col_exp2 = st.columns([1, 3])
     with col_exp1:
-        if st.button("📥 Generar Excel Semáforo", key="sem_gen_excel", type="primary"):
+        if st.button("Generar Excel Semáforo", key="sem_gen_excel", type="primary"):
             excel_bytes = export_semaforo_excel(df_fil, pipeline, kpis)
             st.session_state["sem_excel"] = excel_bytes
             st.session_state["sem_excel_name"] = f"semaforo_alertas_{today.strftime('%d%m%Y')}.xlsx"

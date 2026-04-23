@@ -256,7 +256,7 @@ def render_comparativo_departamentos(datos):
     <div style="background: linear-gradient(135deg, #0c2340, #1a5276);
                 padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1rem;">
         <h3 style="color: white; margin: 0; font-size: 1.2rem;">
-            📊 Comparativo entre Departamentos
+            Comparativo entre Departamentos
         </h3>
         <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0 0; font-size: 0.85rem;">
             Seleccione hasta {max_deptos} departamentos para comparar indicadores clave

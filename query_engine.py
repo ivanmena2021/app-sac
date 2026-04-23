@@ -328,7 +328,7 @@ def _build_depto_summary(df_depto, depto_name, materia_depto=None):
     if total == 0:
         return f"**{depto_name.title()}**: Sin avisos registrados."
 
-    lines = [f"### 📍 {depto_name.title()}"]
+    lines = [f"### {depto_name.title()}"]
 
     # Avisos
     lines.append(f"- **Avisos reportados:** {total:,}")
@@ -387,7 +387,7 @@ def _build_depto_summary(df_depto, depto_name, materia_depto=None):
 def _build_emergency_summary(df_filtered, deptos, fecha_corte):
     """Construye resumen tipo emergencia/coyuntura."""
     lines = [
-        f"## 🚨 Resumen de Intervenciones SAC — Emergencia",
+        f"## Resumen de Intervenciones SAC — Emergencia",
         f"**Fecha de corte:** {fecha_corte}",
         f"**Departamentos:** {', '.join([d.title() for d in deptos])}",
         "",
@@ -417,7 +417,7 @@ def _build_emergency_summary(df_filtered, deptos, fecha_corte):
 
 def _build_tipo_siniestro_summary(df_filtered, tipos):
     """Resumen por tipo de siniestro."""
-    lines = [f"## 📊 Resumen por Tipo de Siniestro", ""]
+    lines = [f"## Resumen por Tipo de Siniestro", ""]
 
     for tipo in tipos:
         df_t = df_filtered[df_filtered["TIPO_SINIESTRO"].astype(str).str.upper() == tipo.upper()] if "TIPO_SINIESTRO" in df_filtered.columns else pd.DataFrame()
@@ -442,7 +442,7 @@ def _build_geographic_summary(df, group_col, group_label, top_n=15):
     if group_col not in df.columns:
         return f"⚠️ No se encontró la columna {group_col} en los datos."
 
-    lines = [f"## 📍 Resumen por {group_label}", ""]
+    lines = [f"## Resumen por {group_label}", ""]
 
     # Agregar dinámicamente según columnas disponibles
     agg_dict = {}
@@ -706,7 +706,7 @@ def process_query(query, datos):
 
                 titulo_periodo = f" — {temporal_label}" if temporal_label else ""
                 titulo_empresa = f" — {empresa}" if empresa else ""
-                sections.append(f"## 📊 Resumen Nacional SAC 2025-2026{titulo_empresa}{titulo_periodo}")
+                sections.append(f"## Resumen Nacional SAC 2025-2026{titulo_empresa}{titulo_periodo}")
                 sections.append(f"**Fecha de corte:** {fecha_corte}\n")
                 sections.append(f"- **Avisos totales:** {n_avisos:,}")
                 sections.append(f"- **Evaluados (cerrados):** {n_ajust:,} — **Avance de evaluación: {pct_ajust}%**")
@@ -731,7 +731,7 @@ def process_query(query, datos):
                         sections.append(f"- {tipo.title()}: {cnt:,} avisos")
             else:
                 # Sin filtros → usar totales pre-calculados
-                sections.append(f"## 📊 Resumen Nacional SAC 2025-2026")
+                sections.append(f"## Resumen Nacional SAC 2025-2026")
                 sections.append(f"**Fecha de corte:** {fecha_corte}\n")
                 sections.append(f"- **Avisos totales:** {datos['total_avisos']:,}")
                 sections.append(f"- **Evaluados (cerrados):** {datos['total_ajustados']:,} — **Avance de evaluación: {datos['pct_ajustados']}%**")
@@ -754,7 +754,7 @@ def process_query(query, datos):
                 sections.append("")
         else:
             # Sin filtros específicos — resumen general
-            sections.append(f"## 📊 Resultado de la consulta")
+            sections.append(f"## Resultado de la consulta")
             sections.append(f"**Registros encontrados:** {len(df):,}\n")
 
             total_indemn = df["INDEMNIZACION"].sum() if "INDEMNIZACION" in df.columns else 0

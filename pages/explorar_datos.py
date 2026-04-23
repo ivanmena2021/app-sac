@@ -15,7 +15,7 @@ datos = get_datos()
 page_header("Explorar Datos",
             "Visualización directa de los datos consolidados y análisis de calidad")
 
-tab_data, tab_quality = st.tabs(["📊 Datos Consolidados", "📋 Calidad de Datos"])
+tab_data, tab_quality = st.tabs(["Datos Consolidados", "Calidad de Datos"])
 
 with tab_data:
     sub1, sub2 = st.tabs(["MIDAGRI (La Positiva)", "Siniestros (Rímac)"])

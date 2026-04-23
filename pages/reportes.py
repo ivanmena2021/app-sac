@@ -22,13 +22,13 @@ page_header("Generar Reportes",
             "Documentos Word, Excel y PowerPoint del Seguro Agrícola Catastrófico")
 
 tab_nac, tab_depto, tab_oper, tab_eme, tab_ppt, tab_batch, tab_hist = st.tabs([
-    "📄 Nacional",
-    "🏔️ Departamental",
-    "📋 Operatividad",
-    "📊 EME",
-    "📊 PPT Dinámica",
-    "📦 Todos",
-    "📈 Histórico",
+    "Nacional",
+    "Departamental",
+    "Operatividad",
+    "EME",
+    "PPT Dinámica",
+    "Todos",
+    "Histórico",
 ])
 
 # ═══ Nacional ═══
@@ -39,7 +39,7 @@ with tab_nac:
 
     c1, c2 = st.columns([1, 1])
     with c1:
-        if st.button("⚡ Generar documento", type="primary", key="gen_nac", use_container_width=True):
+        if st.button("Generar documento", type="primary", key="gen_nac", use_container_width=True):
             with st.spinner("Generando Ayuda Memoria Nacional..."):
                 try:
                     doc_bytes = generate_nacional_docx(datos)
@@ -56,18 +56,18 @@ with tab_nac:
                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                use_container_width=True)
 
-    with st.expander("📋 Cuadro 1 — Primas y Cobertura"):
+    with st.expander("Cuadro 1 — Primas y Cobertura"):
         st.dataframe(datos["cuadro1"], use_container_width=True, hide_index=True)
-    with st.expander("📋 Cuadro 2 — Indemnizaciones y Desembolsos"):
+    with st.expander("Cuadro 2 — Indemnizaciones y Desembolsos"):
         st.dataframe(datos["cuadro2"], use_container_width=True, hide_index=True)
-    with st.expander("📋 Cuadro 3 — Lluvias Intensas"):
+    with st.expander("Cuadro 3 — Lluvias Intensas"):
         st.dataframe(datos["cuadro3"], use_container_width=True, hide_index=True)
 
     # PDF Ejecutivo
     st.markdown("---")
     cp1, cp2 = st.columns([1, 1])
     with cp1:
-        if st.button("📊 Generar PDF Ejecutivo", key="gen_pdf_exec"):
+        if st.button("Generar PDF Ejecutivo", key="gen_pdf_exec"):
             with st.spinner("Generando PDF..."):
                 try:
                     from gen_pdf_resumen import generate_executive_pdf
@@ -99,7 +99,7 @@ with tab_depto:
 
         cg, cd = st.columns([1, 1])
         with cg:
-            if st.button("⚡ Generar documento", type="primary", key="gen_depto", use_container_width=True):
+            if st.button("Generar documento", type="primary", key="gen_depto", use_container_width=True):
                 with st.spinner(f"Generando reporte de {depto_sel.title()}..."):
                     try:
                         doc_bytes = generate_departamental_docx(depto_data)
@@ -122,7 +122,7 @@ with tab_oper:
                 unsafe_allow_html=True)
     cg, cd = st.columns([1, 1])
     with cg:
-        if st.button("⚡ Generar Operatividad", type="primary", key="gen_oper", use_container_width=True):
+        if st.button("Generar Operatividad", type="primary", key="gen_oper", use_container_width=True):
             with st.spinner("Generando..."):
                 try:
                     doc_bytes = generate_operatividad_docx(datos)
@@ -145,7 +145,7 @@ with tab_eme:
                 unsafe_allow_html=True)
     cg, cd = st.columns([1, 1])
     with cg:
-        if st.button("⚡ Generar Reporte EME", type="primary", key="gen_eme", use_container_width=True):
+        if st.button("Generar Reporte EME", type="primary", key="gen_eme", use_container_width=True):
             with st.spinner("Generando Excel..."):
                 try:
                     xls_bytes = generate_reporte_eme(datos)
@@ -211,7 +211,7 @@ with tab_ppt:
 
     cg, cd = st.columns([1, 1])
     with cg:
-        if st.button("⚡ Generar Presentación", type="primary", key="gen_ppt_din", use_container_width=True):
+        if st.button("Generar Presentación", type="primary", key="gen_ppt_din", use_container_width=True):
             with st.spinner("Generando PowerPoint..."):
                 try:
                     ppt_bytes = generar_ppt_dinamico(df_ppt, filtros, datos["fecha_corte"])
@@ -250,7 +250,7 @@ with tab_hist:
         sel_hist = st.selectbox("Seleccione departamento:", sorted(dept_list_hist), key="hist_dept_select")
         cg, cd = st.columns([1, 1])
         with cg:
-            if st.button("⚡ Generar PPT Histórica", type="primary", key="gen_hist_ppt"):
+            if st.button("Generar PPT Histórica", type="primary", key="gen_hist_ppt"):
                 with st.spinner(f"Generando análisis histórico de {sel_hist}..."):
                     try:
                         primas = load_primas_historicas()

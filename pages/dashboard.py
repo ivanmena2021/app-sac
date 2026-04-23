@@ -61,7 +61,7 @@ with col_dl:
                         writer, index=False, sheet_name=str(emp)[:31])
         buf.seek(0)
         st.download_button(
-            "📥 Descargar consolidado", data=buf.getvalue(),
+            "Descargar consolidado", data=buf.getvalue(),
             file_name=f"Consolidado_SAC_2025-2026_{datos['fecha_corte'].replace('/', '-')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key="dl_consolidado", use_container_width=True)
@@ -69,7 +69,7 @@ with col_dl:
         st.error(f"Error: {e}")
 
 with col_ref:
-    if st.button("🔄 Nueva actualización", key="refresh_data"):
+    if st.button("Nueva actualización", key="refresh_data"):
         st.session_state["processed"] = False
         st.session_state.pop("datos", None)
         st.switch_page("pages/inicio.py")
@@ -213,16 +213,16 @@ st.markdown("---")
 st.markdown("**Acceso rápido:**")
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    if st.button("🔍 Consultas", use_container_width=True, key="nav_consultas"):
+    if st.button("Consultas", use_container_width=True, key="nav_consultas"):
         st.switch_page("pages/consultas.py")
 with c2:
-    if st.button("🗺️ Mapa de Calor", use_container_width=True, key="nav_mapa"):
+    if st.button("Mapa de Calor", use_container_width=True, key="nav_mapa"):
         st.switch_page("pages/mapa_calor.py")
 with c3:
-    if st.button("📥 Reportes", use_container_width=True, key="nav_reportes"):
+    if st.button("Reportes", use_container_width=True, key="nav_reportes"):
         st.switch_page("pages/reportes.py")
 with c4:
-    if st.button("🚦 Semáforo", use_container_width=True, key="nav_semaforo"):
+    if st.button("Semáforo", use_container_width=True, key="nav_semaforo"):
         st.switch_page("pages/semaforo_page.py")
 
 footer()

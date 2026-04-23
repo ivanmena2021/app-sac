@@ -42,7 +42,7 @@ st.markdown("**Consultas sugeridas:**")
 cols = st.columns(4)
 for i, sug in enumerate(suggested[:8]):
     with cols[i % 4]:
-        if st.button(f"🔹 {sug}", key=f"sug_{i}", use_container_width=True):
+        if st.button(sug, key=f"sug_{i}", use_container_width=True):
             st.session_state["query_input"] = sug
 
 st.markdown("---")
@@ -57,11 +57,11 @@ query_text = st.text_area(
 
 col_q1, col_q2, col_q3 = st.columns([1, 1, 3])
 with col_q1:
-    btn_query = st.button("🔍 Consultar", type="primary", use_container_width=True, key="btn_query")
+    btn_query = st.button("Consultar", type="primary", use_container_width=True, key="btn_query")
 
 if btn_query and query_text.strip():
     if llm_ready:
-        with st.spinner("🤖 Analizando datos y redactando respuesta..."):
+        with st.spinner("Analizando datos y redactando respuesta..."):
             result = process_query_llm(query_text, datos)
         if result["error"]:
             st.error(f"Error: {result['error']}")
@@ -106,23 +106,23 @@ if st.session_state.get("last_query_prose"):
     st.markdown("")
     c1, c2, c3 = st.columns([1, 1, 2])
     with c1:
-        st.download_button("📋 Descargar .txt", data=prose,
+        st.download_button("Descargar .txt", data=prose,
                            file_name=f"SAC_consulta_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                            mime="text/plain", key="dl_txt", use_container_width=True)
 
     if st.session_state.get("last_query_sql"):
-        with st.expander("🔧 Ver consulta SQL generada"):
+        with st.expander("Ver consulta SQL generada"):
             st.code(st.session_state["last_query_sql"], language="sql")
 
     if st.session_state.get("last_query_data") is not None:
         df_result = st.session_state["last_query_data"]
         if len(df_result) > 0:
-            with st.expander(f"📊 Ver datos ({len(df_result)} filas)"):
+            with st.expander(f"Ver datos ({len(df_result)} filas)"):
                 st.dataframe(df_result, use_container_width=True, hide_index=True)
 
     if st.session_state.get("last_query_summary"):
         summary = st.session_state["last_query_summary"]
-        with st.expander("✅ Resumen verificado"):
+        with st.expander("Resumen verificado"):
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Avisos", f"{summary.get('total_avisos', 0):,}")
             c2.metric("Indemnización", f"S/ {summary.get('total_indemnizacion', 0):,.2f}")

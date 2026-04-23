@@ -91,7 +91,7 @@ if is_data_loaded():
 
                     with st.sidebar:
                         st.markdown("---")
-                        st.markdown("#### 📅 Filtro de Fechas")
+                        st.markdown("#### Filtro de Fechas")
                         _ref_label = "Fecha de Siniestro" if date_col == "FECHA_SINIESTRO" else "Fecha de Aviso"
                         st.caption(f"Columna: **{_ref_label}** · "
                                    f"{min_date.strftime('%d/%m/%Y')} — {max_date.strftime('%d/%m/%Y')}")
@@ -116,7 +116,7 @@ if is_data_loaded():
 
                         if (f_start, f_end) != (min_date, max_date):
                             st.session_state["datos_filtered"] = filter_by_date_range(datos, f_start, f_end)
-                            st.caption(f"🔍 Filtrado: {f_start.strftime('%d/%m/%Y')} — {f_end.strftime('%d/%m/%Y')}")
+                            st.caption(f"Filtrado: {f_start.strftime('%d/%m/%Y')} — {f_end.strftime('%d/%m/%Y')}")
                         else:
                             st.session_state["datos_filtered"] = None
 
