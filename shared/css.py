@@ -405,6 +405,139 @@ GLOBAL_CSS = """
     .stDownloadButton > button { border-radius: 10px !important; font-weight: 600 !important; border: 1px solid #d1d9e0 !important; transition: all 0.2s ease !important; }
     .stDownloadButton > button:hover { border-color: #2980b9 !important; color: #2980b9 !important; background: #f0f7ff !important; }
     .stDataFrame { border-radius: 10px; overflow: hidden; }
+
+    /* ══════════════════════════════════════════
+       DARK MODE — activado por preferencia del
+       SO (prefers-color-scheme) y también por el
+       toggle de Streamlit (Settings → Theme:
+       Dark, que aplica [data-theme="dark"] al
+       root del DOM).
+       ══════════════════════════════════════════ */
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --color-bg: #0b1220;
+            --color-surface: #111827;
+            --color-surface-2: #0f1729;
+            --color-border: #1f2a3d;
+            --color-grid-soft: #1e293b;
+            --color-text: #e2e8f0;
+            --color-text-soft: #94a3b8;
+        }
+        [data-testid="stAppViewBlockContainer"] { background: #0b1220; }
+        .block-container { color: #e2e8f0; }
+        [data-testid="stSidebar"] {
+            background: #0f1729;
+            border-right: 1px solid #1f2a3d;
+        }
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+        [data-testid="stSidebar"] label { color: #cbd5e1; }
+
+        /* Cards y contenedores */
+        .metric-card-v2,
+        .action-card,
+        .report-card,
+        .hero-left,
+        .hero-right,
+        .status-banner,
+        .tab-intro,
+        .query-result-box,
+        .chat-header,
+        .sem-drilldown-title {
+            background: #111827 !important;
+            color: #e2e8f0 !important;
+            border-color: #1f2a3d !important;
+        }
+        .metric-card-v2 .label { color: #94a3b8 !important; }
+        .metric-card-v2 .value { color: #e2e8f0 !important; }
+
+        /* Expanders */
+        .streamlit-expanderHeader,
+        [data-testid="stExpander"] summary,
+        [data-testid="stExpander"] details {
+            background: #111827 !important;
+            color: #e2e8f0 !important;
+        }
+
+        /* Hr/divider */
+        [data-testid="stDivider"] hr, hr {
+            border-top-color: #1f2a3d !important;
+        }
+
+        /* Inputs y selects */
+        .stTextInput input, .stTextArea textarea,
+        [data-baseweb="select"] > div,
+        .stDateInput input {
+            background: #0f1729 !important;
+            color: #e2e8f0 !important;
+            border-color: #1f2a3d !important;
+        }
+
+        /* Tablas */
+        [data-testid="stDataFrame"] { color: #e2e8f0; }
+        [data-testid="stDataFrame"] [role="columnheader"] {
+            background: #1e293b !important;
+            color: #e2e8f0 !important;
+        }
+
+        /* Download button */
+        .stDownloadButton > button {
+            background: #111827 !important;
+            color: #e2e8f0 !important;
+            border-color: #1f2a3d !important;
+        }
+        .stDownloadButton > button:hover {
+            background: #1a2234 !important;
+            color: #60a5fa !important;
+            border-color: #2980b9 !important;
+        }
+
+        /* Captions */
+        [data-testid="stCaptionContainer"],
+        .stCaption { color: #94a3b8 !important; }
+
+        /* Tabs (el Streamlit nativo) */
+        [data-baseweb="tab"] { color: #cbd5e1 !important; }
+        [data-baseweb="tab-list"] { border-bottom-color: #1f2a3d !important; }
+    }
+
+    /* Toggle explicito: si el usuario elige Dark en Streamlit
+       (y el SO esta en light), Streamlit pone data-theme="dark"
+       en el root. Espejamos las reglas. */
+    [data-theme="dark"] [data-testid="stAppViewBlockContainer"] { background: #0b1220; }
+    [data-theme="dark"] .block-container { color: #e2e8f0; }
+    [data-theme="dark"] [data-testid="stSidebar"] {
+        background: #0f1729;
+        border-right: 1px solid #1f2a3d;
+    }
+    [data-theme="dark"] .metric-card-v2,
+    [data-theme="dark"] .action-card,
+    [data-theme="dark"] .report-card,
+    [data-theme="dark"] .hero-left,
+    [data-theme="dark"] .hero-right,
+    [data-theme="dark"] .status-banner,
+    [data-theme="dark"] .tab-intro,
+    [data-theme="dark"] .query-result-box,
+    [data-theme="dark"] .chat-header,
+    [data-theme="dark"] .sem-drilldown-title {
+        background: #111827 !important;
+        color: #e2e8f0 !important;
+        border-color: #1f2a3d !important;
+    }
+    [data-theme="dark"] .metric-card-v2 .label { color: #94a3b8 !important; }
+    [data-theme="dark"] .metric-card-v2 .value { color: #e2e8f0 !important; }
+    [data-theme="dark"] .streamlit-expanderHeader,
+    [data-theme="dark"] [data-testid="stExpander"] summary {
+        background: #111827 !important;
+        color: #e2e8f0 !important;
+    }
+    [data-theme="dark"] [data-testid="stDivider"] hr,
+    [data-theme="dark"] hr {
+        border-top-color: #1f2a3d !important;
+    }
+    [data-theme="dark"] [data-testid="stDataFrame"] [role="columnheader"] {
+        background: #1e293b !important;
+        color: #e2e8f0 !important;
+    }
 </style>
 """
 
