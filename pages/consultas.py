@@ -6,7 +6,7 @@ import streamlit as st
 from datetime import datetime
 
 from shared.state import require_data, get_datos
-from shared.components import page_header, footer
+from shared.components import page_header, footer, render_metric
 from query_engine import process_query, get_suggested_queries as get_suggested_basic
 from query_llm import process_query_llm, is_llm_available, get_suggested_queries as get_suggested_llm
 
@@ -124,9 +124,21 @@ if st.session_state.get("last_query_prose"):
         summary = st.session_state["last_query_summary"]
         with st.expander("Resumen verificado"):
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Total Avisos", f"{summary.get('total_avisos', 0):,}")
-            c2.metric("Indemnización", f"S/ {summary.get('total_indemnizacion', 0):,.2f}")
-            c3.metric("Desembolso", f"S/ {summary.get('total_desembolso', 0):,.2f}")
-            c4.metric("Productores", f"{summary.get('total_productores', 0):,}")
+            with c1:
+                st.markdown(render_metric("Total Avisos",
+                    f"{summary.get('total_avisos', 0):,}", None, "blue"),
+                    unsafe_allow_html=True)
+            with c2:
+                st.markdown(render_metric("Indemnización",
+                    f"S/ {summary.get('total_indemnizacion', 0):,.2f}", None, "amber"),
+                    unsafe_allow_html=True)
+            with c3:
+                st.markdown(render_metric("Desembolso",
+                    f"S/ {summary.get('total_desembolso', 0):,.2f}", None, "purple"),
+                    unsafe_allow_html=True)
+            with c4:
+                st.markdown(render_metric("Productores",
+                    f"{summary.get('total_productores', 0):,}", None, "green"),
+                    unsafe_allow_html=True)
 
 footer()
