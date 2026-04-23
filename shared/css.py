@@ -5,6 +5,75 @@ import streamlit as st
 GLOBAL_CSS = """
 <style>
     /* ══════════════════════════════════════════
+       DESIGN TOKENS — single source of truth
+       (se pueden usar como var(--name) en reglas
+        futuras sin romper el CSS existente)
+       ══════════════════════════════════════════ */
+    :root {
+        /* Colores institucionales (espejados en shared/charts.PALETTE) */
+        --color-primary: #0c2340;
+        --color-primary-mid: #1a5276;
+        --color-accent: #2980b9;
+        --color-midagri: #408B14;
+        --color-midagri-soft: #5FAE2E;
+        --color-success: #27ae60;
+        --color-warning: #f39c12;
+        --color-danger: #e74c3c;
+        --color-info: #3498db;
+        --color-neutral: #64748b;
+        --color-text: #1e293b;
+        --color-text-soft: #475569;
+        --color-bg: #ffffff;
+        --color-surface: #f8fafc;
+        --color-surface-2: #f4f7fa;
+        --color-border: #e2e8f0;
+        --color-grid-soft: #f1f5f9;
+
+        /* Espaciado (progresión 4-8-12-16-24-32-48) */
+        --space-1: 0.25rem;
+        --space-2: 0.5rem;
+        --space-3: 0.75rem;
+        --space-4: 1rem;
+        --space-5: 1.5rem;
+        --space-6: 2rem;
+        --space-7: 3rem;
+
+        /* Radios */
+        --radius-xs: 6px;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-pill: 999px;
+
+        /* Sombras */
+        --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+        --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.05);
+        --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.07);
+        --shadow-lg: 0 8px 32px rgba(12, 35, 64, 0.15);
+
+        /* Transiciones */
+        --trans-fast: 120ms ease;
+        --trans-med: 220ms ease;
+    }
+
+    /* Utility classes para reemplazar <div style="height:Xrem"></div> */
+    .spacer-xs { height: var(--space-2); }
+    .spacer-sm { height: var(--space-3); }
+    .spacer-md { height: var(--space-4); }
+    .spacer-lg { height: var(--space-5); }
+    .spacer-xl { height: var(--space-6); }
+
+    /* Divider más sutil y consistente (aplicado a st.divider) */
+    [data-testid="stDivider"] hr,
+    hr {
+        border: none;
+        border-top: 1px solid var(--color-border);
+        margin: var(--space-5) 0;
+        opacity: 1;
+    }
+
+    /* ══════════════════════════════════════════
        GLOBAL RESET & BASE
        ══════════════════════════════════════════ */
     .block-container { padding-top: 0.8rem; max-width: 1200px; }
