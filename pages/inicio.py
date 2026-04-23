@@ -63,7 +63,37 @@ else:
     if auto_available and has_all_creds:
         st.markdown("""
         <div class="action-card">
-            <div style="font-size: 3rem;">🚀</div>
+            <svg width="140" height="90" viewBox="0 0 140 90"
+                 xmlns="http://www.w3.org/2000/svg" role="img"
+                 aria-label="Ilustración de tendencia de datos sobre silueta de los Andes"
+                 style="margin:0 auto;display:block;">
+                <defs>
+                    <linearGradient id="peakGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#2980b9"/>
+                        <stop offset="100%" stop-color="#1a5276"/>
+                    </linearGradient>
+                    <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#5FAE2E"/>
+                        <stop offset="100%" stop-color="#408B14"/>
+                    </linearGradient>
+                </defs>
+                <!-- Sol -->
+                <circle cx="115" cy="18" r="7" fill="#f39c12" opacity="0.95"/>
+                <circle cx="115" cy="18" r="11" fill="#f39c12" opacity="0.15"/>
+                <!-- Andes (silueta de picos) -->
+                <path d="M 0 78 L 28 38 L 50 60 L 78 20 L 100 50 L 125 40 L 140 48 L 140 90 L 0 90 Z"
+                      fill="url(#peakGrad)" opacity="0.92"/>
+                <!-- Línea de tendencia ascendente -->
+                <path d="M 5 62 Q 25 55, 42 45 T 82 25 T 130 8"
+                      stroke="url(#lineGrad)" stroke-width="2.6" fill="none"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- Puntos de datos -->
+                <circle cx="5" cy="62" r="2.8" fill="#5FAE2E"/>
+                <circle cx="42" cy="45" r="2.8" fill="#5FAE2E"/>
+                <circle cx="82" cy="25" r="2.8" fill="#5FAE2E"/>
+                <circle cx="130" cy="8" r="3.2" fill="#408B14"
+                        stroke="#ffffff" stroke-width="1.5"/>
+            </svg>
             <h2>Actualización con un solo click</h2>
             <p>Descarga los datos más recientes de Rímac y La Positiva, los procesa
             automáticamente y genera el dashboard con todos los reportes listos.</p>
