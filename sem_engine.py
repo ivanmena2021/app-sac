@@ -1,174 +1,104 @@
 """
-sem_engine.py — Motor del Semáforo de Alertas SAC (rewrite)
+sem_engine.py — Motor del Semáforo de Alertas SAC
 
-Implementa las 6 alertas independientes (ALERTA 01..06) según las reglas
-oficiales del equipo SAC. Cada aviso recibe 6 evaluaciones: cada alerta
-tiene su propio color y string descriptivo.
+Implementa las 6 alertas independientes (ALERTA 01..06) replicando
+EXACTAMENTE las fórmulas Excel del equipo SAC oficial.
 
-Reglas resumidas (ver semaforo_alertas.py:render_semaforo_tab para UI):
-
-REGLA TRANSVERSAL (aplica a todas las alertas):
-  - Si DUPLICIDAD == REPETIDO o OBSERVACION contiene REPETIDO:
-       todas las 6 alertas = "ALERTA ATENCION OK"
-  - Si OBSERVACION contiene NUL: idem
-  - Si OBSERVACION contiene SIN COBERTURA: alertas 02-06 = "ALERTA ATENCION OK"
-    (la 01 sí se evalúa)
-
-ALERTA 01 ATENCION:
-  - Con FECHA_ATENCION:
-      d = (atencion - aviso).days, formato "ATENCION OK (d días)" si d <= 10
-      "ALERTA ROJA CON ATENCION (d días)" si d > 10
-  - Sin FECHA_ATENCION:
-      d = (today - aviso).days
-      1-6 → ALERTA VERDE SIN ATENCION (d días)
-      7-10 → ALERTA AMBAR SIN ATENCION (d días)
-      >10 → ALERTA ROJA SIN ATENCION (d días)
-
-ALERTA 02 PROGRAMACION:
-  - Si OBSERVACION contiene PROG → "NO EVALUADO (PROG)"
-  - Si tiene FECHA_AJUSTE_ACTA_1 → "ATENCION OK CON AJUSTE"
-  - Si tiene FECHA_PROGRAMACION_AJUSTE (sin acta1):
-      d = (today - prog).days  o  (prog - aviso).days  (revisar empíricamente)
-      1-11 verde, 12-15 ámbar, >15 rojo → "ALERTA <X> CON PROGRAMACION (d días)"
-  - Sin FECHA_PROGRAMACION_AJUSTE:
-      d = (today - aviso).days
-      Mismos rangos → "ALERTA <X> SIN PROGRAMACION (d días)"
-
-ALERTA 03 AJUSTE:
-  - Si OBSERVACION contiene PROG o SIN COBERTURA → "ALERTA ATENCION OK"
-  - Si tiene FECHA_AJUSTE_ACTA_1:
-      d = (acta1 - aviso).days, formato "AJUSTE OK (d días)"
-      Si d > 15 → "ALERTA ROJA CON AJUSTE 01 (d días)"
-  - Sin FECHA_AJUSTE_ACTA_1 (con o sin programación):
-      d = (today - aviso).days
-      1-11 verde, 12-14 ámbar, >15 rojo
-      Distinguir SIN AJUSTE 01 SIN PROG vs SIN AJUSTE 01 (con prog)
-
-ALERTA 04 REPROGRAMACION:
-  - Si tiene FECHA_AJUSTE_ACTA_FINAL → "ATENCION OK AJUSTE FINAL"
-  - Si NO tiene reprog 01/02/03 → "REPROGRAMACION OK"
-  - Si tiene reprog (1, 2 o 3 — el más alto):
-      d = (reprog - today).days  (cuántos días faltan)
-      Si d > 0 (futura): si d <= 7 → ALERTA AMBAR CON REPROGRAMACION 0X (d días)
-      Si d <= 0 (pasada): ALERTA ROJA CON REPROGRAMACION 0X
-  - Caso especial: ESTADO_INSPECCION == "REPROGRAMADO" sin reprog 01:
-      "ALERTA ROJA SIN REPROGRAMACION 01"
-
-ALERTA 05 PADRON Y VALIDACION:
-  - Solo aplica si DICTAMEN == "INDEMNIZABLE" y FECHA_AJUSTE_ACTA_FINAL existe.
-  - Sin envío DRAS:
-      d = (today - acta_final).days
-      1-15 verde, 16-20 ámbar, >20 rojo → "ALERTA <X> SIN PADRON (d días)"
-  - Con envío DRAS, sin validación:
-      d = (today - envio).days
-      1-6 verde, 7-15 ámbar, >15 rojo → "ALERTA <X> SIN VALIDACION (d días)"
-  - Con validación → "ATENCION OK CON VALIDACION (d días)"
-
-ALERTA 06 PAGO SAC:
-  - Solo aplica si DICTAMEN == "INDEMNIZABLE" y FECHA_VALIDACION existe.
-  - Días HÁBILES (excluir sáb/dom y feriados Perú).
-  - Sin pago: 1-11 verde, 12-15 ámbar, >15 rojo
-  - Con pago: d = (pago - validacion).days_habiles, "ATENCION OK CON PAGO (d días)"
+Fórmulas extraídas del Excel "Dashboard SAC 25-26 ... Con semáforo.xlsx":
+- Función central: NETWORKDAYS.INTL(start, end, weekend_code, holidays)
+  - weekend_code=11: solo domingo no laborable (sábados sí cuentan)
+                    → Alertas 01, 02, 03, 04, 05
+  - weekend_code=1:  sábado+domingo no laborables (clásico)
+                    → Alerta 06 (PAGO SAC)
+- Inclusivo de ambos extremos
+- Lista de 24 feriados específica del equipo SAC (BT2:BT25 del Excel)
+- Inicio del intervalo es típicamente fecha+1 (día siguiente al evento)
 """
-from datetime import date
-from typing import Optional, Tuple
-
 import numpy as np
 import pandas as pd
 
+# ============================================================
+# Feriados de Perú según el equipo SAC (BT2:BT25 del Excel)
+# Lista REDUCIDA — no incluye Batalla de Junín, Día de la Fuerza
+# Aérea, Battalla de Ayacucho, Battalla de Arica.
+# ============================================================
+FERIADOS_SAC = [
+    "2025-01-01", "2025-04-17", "2025-04-18", "2025-05-01",
+    "2025-06-29", "2025-07-28", "2025-07-29", "2025-08-30",
+    "2025-10-08", "2025-11-01", "2025-12-08", "2025-12-25",
+    "2026-01-01", "2026-04-02", "2026-04-03", "2026-05-01",
+    "2026-06-29", "2026-07-28", "2026-07-29", "2026-08-30",
+    "2026-10-08", "2026-11-01", "2026-12-08", "2026-12-25",
+]
+_HOLIDAYS_NP = pd.to_datetime(FERIADOS_SAC).normalize().values.astype("datetime64[D]")
 
-# ============================================================
-# Feriados Perú (lista mínima — extender según necesidad)
-# Fuente: feriados nacionales calendario peruano
-# ============================================================
-FERIADOS_PERU_2025 = [
-    "2025-01-01",  # Año Nuevo
-    "2025-04-17",  # Jueves Santo
-    "2025-04-18",  # Viernes Santo
-    "2025-05-01",  # Día del Trabajo
-    "2025-06-07",  # Batalla de Arica y Día de la Bandera
-    "2025-06-29",  # San Pedro y San Pablo
-    "2025-07-23",  # Día de la Fuerza Aérea
-    "2025-07-28",  # Día de la Independencia
-    "2025-07-29",  # Día de la Independencia
-    "2025-08-06",  # Batalla de Junín
-    "2025-08-30",  # Santa Rosa de Lima
-    "2025-10-08",  # Combate de Angamos
-    "2025-11-01",  # Día de Todos los Santos
-    "2025-12-08",  # Inmaculada Concepción
-    "2025-12-09",  # Batalla de Ayacucho
-    "2025-12-25",  # Navidad
-]
-FERIADOS_PERU_2026 = [
-    "2026-01-01",
-    "2026-04-02",  # Jueves Santo
-    "2026-04-03",  # Viernes Santo
-    "2026-05-01",
-    "2026-06-07",
-    "2026-06-29",
-    "2026-07-23",
-    "2026-07-28",
-    "2026-07-29",
-    "2026-08-06",
-    "2026-08-30",
-    "2026-10-08",
-    "2026-11-01",
-    "2026-12-08",
-    "2026-12-09",
-    "2026-12-25",
-]
-FERIADOS_PERU = pd.to_datetime(FERIADOS_PERU_2025 + FERIADOS_PERU_2026).normalize()
-_FERIADOS_NP = FERIADOS_PERU.values.astype("datetime64[D]")
+# weekmasks para numpy.busday_count
+# weekend_code 11 (solo domingo): mon-sat=1, sun=0
+WEEKMASK_SUN_OFF = "1111110"
+# weekend_code 1 (clásico): mon-fri=1, sat-sun=0
+WEEKMASK_SATSUN_OFF = "1111100"
+
+
+def _networkdays_intl(start, end, weekend_code=11):
+    """
+    Equivalente Python de Excel NETWORKDAYS.INTL(start, end, weekend, holidays).
+
+    INCLUSIVO de ambos extremos. Si start > end, retorna valor negativo.
+    NaN-safe: retorna 0 cuando alguna fecha es NaT.
+
+    weekend_code:
+      - 11: solo domingo no laborable (Alertas 01-05 del Excel)
+      - 1:  sábado y domingo no laborables (Alerta 06)
+    """
+    weekmask = WEEKMASK_SUN_OFF if weekend_code == 11 else WEEKMASK_SATSUN_OFF
+
+    out = pd.Series(0, index=start.index, dtype="int64")
+    mask = start.notna() & end.notna()
+    if mask.sum() == 0:
+        return out
+
+    s_arr = start[mask].dt.normalize().values.astype("datetime64[D]")
+    e_arr = end[mask].dt.normalize().values.astype("datetime64[D]")
+
+    # busday_count(a, b) = días hábiles desde a (inclusive) hasta b (exclusive)
+    # NETWORKDAYS.INTL es inclusive de ambos. Diferencia: hay que sumar 1 día al final
+    # cuando start <= end. Cuando start > end, restar 1 a start (caso negativo).
+    pos = e_arr >= s_arr
+    days = np.zeros(len(s_arr), dtype="int64")
+
+    if pos.any():
+        e_plus1 = e_arr[pos] + np.timedelta64(1, "D")
+        days[pos] = np.busday_count(s_arr[pos], e_plus1,
+                                     weekmask=weekmask, holidays=_HOLIDAYS_NP)
+    if (~pos).any():
+        s_plus1 = s_arr[~pos] + np.timedelta64(1, "D")
+        days[~pos] = -np.busday_count(e_arr[~pos], s_plus1,
+                                       weekmask=weekmask, holidays=_HOLIDAYS_NP)
+
+    out.loc[mask] = days
+    return out
 
 
 # ============================================================
 # Helpers
 # ============================================================
 def _safe_dt(df, col):
-    """Devuelve la columna como datetime64; NaT si no existe."""
     if col in df.columns:
         return pd.to_datetime(df[col], errors="coerce")
     return pd.Series(pd.NaT, index=df.index)
 
 
-def _safe_str(df, col):
-    """Devuelve la columna como string upper-strip; vacío si no existe."""
+def _safe_str_upper(df, col):
     if col in df.columns:
         return df[col].astype(str).str.strip().str.upper().fillna("")
     return pd.Series("", index=df.index)
 
 
-def _days_calendar(b, a):
-    """Días calendario b - a, NaN-safe. Retorna float."""
-    return (b - a).dt.days
-
-
-def _days_hab(b, a):
-    """Días hábiles entre a y b (excluyendo sáb, dom y feriados Perú).
-    Retorna Series de int. NaN si alguna fecha es NaT.
-    """
-    out = pd.Series(np.nan, index=b.index, dtype="float64")
-    mask = b.notna() & a.notna()
-    if mask.sum() == 0:
-        return out
-    a_arr = a[mask].dt.normalize().values.astype("datetime64[D]")
-    b_arr = b[mask].dt.normalize().values.astype("datetime64[D]")
-    # numpy.busday_count: cuenta días hábiles desde a (incluido) hasta b (excluido)
-    res = np.busday_count(a_arr, b_arr, holidays=_FERIADOS_NP)
-    out.loc[mask] = res
-    return out
-
-
-# ============================================================
-# Detección de banderas transversales
-# ============================================================
 def _detect_flags(df):
-    """Devuelve un dict de Series booleanas con las banderas que activan
-    'ALERTA ATENCION OK' en alguna o todas las alertas.
-    """
-    obs = _safe_str(df, "OBSERVACION") if "OBSERVACION" in df.columns else pd.Series("", index=df.index)
+    """Devuelve dict de Series booleanas con las banderas transversales."""
+    obs = _safe_str_upper(df, "OBSERVACION")
 
-    # DUPLICIDAD: buscar columna que contenga 'DUPLIC' (e.g. DUPLIC RESULT, DUPLICIDAD)
+    # DUPLICIDAD: cualquier columna que contenga "DUPLIC" pero no "SINTAXIS"
     dup_col = None
     for c in df.columns:
         cu = str(c).upper()
@@ -182,84 +112,65 @@ def _detect_flags(df):
         is_repetido_dup = pd.Series(False, index=df.index)
 
     is_repetido_obs = obs.str.contains("REPETIDO", na=False)
-    is_nul = obs.str.contains("NUL", na=False) & ~obs.str.contains("ANULAD", na=False)
-    is_sin_cobertura = obs.str.contains("SIN COBERTURA", na=False)
+    is_nul = obs.str.contains("NUL", na=False)
+    is_sin_cob = obs.str.contains("SIN COBERTURA", na=False)
     is_prog = obs.str.contains("PROG", na=False)
     is_acta_obs = obs.str.contains("ACTA OBS", na=False)
+    is_prog_carta = obs.str.contains("PROGRAMADO CARTA", na=False)
 
     return {
-        "atencion_ok_all": is_repetido_dup | is_repetido_obs | is_nul,
-        "atencion_ok_2_to_6": is_sin_cobertura,
+        "ok_all": is_repetido_dup | is_repetido_obs | is_nul,
+        "ok_2_to_6": is_sin_cob,
         "is_prog": is_prog,
         "is_acta_obs": is_acta_obs,
+        "is_prog_carta": is_prog_carta,
         "obs": obs,
     }
+
+
+def _series_today(today, index):
+    return pd.Series(today, index=index)
 
 
 # ============================================================
 # ALERTA 01: ATENCION
 # ============================================================
 def alerta_01_atencion(df, today, flags):
-    """
-    Devuelve (texto, semaforo) para ALERTA 01.
-    """
-    n = len(df)
     aviso = _safe_dt(df, "FECHA_AVISO")
     atencion = _safe_dt(df, "FECHA_ATENCION")
+    today_s = _series_today(today, df.index)
 
-    # Días con atención: calendar(atencion - aviso)
-    d_con = _days_calendar(atencion, aviso)
-    # Días sin atención: calendar(today - aviso)
-    d_sin = (today - aviso).dt.days
+    has_aviso = aviso.notna()
+    has_atn = atencion.notna()
 
     texto = pd.Series("", index=df.index, dtype="object")
     semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
 
-    has_atn = atencion.notna()
-    has_aviso = aviso.notna()
-
-    # Sin atención
+    # SIN ATENCION: d = NETWORKDAYS(aviso, today, 11)
+    d_sin = _networkdays_intl(aviso, today_s, 11)
     sin_atn = has_aviso & ~has_atn
-    d = d_sin.fillna(0).astype("Int64")
-    # Verde 1-6, ámbar 7-10, rojo >10
-    cond_v = sin_atn & (d <= 6)
-    cond_a = sin_atn & (d >= 7) & (d <= 10)
-    cond_r = sin_atn & (d > 10)
-
-    texto = texto.where(~cond_v, "ALERTA VERDE SIN ATENCION (" + d.astype(str) + " días)")
+    cond_v = sin_atn & (d_sin <= 6)
+    cond_a = sin_atn & (d_sin > 6) & (d_sin <= 10)
+    cond_r = sin_atn & (d_sin > 10)
+    texto = texto.where(~cond_v, "ALERTA VERDE SIN ATENCION (" + d_sin.astype(str) + " días)")
     semaforo = semaforo.where(~cond_v, 1.0)
-    texto = texto.where(~cond_a, "ALERTA AMBAR SIN ATENCION (" + d.astype(str) + " días)")
+    texto = texto.where(~cond_a, "ALERTA AMBAR SIN ATENCION (" + d_sin.astype(str) + " días)")
     semaforo = semaforo.where(~cond_a, 2.0)
-    texto = texto.where(~cond_r, "ALERTA ROJA SIN ATENCION (" + d.astype(str) + " días)")
+    # Bug tipográfico Excel: ROJA SIN ATENCION va sin espacio antes de "días"
+    texto = texto.where(~cond_r, "ALERTA ROJA SIN ATENCION (" + d_sin.astype(str) + "días)")
     semaforo = semaforo.where(~cond_r, 3.0)
 
-    # Con atención
-    # Empíricamente: la fórmula de "días" en CON ATENCION es:
-    #   max(networkdays_business(aviso, atencion), calendar_days)
-    # Donde networkdays cuenta lun-vie inclusive.
-    # Casos verificados:
-    #   - AVISO=jue, ATEN=vie (cal=1, business=2): output 2 → max=2 ✓
-    #   - AVISO=mié, ATEN=lun next (cal=5, business=4): output 5 → max=5 ✓
-    #   - AVISO=vie, ATEN=lun next next (cal=10, business=7): output 7 → ¿?
-    #   - Caso 7 no calza con max. Pero la mayoría sí. Iteramos.
-    # Por ahora usamos calendario directo (sin offset) porque match es mayor que con +1.
+    # CON ATENCION: d = NETWORKDAYS(aviso, atencion, 11)
+    d_con = _networkdays_intl(aviso, atencion, 11)
     con_atn = has_aviso & has_atn
-    dc = d_con.fillna(0).astype("Int64")
-    # business days inclusive (cuenta ambos extremos)
-    business = _days_hab(atencion, aviso) + 1  # busday_count es exclusivo del fin
-    business = business.fillna(0).astype("Int64")
-    dc_disp = pd.Series(np.where(business > dc, business, dc), index=df.index).astype("Int64")
-
-    cond_ok = con_atn & (dc <= 10)
-    cond_rj = con_atn & (dc > 10)
-
-    texto = texto.where(~cond_ok, "ATENCION OK (" + dc_disp.astype(str) + " días)")
-    # ATENCION OK no tiene semáforo (NaN según Excel)
-    texto = texto.where(~cond_rj, "ALERTA ROJA CON ATENCION (" + dc_disp.astype(str) + " días)")
+    cond_ok = con_atn & (d_con <= 10)
+    cond_rj = con_atn & (d_con > 10)
+    texto = texto.where(~cond_ok, "ATENCION OK (" + d_con.astype(str) + " días)")
+    texto = texto.where(~cond_rj, "ALERTA ROJA CON ATENCION (" + d_con.astype(str) + " días)")
     semaforo = semaforo.where(~cond_rj, 3.0)
 
-    # Banderas REPETIDO/NUL → "ALERTA ATENCION OK"
-    flag_all = flags["atencion_ok_all"]
+    # Bandera transversal: REPETIDO/NUL → "ALERTA ATENCION OK"
+    flag_all = flags["ok_all"]
     texto = texto.where(~flag_all, "ALERTA ATENCION OK")
     semaforo = semaforo.where(~flag_all, np.nan)
 
@@ -270,64 +181,56 @@ def alerta_01_atencion(df, today, flags):
 # ALERTA 02: PROGRAMACION
 # ============================================================
 def alerta_02_programacion(df, today, flags):
-    n = len(df)
     aviso = _safe_dt(df, "FECHA_AVISO")
     prog = _safe_dt(df, "FECHA_PROGRAMACION_AJUSTE")
     acta1 = _safe_dt(df, "FECHA_AJUSTE_ACTA_1")
+    today_s = _series_today(today, df.index)
 
-    has_acta1 = acta1.notna()
+    has_aviso = aviso.notna()
     has_prog = prog.notna()
+    has_acta1 = acta1.notna()
+
+    aviso_plus1 = aviso + pd.Timedelta(days=1)
 
     texto = pd.Series("", index=df.index, dtype="object")
     semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
 
-    # NO EVALUADO (PROG): observación con PROG (programado carta)
-    is_prog_obs = flags["is_prog"]
-    cond_no_eval = is_prog_obs & ~has_acta1
+    # ATENCION OK CON AJUSTE
+    cond_ok_aj = has_aviso & has_acta1
+    texto = texto.where(~cond_ok_aj, "ATENCION OK CON AJUSTE")
+
+    # NO EVALUADO (PROG)
+    cond_no_eval = has_aviso & ~has_acta1 & flags["is_prog"]
     texto = texto.where(~cond_no_eval, "NO EVALUADO (PROG)")
 
-    # ATENCION OK CON AJUSTE: tiene acta1 → ya pasó programación
-    cond_ok_ajuste = has_acta1 & ~cond_no_eval
-    texto = texto.where(~cond_ok_ajuste, "ATENCION OK CON AJUSTE")
+    # SIN PROGRAMACION
+    sin_prog = has_aviso & ~has_acta1 & ~has_prog & ~flags["is_prog"]
+    d_sin = _networkdays_intl(aviso_plus1, today_s, 11)
+    cond_v_sp = sin_prog & (d_sin <= 11)
+    cond_a_sp = sin_prog & (d_sin > 11) & (d_sin <= 15)
+    cond_r_sp = sin_prog & (d_sin > 15)
+    texto = texto.where(~cond_v_sp, "ALERTA VERDE SIN PROGRAMACION (" + d_sin.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_v_sp, 1.0)
+    texto = texto.where(~cond_a_sp, "ALERTA AMBAR SIN PROGRAMACION (" + d_sin.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_a_sp, 2.0)
+    texto = texto.where(~cond_r_sp, "ALERTA ROJA SIN PROGRAMACION (" + d_sin.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r_sp, 3.0)
 
-    # CON PROGRAMACION (sin ajuste, con prog)
-    con_prog_sin_acta = has_prog & ~has_acta1 & ~cond_no_eval
-    # Días empíricamente = business_inclusive(aviso, prog) - 1
-    business_pa = (_days_hab(prog, aviso) + 1).fillna(0).astype("Int64")
-    d_disp = business_pa - 1
+    # CON PROGRAMACION
+    con_prog = has_aviso & ~has_acta1 & has_prog & ~flags["is_prog"]
+    d_con = _networkdays_intl(aviso_plus1, prog, 11)
+    cond_v_cp = con_prog & (d_con <= 11)
+    cond_a_cp = con_prog & (d_con > 11) & (d_con <= 15)
+    cond_r_cp = con_prog & (d_con > 15)
+    texto = texto.where(~cond_v_cp, "ALERTA VERDE CON PROGRAMACION (" + d_con.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_v_cp, 1.0)
+    texto = texto.where(~cond_a_cp, "ALERTA AMBAR CON PROGRAMACION (" + d_con.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_a_cp, 2.0)
+    texto = texto.where(~cond_r_cp, "ALERTA ROJA CON PROGRAMACION (" + d_con.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r_cp, 3.0)
 
-    # Umbrales sobre el display (no sobre cal):
-    # 1-11 verde, 12-15 ámbar, >15 rojo
-    cond_v = con_prog_sin_acta & (d_disp <= 11)
-    cond_a = con_prog_sin_acta & (d_disp >= 12) & (d_disp <= 15)
-    cond_r = con_prog_sin_acta & (d_disp > 15)
-
-    texto = texto.where(~cond_v, "ALERTA VERDE CON PROGRAMACION (" + d_disp.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_v, 1.0)
-    texto = texto.where(~cond_a, "ALERTA AMBAR CON PROGRAMACION (" + d_disp.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_a, 2.0)
-    texto = texto.where(~cond_r, "ALERTA ROJA CON PROGRAMACION (" + d_disp.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r, 3.0)
-
-    # SIN PROGRAMACION (sin prog, sin acta)
-    sin_prog = ~has_prog & ~has_acta1 & ~cond_no_eval
-    # Empíricamente: d_excel = (today - aviso).days - 1
-    d_ta_raw = (today - aviso).dt.days.fillna(0).astype("Int64")
-    d_ta = d_ta_raw - 1
-
-    cond_v2 = sin_prog & (d_ta <= 11)
-    cond_a2 = sin_prog & (d_ta >= 12) & (d_ta <= 15)
-    cond_r2 = sin_prog & (d_ta > 15)
-
-    texto = texto.where(~cond_v2, "ALERTA VERDE SIN PROGRAMACION (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_v2, 1.0)
-    texto = texto.where(~cond_a2, "ALERTA AMBAR SIN PROGRAMACION (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_a2, 2.0)
-    texto = texto.where(~cond_r2, "ALERTA ROJA SIN PROGRAMACION (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r2, 3.0)
-
-    # Banderas
-    flag_all = flags["atencion_ok_all"] | flags["atencion_ok_2_to_6"]
+    # Bandera transversal
+    flag_all = flags["ok_all"] | flags["ok_2_to_6"]
     texto = texto.where(~flag_all, "ALERTA ATENCION OK")
     semaforo = semaforo.where(~flag_all, np.nan)
 
@@ -341,65 +244,65 @@ def alerta_03_ajuste(df, today, flags):
     aviso = _safe_dt(df, "FECHA_AVISO")
     prog = _safe_dt(df, "FECHA_PROGRAMACION_AJUSTE")
     acta1 = _safe_dt(df, "FECHA_AJUSTE_ACTA_1")
+    today_s = _series_today(today, df.index)
 
+    has_aviso = aviso.notna()
     has_prog = prog.notna()
     has_acta1 = acta1.notna()
+
+    aviso_plus1 = aviso + pd.Timedelta(days=1)
 
     texto = pd.Series("", index=df.index, dtype="object")
     semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
 
-    # CON AJUSTE 01: días empíricamente = business_inclusive(aviso, acta1)
-    # Sin offset adicional (probado: -1 empeoraba match).
-    d_aa = _days_calendar(acta1, aviso).fillna(0).astype("Int64")
-    business_aa_inc = _days_hab(acta1, aviso) + 1
-    business_aa_inc = business_aa_inc.fillna(0).astype("Int64")
-    d_aa_disp = business_aa_inc
-
-    cond_ok = has_acta1 & (business_aa_inc <= 15)
-    cond_rj = has_acta1 & (business_aa_inc > 15)
-
-    texto = texto.where(~cond_ok, "AJUSTE OK (" + d_aa_disp.astype(str) + " días)")
-    texto = texto.where(~cond_rj, "ALERTA ROJA CON AJUSTE 01 (" + d_aa_disp.astype(str) + " días)")
+    # CON ACTA1
+    d_aa = _networkdays_intl(aviso_plus1, acta1, 11)
+    con_acta = has_aviso & has_acta1 & ~flags["is_prog"]
+    cond_ok = con_acta & (d_aa <= 15)
+    cond_rj_carta = con_acta & (d_aa > 15) & flags["is_prog_carta"]
+    cond_rj = con_acta & (d_aa > 15) & ~flags["is_prog_carta"]
+    texto = texto.where(~cond_ok, "AJUSTE OK (" + d_aa.astype(str) + " días)")
+    texto = texto.where(~cond_rj_carta, "ATENCION OK (" + d_aa.astype(str) + " días)")
+    texto = texto.where(~cond_rj, "ALERTA ROJA CON AJUSTE 01 (" + d_aa.astype(str) + " días)")
     semaforo = semaforo.where(~cond_rj, 3.0)
 
-    # SIN AJUSTE 01: días = today - aviso
-    d_ta = (today - aviso).dt.days.fillna(0).astype("Int64")
-    sin_acta1 = ~has_acta1
+    # SIN ACTA1
+    d_sa = _networkdays_intl(aviso_plus1, today_s, 11)
+    sin_acta = has_aviso & ~has_acta1 & ~flags["is_prog"]
+    sin_acta_sp = sin_acta & ~has_prog
+    sin_acta_cp = sin_acta & has_prog
 
-    # SIN AJUSTE 01 SIN PROG (12-14 ambar) según reglas, los demás verde
-    sin_acta_sin_prog = sin_acta1 & ~has_prog
-    sin_acta_con_prog = sin_acta1 & has_prog
-
-    # Verde 1-11
-    cond_v_sp = sin_acta_sin_prog & (d_ta <= 11)
-    cond_a_sp = sin_acta_sin_prog & (d_ta >= 12) & (d_ta <= 14)
-    cond_r_sp = sin_acta_sin_prog & (d_ta > 14)
-
-    texto = texto.where(~cond_v_sp, "ALERTA VERDE SIN PROG (" + d_ta.astype(str) + " días)")
+    # 1-11 verde
+    cond_v_sp = sin_acta_sp & (d_sa <= 11)
+    cond_v_cp = sin_acta_cp & (d_sa <= 11)
+    texto = texto.where(~cond_v_sp, "ALERTA VERDE SIN PROG (" + d_sa.astype(str) + " días)")
     semaforo = semaforo.where(~cond_v_sp, 1.0)
-    texto = texto.where(~cond_a_sp, "ALERTA AMBAR SIN AJUSTE 01 SIN PROG (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_a_sp, 2.0)
-    texto = texto.where(~cond_r_sp, "ALERTA ROJA SIN AJUSTE 01 (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r_sp, 3.0)
-
-    cond_v_cp = sin_acta_con_prog & (d_ta <= 11)
-    cond_a_cp = sin_acta_con_prog & (d_ta >= 12) & (d_ta <= 14)
-    cond_r_cp = sin_acta_con_prog & (d_ta > 14)
-
-    texto = texto.where(~cond_v_cp, "ALERTA VERDE SIN AJUSTE 01 (" + d_ta.astype(str) + " días)")
+    # NOTA: el Excel original tiene un bug tipográfico — falta el espacio
+    # antes de "días" en estas dos variantes ("ALERTA VERDE SIN AJUSTE 01"
+    # y "ALERTA AMBAR SIN AJUSTE PROG"). Lo replicamos para match exacto.
+    texto = texto.where(~cond_v_cp, "ALERTA VERDE SIN AJUSTE 01 (" + d_sa.astype(str) + "días)")
     semaforo = semaforo.where(~cond_v_cp, 1.0)
-    texto = texto.where(~cond_a_cp, "ALERTA AMBAR SIN AJUSTE PROG (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_a_cp, 2.0)
-    texto = texto.where(~cond_r_cp, "ALERTA ROJA SIN AJUSTE 01 (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r_cp, 3.0)
 
-    # Banderas: REPETIDO/NUL/SIN COBERTURA + PROG
-    flag_all = flags["atencion_ok_all"] | flags["atencion_ok_2_to_6"]
-    is_prog_no_acta = flags["is_prog"] & ~has_acta1
+    # 12-15 ámbar
+    cond_a_sp = sin_acta_sp & (d_sa > 11) & (d_sa <= 15)
+    cond_a_cp = sin_acta_cp & (d_sa > 11) & (d_sa <= 15)
+    texto = texto.where(~cond_a_sp, "ALERTA AMBAR SIN AJUSTE 01 SIN PROG (" + d_sa.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_a_sp, 2.0)
+    # Bug tipográfico Excel: falta espacio antes de "días"
+    texto = texto.where(~cond_a_cp, "ALERTA AMBAR SIN AJUSTE PROG (" + d_sa.astype(str) + "días)")
+    semaforo = semaforo.where(~cond_a_cp, 2.0)
+
+    # >15 rojo (con caso especial PROGRAMADO CARTA → ATENCION OK)
+    cond_r_carta = sin_acta & (d_sa > 15) & flags["is_prog_carta"]
+    cond_r = sin_acta & (d_sa > 15) & ~flags["is_prog_carta"]
+    texto = texto.where(~cond_r_carta, "ATENCION OK (" + d_sa.astype(str) + " días)")
+    texto = texto.where(~cond_r, "ALERTA ROJA SIN AJUSTE 01 (" + d_sa.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r, 3.0)
+
+    # Bandera transversal
+    flag_all = flags["ok_all"] | flags["ok_2_to_6"]
     texto = texto.where(~flag_all, "ALERTA ATENCION OK")
     semaforo = semaforo.where(~flag_all, np.nan)
-    texto = texto.where(~is_prog_no_acta, "NO EVALUADO (PROG)")
-    semaforo = semaforo.where(~is_prog_no_acta, np.nan)
 
     return texto, semaforo
 
@@ -408,90 +311,80 @@ def alerta_03_ajuste(df, today, flags):
 # ALERTA 04: REPROGRAMACION
 # ============================================================
 def alerta_04_reprogramacion(df, today, flags):
-    acta1 = _safe_dt(df, "FECHA_AJUSTE_ACTA_1")
-    actafinal = _safe_dt(df, "FECHA_AJUSTE_ACTA_FINAL")
     rep1 = _safe_dt(df, "FECHA_REPROGRAMACION_01")
     rep2 = _safe_dt(df, "FECHA_REPROGRAMACION_02")
     rep3 = _safe_dt(df, "FECHA_REPROGRAMACION_03")
-
-    estado_ins = _safe_str(df, "ESTADO_INSPECCION")
-    estado_sin = _safe_str(df, "ESTADO_SINIESTRO")
-
-    texto = pd.Series("", index=df.index, dtype="object")
-    semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
+    actafinal = _safe_dt(df, "FECHA_AJUSTE_ACTA_FINAL")
+    estado_ins = _safe_str_upper(df, "ESTADO_INSPECCION")
+    estado_sin = _safe_str_upper(df, "ESTADO_SINIESTRO")
+    today_s = _series_today(today, df.index)
 
     has_acta_final = actafinal.notna()
     has_r1 = rep1.notna()
     has_r2 = rep2.notna()
     has_r3 = rep3.notna()
-    any_reprog = has_r1 | has_r2 | has_r3
+
+    today_plus1 = today_s + pd.Timedelta(days=1)
+
+    texto = pd.Series("", index=df.index, dtype="object")
+    semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
 
     # ATENCION OK AJUSTE FINAL
-    cond_ok = has_acta_final
-    texto = texto.where(~cond_ok, "ATENCION OK AJUSTE FINAL")
+    texto = texto.where(~has_acta_final, "ATENCION OK AJUSTE FINAL")
 
-    # REPROGRAMACION OK: sin acta final, sin ninguna reprog
-    cond_repok = ~has_acta_final & ~any_reprog
-    texto = texto.where(~cond_repok, "REPROGRAMACION OK")
+    # ALERTA ROJA SIN REPROGRAMACION01
+    cond_sin_rep1 = ~has_acta_final & (estado_ins == "REPROGRAMADO") & (estado_sin == "EN CURSO") & ~has_r1
+    texto = texto.where(~cond_sin_rep1, "ALERTA ROJA SIN REPROGRAMACION01")
+    semaforo = semaforo.where(~cond_sin_rep1, 3.0)
 
-    # ALERTA ROJA SIN REPROGRAMACION 01: estado_inspeccion REPROGRAMADO sin rep1
-    cond_sin_r1 = (estado_ins == "REPROGRAMADO") & ~has_r1 & ~has_acta_final
-    texto = texto.where(~cond_sin_r1, "ALERTA ROJA SIN REPROGRAMACION 01")
-    semaforo = semaforo.where(~cond_sin_r1, 3.0)
+    # default REPROGRAMACION OK para cuando no hay reprog
+    cond_default = ~has_acta_final & ~cond_sin_rep1 & ~has_r1 & ~has_r2 & ~has_r3
+    texto = texto.where(~cond_default, "REPROGRAMACION OK")
 
-    # CON REPROGRAMACION (1, 2 o 3 — el más alto define el ciclo)
-    # Días = reprog - today (cuántos faltan)
-    # Ciclo 1: usa rep1
-    # Ciclo 2: usa rep2 (descarta rep1)
-    # Ciclo 3: usa rep3
-    d_r1 = (rep1 - today).dt.days
-    d_r2 = (rep2 - today).dt.days
-    d_r3 = (rep3 - today).dt.days
-
-    # Ciclo 3 (top priority dentro de las reprog)
-    # d_r3 = rep3 - today (positivo: futura; negativo: pasada)
-    # AMBAR: 1-7 días faltantes → reprog inminente
-    # ROJA: rep3 ya pasó (today >= rep3 → d <= 0)
-    # Si rep3 muy futura (> 7 días) → no hay alerta, queda como REPROGRAMACION OK
-    cond_r3 = ~has_acta_final & has_r3
-    d3_int = d_r3.fillna(0).astype("Int64")
-    cond_r3_amb = cond_r3 & (d3_int >= 1) & (d3_int <= 7)
-    cond_r3_roj = cond_r3 & (d3_int <= 0)  # ya pasó la reprog
-    texto = texto.where(~cond_r3_amb, "ALERTA AMBAR CON REPROGRAMACION 03 (" + d3_int.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r3_amb, 2.0)
+    # CON REP3 (top priority si existe)
+    cond_r3_active = ~has_acta_final & ~cond_sin_rep1 & has_r3
+    d_r3_past = _networkdays_intl(rep3, today_s, 11)
+    d_r3_future = _networkdays_intl(today_plus1, rep3, 11)
+    cond_r3_roj = cond_r3_active & (d_r3_past > 1)
+    cond_r3_amb = cond_r3_active & ~(d_r3_past > 1) & (rep3 > today_s) & (d_r3_future <= 7)
+    cond_r3_ok  = cond_r3_active & ~(d_r3_past > 1) & ~((rep3 > today_s) & (d_r3_future <= 7))
     texto = texto.where(~cond_r3_roj, "ALERTA ROJA CON REPROGRAMACION 03")
     semaforo = semaforo.where(~cond_r3_roj, 3.0)
+    texto = texto.where(~cond_r3_amb, "ALERTA AMBAR CON REPROGRAMACION 03 (" + d_r3_future.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r3_amb, 2.0)
+    texto = texto.where(~cond_r3_ok, "REPROGRAMACION OK")
 
-    # Ciclo 2 (solo si no hay rep3)
-    cond_r2 = ~has_acta_final & has_r2 & ~has_r3
-    d2_int = d_r2.fillna(0).astype("Int64")
-    cond_r2_amb = cond_r2 & (d2_int >= 1) & (d2_int <= 7)
-    cond_r2_roj = cond_r2 & (d2_int <= 0)
-    texto = texto.where(~cond_r2_amb, "ALERTA AMBAR CON REPROGRAMACION 02 (" + d2_int.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r2_amb, 2.0)
+    # CON REP2 (si no hay rep3)
+    cond_r2_active = ~has_acta_final & ~cond_sin_rep1 & ~has_r3 & has_r2
+    d_r2_past = _networkdays_intl(rep2, today_s, 11)
+    d_r2_future = _networkdays_intl(today_plus1, rep2, 11)
+    cond_r2_roj = cond_r2_active & (d_r2_past > 1)
+    cond_r2_amb = cond_r2_active & ~(d_r2_past > 1) & (rep2 > today_s) & (d_r2_future <= 7)
+    cond_r2_ok  = cond_r2_active & ~(d_r2_past > 1) & ~((rep2 > today_s) & (d_r2_future <= 7))
     texto = texto.where(~cond_r2_roj, "ALERTA ROJA CON REPROGRAMACION 02")
     semaforo = semaforo.where(~cond_r2_roj, 3.0)
+    texto = texto.where(~cond_r2_amb, "ALERTA AMBAR CON REPROGRAMACION 02 (" + d_r2_future.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r2_amb, 2.0)
+    texto = texto.where(~cond_r2_ok, "REPROGRAMACION OK")
 
-    # Ciclo 1 (solo si no hay rep2 ni rep3)
-    cond_r1 = ~has_acta_final & has_r1 & ~has_r2 & ~has_r3
-    d1_int = d_r1.fillna(0).astype("Int64")
-    cond_r1_amb = cond_r1 & (d1_int >= 1) & (d1_int <= 7)
-    cond_r1_roj = cond_r1 & (d1_int <= 0)
-    texto = texto.where(~cond_r1_amb, "ALERTA AMBAR CON REPROGRAMACION 01 (" + d1_int.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r1_amb, 2.0)
+    # CON REP1 (si no hay rep2 ni rep3) - con caso especial ACTA OBS
+    cond_r1_active = ~has_acta_final & ~cond_sin_rep1 & ~has_r3 & ~has_r2 & has_r1
+    d_r1_past = _networkdays_intl(rep1, today_s, 11)
+    d_r1_future = _networkdays_intl(today_plus1, rep1, 11)
+    cond_r1_roj = cond_r1_active & (d_r1_past > 1)
+    cond_r1_obs = cond_r1_active & ~(d_r1_past > 1) & (rep1 > today_s) & (d_r1_future <= 7) & flags["is_acta_obs"]
+    cond_r1_amb = cond_r1_active & ~(d_r1_past > 1) & (rep1 > today_s) & (d_r1_future <= 7) & ~flags["is_acta_obs"]
+    cond_r1_ok  = cond_r1_active & ~(d_r1_past > 1) & ~((rep1 > today_s) & (d_r1_future <= 7))
     texto = texto.where(~cond_r1_roj, "ALERTA ROJA CON REPROGRAMACION 01")
     semaforo = semaforo.where(~cond_r1_roj, 3.0)
+    texto = texto.where(~cond_r1_obs, "ALERTA ACTA OBS (" + d_r1_future.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r1_obs, 4.0)
+    texto = texto.where(~cond_r1_amb, "ALERTA AMBAR CON REPROGRAMACION 01 (" + d_r1_future.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r1_amb, 2.0)
+    texto = texto.where(~cond_r1_ok, "REPROGRAMACION OK")
 
-    # Si tiene reprog futura > 7 días → "REPROGRAMACION OK" (no hay alerta inmediata)
-    cond_r_ok = (~has_acta_final & (
-        (cond_r3 & (d3_int > 7)) |
-        (cond_r2 & (d2_int > 7)) |
-        (cond_r1 & (d1_int > 7))
-    ))
-    texto = texto.where(~cond_r_ok, "REPROGRAMACION OK")
-
-    # Banderas
-    flag_all = flags["atencion_ok_all"] | flags["atencion_ok_2_to_6"]
+    # Bandera transversal
+    flag_all = flags["ok_all"] | flags["ok_2_to_6"]
     texto = texto.where(~flag_all, "ALERTA ATENCION OK")
     semaforo = semaforo.where(~flag_all, np.nan)
 
@@ -505,56 +398,53 @@ def alerta_05_padron(df, today, flags):
     actafinal = _safe_dt(df, "FECHA_AJUSTE_ACTA_FINAL")
     envio = _safe_dt(df, "FECHA_ENVIO_DRAS")
     valid = _safe_dt(df, "FECHA_VALIDACION")
-    dictamen = _safe_str(df, "DICTAMEN")
+    dictamen = _safe_str_upper(df, "DICTAMEN")
+    today_s = _series_today(today, df.index)
 
-    texto = pd.Series(np.nan, index=df.index, dtype="object")
-    semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
-
-    is_indemn = dictamen.str.contains("INDEMNIZABLE", na=False) & ~dictamen.str.contains("NO INDEMNIZABLE", na=False)
+    is_indemn = (dictamen == "INDEMNIZABLE")
     has_actafinal = actafinal.notna()
     has_envio = envio.notna()
     has_valid = valid.notna()
 
-    # CON VALIDACION → "ATENCION OK CON VALIDACION (d días)"
-    # Empíricamente: d = (valid - envio).days - 1 (offset de 1 día)
-    # El caso "(-2 días)" ocurre cuando valid=envio+0 (mismo día) y hay
-    # algún offset adicional que aplicamos: si envio>=valid, restamos 2.
-    d_ve_raw = _days_calendar(valid, envio).fillna(0).astype("Int64")
-    # Offset: si envio == valid (d=0), excel muestra -2; si valid > envio, excel muestra d-1.
-    d_ve = pd.Series(np.where(d_ve_raw == 0, -2, d_ve_raw - 1), index=df.index).astype("Int64")
+    envio_plus1 = envio + pd.Timedelta(days=1)
+    actafinal_plus1 = actafinal + pd.Timedelta(days=1)
 
-    cond_valid = is_indemn & has_actafinal & has_envio & has_valid
-    texto = texto.where(~cond_valid, "ATENCION OK CON VALIDACION (" + d_ve.astype(str) + " días)")
+    texto = pd.Series("", index=df.index, dtype="object")
+    semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
 
-    # SIN VALIDACION (con envio): d = today - envio
-    cond_sin_valid = is_indemn & has_actafinal & has_envio & ~has_valid
-    d_te = (today - envio).dt.days.fillna(0).astype("Int64")
-    cond_v = cond_sin_valid & (d_te >= 1) & (d_te <= 6)
-    cond_a = cond_sin_valid & (d_te >= 7) & (d_te <= 15)
-    cond_r = cond_sin_valid & (d_te > 15)
-    texto = texto.where(~cond_v, "ALERTA VERDE SIN VALIDACION (" + d_te.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_v, 1.0)
-    texto = texto.where(~cond_a, "ALERTA AMBAR SIN VALIDACION (" + d_te.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_a, 2.0)
-    texto = texto.where(~cond_r, "ALERTA ROJA SIN VALIDACION (" + d_te.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_r, 3.0)
+    # CON VALIDACION
+    cond_v_v = is_indemn & has_valid & (valid >= envio)
+    d_ve = _networkdays_intl(envio_plus1, valid, 11)
+    texto = texto.where(~cond_v_v, "ATENCION OK CON VALIDACION (" + d_ve.astype(str) + " días)")
 
-    # SIN PADRON (sin envio): d = today - actafinal - 1 (offset empírico)
-    cond_sin_envio = is_indemn & has_actafinal & ~has_envio
-    d_ta_raw = (today - actafinal).dt.days.fillna(0).astype("Int64")
-    d_ta = d_ta_raw - 1
-    cond_pv = cond_sin_envio & (d_ta >= 1) & (d_ta <= 15)
-    cond_pa = cond_sin_envio & (d_ta >= 16) & (d_ta <= 20)
-    cond_pr = cond_sin_envio & (d_ta > 20)
-    texto = texto.where(~cond_pv, "ALERTA VERDE SIN PADRON (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_pv, 1.0)
-    texto = texto.where(~cond_pa, "ALERTA AMBAR SIN PADRON (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_pa, 2.0)
-    texto = texto.where(~cond_pr, "ALERTA ROJA SIN PADRON (" + d_ta.astype(str) + " días)")
-    semaforo = semaforo.where(~cond_pr, 3.0)
+    # SIN VALIDACION (con envio)
+    sin_valid = is_indemn & ~has_valid & has_envio & (today_s >= envio)
+    d_te = _networkdays_intl(envio_plus1, today_s, 11)
+    cond_v_e = sin_valid & (d_te <= 6)
+    cond_a_e = sin_valid & (d_te > 6) & (d_te <= 15)
+    cond_r_e = sin_valid & (d_te > 15)
+    texto = texto.where(~cond_v_e, "ALERTA VERDE SIN VALIDACION (" + d_te.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_v_e, 1.0)
+    texto = texto.where(~cond_a_e, "ALERTA AMBAR SIN VALIDACION (" + d_te.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_a_e, 2.0)
+    texto = texto.where(~cond_r_e, "ALERTA ROJA SIN VALIDACION (" + d_te.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r_e, 3.0)
 
-    # Banderas
-    flag_all = flags["atencion_ok_all"] | flags["atencion_ok_2_to_6"]
+    # SIN ENVIO (con acta final)
+    sin_envio = is_indemn & ~has_valid & ~has_envio & has_actafinal
+    d_ta = _networkdays_intl(actafinal_plus1, today_s, 11)
+    cond_v_p = sin_envio & (d_ta <= 15)
+    cond_a_p = sin_envio & (d_ta > 15) & (d_ta <= 20)
+    cond_r_p = sin_envio & (d_ta > 20)
+    texto = texto.where(~cond_v_p, "ALERTA VERDE SIN PADRON (" + d_ta.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_v_p, 1.0)
+    texto = texto.where(~cond_a_p, "ALERTA AMBAR SIN PADRON (" + d_ta.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_a_p, 2.0)
+    texto = texto.where(~cond_r_p, "ALERTA ROJA SIN PADRON (" + d_ta.astype(str) + " días)")
+    semaforo = semaforo.where(~cond_r_p, 3.0)
+
+    # Bandera transversal
+    flag_all = flags["ok_all"] | flags["ok_2_to_6"]
     texto = texto.where(~flag_all, "ALERTA ATENCION OK")
     semaforo = semaforo.where(~flag_all, np.nan)
 
@@ -562,36 +452,38 @@ def alerta_05_padron(df, today, flags):
 
 
 # ============================================================
-# ALERTA 06: PAGO SAC (días hábiles!)
+# ALERTA 06: PAGO SAC (weekend code 1: sáb+dom no laborables)
 # ============================================================
 def alerta_06_pago(df, today, flags):
     valid = _safe_dt(df, "FECHA_VALIDACION")
     desemb = _safe_dt(df, "FECHA_DESEMBOLSO")
-    dictamen = _safe_str(df, "DICTAMEN")
+    dictamen = _safe_str_upper(df, "DICTAMEN")
+    today_s = _series_today(today, df.index)
 
-    texto = pd.Series(np.nan, index=df.index, dtype="object")
-    semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
-
-    is_indemn = dictamen.str.contains("INDEMNIZABLE", na=False) & ~dictamen.str.contains("NO INDEMNIZABLE", na=False)
+    is_indemn = (dictamen == "INDEMNIZABLE")
     has_valid = valid.notna()
     has_pago = desemb.notna()
 
-    # CON PAGO: d hábil = (desemb - valid)
-    d_dv = _days_hab(desemb, valid).fillna(0).astype("Int64")
-    cond_pago = is_indemn & has_valid & has_pago
+    valid_plus1 = valid + pd.Timedelta(days=1)
+
+    texto = pd.Series("", index=df.index, dtype="object")
+    semaforo = pd.Series(np.nan, index=df.index, dtype="float64")
+
+    # CON PAGO
+    cond_pago = is_indemn & has_pago
+    d_dv = _networkdays_intl(valid_plus1, desemb, 1)
     cond_pago_ok = cond_pago & (d_dv <= 15)
     cond_pago_rj = cond_pago & (d_dv > 15)
     texto = texto.where(~cond_pago_ok, "ATENCION OK CON PAGO (" + d_dv.astype(str) + " días)")
     texto = texto.where(~cond_pago_rj, "ALERTA ROJA CON PAGO (" + d_dv.astype(str) + " días)")
     semaforo = semaforo.where(~cond_pago_rj, 3.0)
 
-    # SIN PAGO (validación pero sin desembolso)
-    today_series = pd.Series([today] * len(df), index=df.index)
-    d_tv = _days_hab(today_series, valid).fillna(0).astype("Int64")
-    cond_sin_pago = is_indemn & has_valid & ~has_pago
-    cond_v = cond_sin_pago & (d_tv <= 11)
-    cond_a = cond_sin_pago & (d_tv >= 12) & (d_tv <= 15)
-    cond_r = cond_sin_pago & (d_tv > 15)
+    # SIN PAGO (con validacion)
+    sin_pago = is_indemn & ~has_pago & has_valid
+    d_tv = _networkdays_intl(valid_plus1, today_s, 1)
+    cond_v = sin_pago & (d_tv <= 11)
+    cond_a = sin_pago & (d_tv > 11) & (d_tv <= 15)
+    cond_r = sin_pago & (d_tv > 15)
     texto = texto.where(~cond_v, "ALERTA VERDE SIN PAGO (" + d_tv.astype(str) + " días)")
     semaforo = semaforo.where(~cond_v, 1.0)
     texto = texto.where(~cond_a, "ALERTA AMBAR SIN PAGO (" + d_tv.astype(str) + " días)")
@@ -599,8 +491,8 @@ def alerta_06_pago(df, today, flags):
     texto = texto.where(~cond_r, "ALERTA ROJA SIN PAGO (" + d_tv.astype(str) + " días)")
     semaforo = semaforo.where(~cond_r, 3.0)
 
-    # Banderas
-    flag_all = flags["atencion_ok_all"] | flags["atencion_ok_2_to_6"]
+    # Bandera transversal
+    flag_all = flags["ok_all"] | flags["ok_2_to_6"]
     texto = texto.where(~flag_all, "ALERTA ATENCION OK")
     semaforo = semaforo.where(~flag_all, np.nan)
 
@@ -611,10 +503,7 @@ def alerta_06_pago(df, today, flags):
 # Punto de entrada principal
 # ============================================================
 def compute_alerts(df, today=None):
-    """
-    Calcula las 6 alertas independientes.
-    Retorna df con 12 columnas adicionales.
-    """
+    """Calcula las 6 alertas independientes y retorna df con 12 columnas extra."""
     if today is None:
         from datetime import datetime, timezone, timedelta
         TZ_PERU = timezone(timedelta(hours=-5))
