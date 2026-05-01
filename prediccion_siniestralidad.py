@@ -38,10 +38,32 @@ import pandas as pd
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static_data")
 PATH_NACIONAL = os.path.join(STATIC_DIR, "series_temporales.json")
+PATH_DEPT = os.path.join(STATIC_DIR, "series_temporales_dept.json")
 
 CAMPANAS_HIST = ["2020-2021", "2021-2022", "2022-2023", "2023-2024", "2024-2025"]
 MESES_CAMPANA = ["Ago", "Sep", "Oct", "Nov", "Dic", "Ene", "Feb", "Mar",
                  "Abr", "May", "Jun", "Jul"]
+
+# MAE empírico del modelo M5 nacional por mes vigente (validación
+# leave-one-out sobre las 5 campañas históricas). Permite calibrar
+# intervalos de confianza realistas en vez de heurísticos.
+# Si MAE > 30% el modelo no es confiable y la app lo advierte.
+MAE_M5_POR_MES = {
+    0: float("inf"),  # Ago: total avance 0% → predicción indefinida
+    1: float("inf"),  # Sep
+    2: float("inf"),  # Oct: avance ~0%
+    3: 380.6,         # Nov: muy poco confiable
+    4: 59.4,          # Dic
+    5: 78.5,          # Ene
+    6: 96.3,          # Feb (todavía volátil)
+    7: 27.2,          # Mar
+    8: 16.0,          # Abr (fecha del Excel del equipo)
+    9: 10.1,          # May
+    10: 5.2,          # Jun
+    11: 0.0,          # Jul (trivialmente exacto)
+}
+
+UMBRAL_MAE_CONFIABLE = 30.0  # En % — si MAE > 30% advertir al usuario
 
 
 # ============================================================
@@ -227,6 +249,8 @@ def predecir_cierre_campana(
                           "El error es mayor en monto que en casos porque hay más variabilidad "
                           "entre campañas en montos. Confiabilidad mejora desde Feb en adelante.",
         },
+        "MAE_mes_actual": MAE_M5_POR_MES.get(mes_corte_idx, 100.0),
+        "es_confiable": MAE_M5_POR_MES.get(mes_corte_idx, 100.0) <= UMBRAL_MAE_CONFIABLE,
         "limitaciones": [
             "El modelo asume que la tendencia de aceleración operativa continúa.",
             "Solo confiable desde el mes Feb en adelante (mes_idx >= 6).",
@@ -234,6 +258,259 @@ def predecir_cierre_campana(
             "No considera shocks externos (sequías extraordinarias, cambios de política).",
             "Los meses con avance histórico ~0% (Ago-Nov) producen predicciones inestables.",
         ],
+    }
+
+
+# ============================================================
+# Predicción POR DEPARTAMENTO
+# ============================================================
+def _curvas_dept() -> Dict:
+    """Carga las series por departamento desde series_temporales_dept.json."""
+    with open(PATH_DEPT, encoding="utf-8") as f:
+        d = json.load(f)
+    return d.get("por_dept", {})
+
+
+def predecir_por_dept(
+    df_actual,
+    mes_corte_idx: int,
+    primas_actual_por_dept: Optional[Dict[str, float]] = None,
+    today=None,
+) -> List[Dict]:
+    """
+    Predice el cierre de campaña a nivel departamental.
+
+    Para cada dept:
+      - Usa M4 (avance de la última campaña histórica del propio dept) como
+        predictor por defecto, con fallback al promedio dept si no hay datos
+        recientes.
+      - Aplica intervalo basado en min/max de las últimas 3 campañas del dept.
+
+    Returns: lista de dicts ordenados por monto proyectado descendente.
+    """
+    import unicodedata as _ud
+
+    if today is None:
+        from datetime import datetime, timezone, timedelta
+        TZ_PERU = timezone(timedelta(hours=-5))
+        today = datetime.now(TZ_PERU).date()
+
+    if today.month >= 8:
+        camp_actual = f"{today.year}-{today.year + 1}"
+    else:
+        camp_actual = f"{today.year - 1}-{today.year}"
+
+    curvas = _curvas_dept()
+    primas_actual_por_dept = primas_actual_por_dept or {}
+
+    # Normalizar dept: quitar tildes, upper
+    def _norm(name):
+        s = str(name).strip().upper()
+        return "".join(c for c in _ud.normalize("NFD", s) if _ud.category(c) != "Mn")
+
+    if df_actual is None or df_actual.empty or "DEPARTAMENTO" not in df_actual.columns:
+        return []
+
+    df = df_actual.copy()
+    df["_dept"] = df["DEPARTAMENTO"].astype(str).str.strip().str.upper().apply(
+        lambda s: "".join(c for c in _ud.normalize("NFD", s) if _ud.category(c) != "Mn")
+    )
+
+    # Fecha de ajuste para indemnizaciones
+    date_col = None
+    for c in ["FECHA_AJUSTE_ACTA_FINAL", "FECHA_AJUSTE_ACTA_1",
+              "FECHA_PROGRAMACION_AJUSTE", "FECHA_SINIESTRO"]:
+        if c in df.columns:
+            date_col = c
+            break
+    if date_col is None:
+        return []
+
+    # Filtrar indemnizables
+    if "DICTAMEN" in df.columns:
+        dc = df["DICTAMEN"].astype(str).str.strip().str.upper()
+        is_ind = dc.str.contains("INDEMNIZABLE", na=False) & ~dc.str.contains("NO INDEMNIZABLE", na=False)
+        df_ind = df[is_ind].copy()
+    else:
+        df_ind = df.iloc[0:0].copy()
+
+    if not df_ind.empty:
+        df_ind["_f"] = pd.to_datetime(df_ind[date_col], errors="coerce")
+        df_ind = df_ind[df_ind["_f"].notna()]
+
+        monto_col = None
+        for c in ["INDEMNIZACION", "MONTO_INDEMNIZADO"]:
+            if c in df_ind.columns:
+                monto_col = c
+                break
+        df_ind["_monto"] = (pd.to_numeric(df_ind[monto_col], errors="coerce").fillna(0)
+                            if monto_col else 0)
+
+    # Por cada dept del universo (histórico + actual), predecir
+    todos_depts = set(curvas.keys())
+    if "_dept" in df.columns:
+        todos_depts |= set(df["_dept"].dropna().unique())
+
+    resultados = []
+    for dept in sorted(todos_depts):
+        # Acumulado actual del dept
+        if not df_ind.empty:
+            df_d = df_ind[df_ind["_dept"] == dept]
+            acu_n = len(df_d)
+            acu_m = float(df_d["_monto"].sum()) if "_monto" in df_d.columns else 0
+        else:
+            acu_n = 0
+            acu_m = 0
+
+        # Avances históricos del dept en el mes vigente
+        block = curvas.get(dept, {})
+        ind_block = block.get("indemnizaciones", {})
+
+        avs_n_hist = []
+        avs_m_hist = []
+        for c in CAMPANAS_HIST:
+            raw = ind_block.get(c, {})
+            s_n = [0.0] * 12
+            s_m = [0.0] * 12
+            for p, v in raw.items():
+                idx = _period_to_idx(p, c)
+                if idx is not None and isinstance(v, dict):
+                    s_n[idx] = v.get("n", 0)
+                    s_m[idx] = v.get("monto", 0)
+            cum_n, cum_m = np.cumsum(s_n), np.cumsum(s_m)
+            tot_n, tot_m = cum_n[-1], cum_m[-1]
+            if tot_n > 0:
+                avs_n_hist.append(cum_n[mes_corte_idx] / tot_n)
+            if tot_m > 0:
+                avs_m_hist.append(cum_m[mes_corte_idx] / tot_m)
+
+        # Avance proyectado para el dept usando M4 (más estable con pocos puntos)
+        if len(avs_n_hist) >= 1:
+            av_n = float(np.mean(avs_n_hist[-2:])) if len(avs_n_hist) >= 2 else avs_n_hist[-1]
+        else:
+            av_n = 0.5  # fallback genérico
+        if len(avs_m_hist) >= 1:
+            av_m = float(np.mean(avs_m_hist[-2:])) if len(avs_m_hist) >= 2 else avs_m_hist[-1]
+        else:
+            av_m = 0.4
+
+        # Predicción
+        pred_n = acu_n / av_n if av_n > 1e-9 else 0
+        pred_m = acu_m / av_m if av_m > 1e-9 else 0
+
+        # Intervalo: usar min/max de avance histórico del propio dept
+        if avs_n_hist:
+            pred_n_min = acu_n / max(avs_n_hist) if max(avs_n_hist) > 1e-9 else 0
+            pred_n_max = acu_n / min(avs_n_hist) if min(avs_n_hist) > 1e-9 else 0
+        else:
+            pred_n_min = pred_n_max = pred_n
+
+        if avs_m_hist:
+            pred_m_min = acu_m / max(avs_m_hist) if max(avs_m_hist) > 1e-9 else 0
+            pred_m_max = acu_m / min(avs_m_hist) if min(avs_m_hist) > 1e-9 else 0
+        else:
+            pred_m_min = pred_m_max = pred_m
+
+        # Siniestralidad
+        prima = primas_actual_por_dept.get(dept, 0)
+        sin_proj = (pred_m / prima * 100) if prima > 0 else None
+        sin_min = (pred_m_min / prima * 100) if prima > 0 else None
+        sin_max = (pred_m_max / prima * 100) if prima > 0 else None
+
+        # Confiabilidad: cuántas campañas históricas tenemos para este dept
+        confiabilidad = "alta" if len(avs_n_hist) >= 4 else (
+            "media" if len(avs_n_hist) >= 2 else "baja"
+        )
+
+        resultados.append({
+            "departamento": dept,
+            "acumulado_n": acu_n,
+            "acumulado_monto": acu_m,
+            "prima_neta": prima,
+            "siniestralidad_actual": (acu_m / prima * 100) if prima > 0 else None,
+            "predicho_n": pred_n,
+            "predicho_monto": pred_m,
+            "predicho_n_min": pred_n_min,
+            "predicho_n_max": pred_n_max,
+            "predicho_monto_min": pred_m_min,
+            "predicho_monto_max": pred_m_max,
+            "siniestralidad_proyectada": sin_proj,
+            "siniestralidad_min": sin_min,
+            "siniestralidad_max": sin_max,
+            "n_campanias_historicas": len(avs_n_hist),
+            "confiabilidad": confiabilidad,
+            "avance_proyectado_n": av_n,
+            "avance_proyectado_monto": av_m,
+        })
+
+    # Ordenar por monto proyectado descendente
+    resultados.sort(key=lambda x: -x["predicho_monto"])
+    return resultados
+
+
+# ============================================================
+# Indicador de intensidad de la campaña actual
+# ============================================================
+def evaluar_intensidad_campana(
+    serie_actual_avisos: List[float],
+    mes_corte_idx: int,
+) -> Dict:
+    """
+    Compara los avisos acumulados al mes vigente con la distribución
+    histórica para indicar si la campaña en curso es:
+      - "leve":     debajo del percentil 25 histórico
+      - "moderada": entre p25 y p75
+      - "intensa":  arriba del p75
+      - "extrema":  arriba del max histórico (>100% del peor año)
+
+    Esta es una señal complementaria al predictor: avisa cuando la
+    campaña actual está fuera del rango histórico → la predicción
+    extrapolando puede tener error mayor al MAE base.
+    """
+    with open(PATH_NACIONAL, encoding="utf-8") as f:
+        nac = json.load(f)
+
+    acu_actual = sum(serie_actual_avisos[: mes_corte_idx + 1])
+
+    # Acumulados históricos al mismo mes
+    historicos = []
+    for c in CAMPANAS_HIST:
+        raw = nac.get("avisos", {}).get(c, {})
+        s = [0.0] * 12
+        for p, v in raw.items():
+            idx = _period_to_idx(p, c)
+            if idx is not None and isinstance(v, (int, float)):
+                s[idx] = v
+        cum = np.cumsum(s)
+        historicos.append(float(cum[mes_corte_idx]))
+
+    if not historicos:
+        return {"intensidad": "desconocida", "acumulado_actual": acu_actual,
+                "historicos": [], "ratio_vs_promedio": None}
+
+    p25 = float(np.percentile(historicos, 25))
+    p50 = float(np.percentile(historicos, 50))
+    p75 = float(np.percentile(historicos, 75))
+    h_max = float(max(historicos))
+    h_min = float(min(historicos))
+    avg = float(np.mean(historicos))
+
+    if acu_actual > h_max:
+        intensidad = "extrema"
+    elif acu_actual > p75:
+        intensidad = "intensa"
+    elif acu_actual >= p25:
+        intensidad = "moderada"
+    else:
+        intensidad = "leve"
+
+    return {
+        "intensidad": intensidad,
+        "acumulado_actual": acu_actual,
+        "historicos": historicos,
+        "p25": p25, "p50": p50, "p75": p75,
+        "min": h_min, "max": h_max, "promedio": avg,
+        "ratio_vs_promedio": acu_actual / avg if avg > 0 else None,
     }
 
 

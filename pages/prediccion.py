@@ -16,10 +16,14 @@ from shared.charts import apply_theme, render_chart, add_reference_line, PALETTE
 from shared.cache import load_json_cached
 from prediccion_siniestralidad import (
     predecir_cierre_campana,
+    predecir_por_dept,
+    evaluar_intensidad_campana,
     proyectar_serie_mensual,
     serie_actual_desde_df,
     CAMPANAS_HIST,
     MESES_CAMPANA,
+    MAE_M5_POR_MES,
+    UMBRAL_MAE_CONFIABLE,
 )
 from data_processor import load_primas_historicas
 
@@ -55,11 +59,61 @@ pred = predecir_cierre_campana(
 
 
 # ═══════════════════════════════════════════════════════════════
+# ALERTA DE CONFIABILIDAD POR MES
+# ═══════════════════════════════════════════════════════════════
+mae_mes = MAE_M5_POR_MES.get(mes_corte_idx, 100.0)
+if not pred["es_confiable"]:
+    st.warning(
+        f"⚠ El modelo tiene MAE histórico de {mae_mes:.0f}% al mes **{mes_corte}**. "
+        f"Las predicciones son orientativas y tienen alta incertidumbre. "
+        f"El modelo es confiable desde **Mar** en adelante (MAE < {UMBRAL_MAE_CONFIABLE:.0f}%)."
+    )
+elif mae_mes > 15:
+    st.info(
+        f"Modelo activo. MAE histórico al mes **{mes_corte}**: {mae_mes:.1f}%. "
+        f"Las predicciones tienen un margen de error promedio de ±{mae_mes:.0f}%."
+    )
+
+# ═══════════════════════════════════════════════════════════════
+# INTENSIDAD DE LA CAMPAÑA ACTUAL (avisos vs histórico)
+# ═══════════════════════════════════════════════════════════════
+serie_avisos = []
+df_avisos = df_actual[df_actual.get("FECHA_AVISO").notna()] if "FECHA_AVISO" in df_actual.columns else None
+if df_avisos is not None and not df_avisos.empty:
+    fechas = pd.to_datetime(df_avisos["FECHA_AVISO"], errors="coerce").dropna()
+    serie_avisos = [0.0] * 12
+    for f in fechas:
+        from prediccion_siniestralidad import _period_to_idx
+        idx = _period_to_idx(f.strftime("%Y-%m"), "2025-2026")
+        if idx is not None:
+            serie_avisos[idx] += 1
+
+intensidad = evaluar_intensidad_campana(serie_avisos, mes_corte_idx) if serie_avisos else None
+
+# ═══════════════════════════════════════════════════════════════
 # 2. PANEL DE KPIs
 # ═══════════════════════════════════════════════════════════════
 
 st.markdown("### Estado actual de la campaña 2025-2026")
 st.caption(f"Datos consolidados al cierre del mes vigente: **{mes_label}**")
+
+if intensidad:
+    int_label = intensidad["intensidad"].upper()
+    int_color = {"leve": "#27ae60", "moderada": "#3498db",
+                 "intensa": "#f39c12", "extrema": "#e74c3c",
+                 "desconocida": "#64748b"}.get(intensidad["intensidad"], "#64748b")
+    ratio = intensidad.get("ratio_vs_promedio")
+    ratio_str = f"{ratio:.0%} del promedio histórico" if ratio else "—"
+    st.markdown(
+        f'<div style="background:linear-gradient(135deg, {int_color}22, {int_color}11);'
+        f'border-left:4px solid {int_color};padding:0.7rem 1rem;border-radius:8px;'
+        f'margin:0.5rem 0;font-size:0.9rem;">'
+        f'<strong>Intensidad de la campaña:</strong> <span style="color:{int_color};font-weight:700;">{int_label}</span> '
+        f'· {int(intensidad["acumulado_actual"]):,} avisos al {mes_corte} ({ratio_str}) · '
+        f'rango histórico al mismo mes: {int(intensidad["min"]):,}–{int(intensidad["max"]):,}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
@@ -357,5 +411,83 @@ st.caption(
     "datos dinámicos de la campaña actual filtrados por DICTAMEN = INDEMNIZABLE "
     "y agrupados por FECHA DE AJUSTE."
 )
+
+
+# ═══════════════════════════════════════════════════════════════
+# 8. PREDICCIÓN POR DEPARTAMENTO
+# ═══════════════════════════════════════════════════════════════
+
+st.divider()
+st.markdown("### Predicción por departamento")
+st.caption(
+    "Estimación del cierre por departamento usando M4_dept (promedio de las "
+    "últimas 2 campañas del propio departamento, más estable que el modelo "
+    "nacional cuando hay pocos datos). El intervalo es el min/max histórico "
+    "del avance del propio departamento. La columna **Confiabilidad** indica "
+    "cuántas campañas históricas tenemos para cada dept."
+)
+
+# Primas por dept para la campaña actual
+primas_dept_actual = primas.get("2025-2026", {}) if primas else {}
+
+dept_preds = predecir_por_dept(
+    df_actual=df_actual,
+    mes_corte_idx=mes_corte_idx,
+    primas_actual_por_dept=primas_dept_actual,
+)
+
+if dept_preds:
+    rows = []
+    for d in dept_preds:
+        sin_proj = d.get("siniestralidad_proyectada")
+        sin_min = d.get("siniestralidad_min")
+        sin_max = d.get("siniestralidad_max")
+        sin_str = f"{sin_proj:.1f}%" if sin_proj is not None else "—"
+        sin_range = (f"{sin_min:.1f}% – {sin_max:.1f}%"
+                     if sin_min is not None and sin_max is not None else "—")
+        # Marcador de confiabilidad
+        conf_emoji = {"alta": "●", "media": "◐", "baja": "○"}.get(d["confiabilidad"], "○")
+        rows.append({
+            "Depto": d["departamento"].title(),
+            "Acum. casos": f"{int(d['acumulado_n']):,}",
+            "Pred. casos (cierre)": f"{int(d['predicho_n']):,}",
+            "Rango casos": f"{int(d['predicho_n_min']):,} – {int(d['predicho_n_max']):,}",
+            "Pred. monto (S/)": f"S/ {d['predicho_monto']:,.0f}",
+            "Siniestralidad proy.": sin_str,
+            "Rango sin.": sin_range,
+            f"Conf. ({d['n_campanias_historicas']}/5)": f"{conf_emoji} {d['confiabilidad']}",
+        })
+
+    st.dataframe(
+        pd.DataFrame(rows),
+        use_container_width=True,
+        hide_index=True,
+        height=min(38 * len(rows) + 38, 600),
+    )
+
+    st.caption(
+        "**Confiabilidad:** ● alta = depto presente en 4-5 campañas históricas · "
+        "◐ media = 2-3 campañas · ○ baja = 0-1 campañas (predicción muy inestable). "
+        "**Rango:** estimación min-max usando los % de avance históricos del propio "
+        "departamento. Sumando los puntos centrales de los departamentos NO se "
+        "obtiene exactamente el total nacional porque cada dept usa M4 mientras que "
+        "el total nacional usa M5 (regresión lineal). Los modelos por dept son útiles "
+        "para gestión por dept, no para sustituir el agregado nacional."
+    )
+
+    # Top 5 con mayor incremento esperado
+    crecimientos = sorted(
+        [(d["departamento"], d["predicho_monto"] - d["acumulado_monto"], d["predicho_monto"])
+         for d in dept_preds if d["predicho_monto"] > 0],
+        key=lambda x: -x[1]
+    )[:5]
+    if crecimientos:
+        st.markdown("**Top 5 departamentos con mayor crecimiento esperado de aquí al cierre:**")
+        for dep, crec, total in crecimientos:
+            st.markdown(f"- **{dep.title()}**: S/ {crec:,.0f} adicionales "
+                       f"(de aquí a Jul) — total proyectado S/ {total:,.0f}")
+else:
+    st.info("No hay datos suficientes para predicción por departamento.")
+
 
 footer()
