@@ -63,6 +63,7 @@ pg = st.navigation({
         st.Page("pages/mapa_calor.py", title="Mapa de Calor", icon=":material/map:"),
         st.Page("pages/comparativo.py", title="Comparativo Campañas", icon=":material/compare_arrows:"),
         st.Page("pages/comparar_deptos.py", title="Comparar Departamentos", icon=":material/bar_chart:"),
+        st.Page("pages/prediccion.py", title="Predicción de Cierre", icon=":material/insights:"),
         st.Page("pages/explorar_datos.py", title="Explorar Datos", icon=":material/search:"),
         st.Page("pages/calendario.py", title="Calendario Agrícola", icon=":material/event:"),
         st.Page("pages/clima_riesgo_page.py", title="Clima y Riesgo", icon=":material/cloud:"),
