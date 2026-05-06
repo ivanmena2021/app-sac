@@ -164,7 +164,10 @@ try:
             )
 
         # Calcular métricas para el departamento
-        dd = get_departamento_data(datos, depto_sel)
+        # H3 fix: spinner durante el filtrado por dept (puede demorar
+        # con DataFrames grandes en cambios sucesivos del selector)
+        with st.spinner(f"Cargando indicadores de {depto_sel.title()}..."):
+            dd = get_departamento_data(datos, depto_sel)
 
         # % Evaluación desde estados
         _estados = dd.get("estados")

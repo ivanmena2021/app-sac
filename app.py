@@ -92,36 +92,40 @@ if is_data_loaded():
 
                     with st.sidebar:
                         st.divider()
-                        st.markdown("#### Filtro de Fechas")
-                        _ref_label = "Fecha de Siniestro" if date_col == "FECHA_SINIESTRO" else "Fecha de Aviso"
-                        st.caption(f"Columna: **{_ref_label}** · "
-                                   f"{min_date.strftime('%d/%m/%Y')} — {max_date.strftime('%d/%m/%Y')}")
+                        # M3 fix: filtro en expander colapsado para no saturar
+                        # el sidebar (en pantallas chicas se cortaba abajo).
+                        # Si hay un filtro activo, se autoexpande para visibilidad.
+                        _has_filter_active = (st.session_state.get("date_preset", "Todo") != "Todo")
+                        with st.expander("Filtro de Fechas", expanded=_has_filter_active):
+                            _ref_label = "Fecha de Siniestro" if date_col == "FECHA_SINIESTRO" else "Fecha de Aviso"
+                            st.caption(f"Columna: **{_ref_label}** · "
+                                       f"{min_date.strftime('%d/%m/%Y')} — {max_date.strftime('%d/%m/%Y')}")
 
-                        preset = st.radio(
-                            "Período", ["Todo", "30 días", "90 días", "Este año", "Personalizado"],
-                            key="date_preset", horizontal=True, label_visibility="collapsed")
+                            preset = st.radio(
+                                "Período", ["Todo", "30 días", "90 días", "Este año", "Personalizado"],
+                                key="date_preset", horizontal=True, label_visibility="collapsed")
 
-                        if preset == "30 días":
-                            f_start = max_date - _dt.timedelta(days=30); f_end = max_date
-                        elif preset == "90 días":
-                            f_start = max_date - _dt.timedelta(days=90); f_end = max_date
-                        elif preset == "Este año":
-                            f_start = _dt.date(max_date.year, 1, 1); f_end = max_date
-                        elif preset == "Personalizado":
-                            dr = st.date_input("Rango", [min_date, max_date],
-                                               min_value=min_date, max_value=max_date,
-                                               key="custom_date_range")
-                            f_start, f_end = (dr[0], dr[1]) if isinstance(dr, (list, tuple)) and len(dr) == 2 else (min_date, max_date)
-                        else:
-                            f_start, f_end = min_date, max_date
+                            if preset == "30 días":
+                                f_start = max_date - _dt.timedelta(days=30); f_end = max_date
+                            elif preset == "90 días":
+                                f_start = max_date - _dt.timedelta(days=90); f_end = max_date
+                            elif preset == "Este año":
+                                f_start = _dt.date(max_date.year, 1, 1); f_end = max_date
+                            elif preset == "Personalizado":
+                                dr = st.date_input("Rango", [min_date, max_date],
+                                                   min_value=min_date, max_value=max_date,
+                                                   key="custom_date_range")
+                                f_start, f_end = (dr[0], dr[1]) if isinstance(dr, (list, tuple)) and len(dr) == 2 else (min_date, max_date)
+                            else:
+                                f_start, f_end = min_date, max_date
 
-                        if (f_start, f_end) != (min_date, max_date):
-                            st.session_state["datos_filtered"] = filter_by_date_range(datos, f_start, f_end)
-                            st.caption(f"Filtrado: {f_start.strftime('%d/%m/%Y')} — {f_end.strftime('%d/%m/%Y')}")
-                        else:
-                            st.session_state["datos_filtered"] = None
+                            if (f_start, f_end) != (min_date, max_date):
+                                st.session_state["datos_filtered"] = filter_by_date_range(datos, f_start, f_end)
+                                st.caption(f"Filtrado: {f_start.strftime('%d/%m/%Y')} — {f_end.strftime('%d/%m/%Y')}")
+                            else:
+                                st.session_state["datos_filtered"] = None
 
-                        # Status indicator
+                        # Status indicator (fuera del expander, siempre visible)
                         ts = st.session_state.get("update_timestamp", "")
                         src = st.session_state.get("source", "")
                         if ts:
