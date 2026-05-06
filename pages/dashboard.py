@@ -16,12 +16,15 @@ from data_processor import get_departamento_data
 require_data()
 datos = get_datos()
 
+ts = st.session_state.get("update_timestamp", "---")
+# B1 fix: badge dinámico mostrando la última actualización real (no "Tiempo Real"
+# que era engañoso). Si solo está la fecha sin hora, mostramos solo fecha.
+badge_text = f"Actualizado {ts.split(' ')[0]}" if ts and ts != "---" else "Sin datos"
 page_header("Dashboard Nacional",
             "Panel de indicadores clave del Seguro Agrícola Catastrófico a nivel nacional",
-            badge="Tiempo Real")
+            badge=badge_text)
 
 # Status banner
-ts = st.session_state.get("update_timestamp", "---")
 source = st.session_state.get("source", "manual")
 source_label = "descarga automática" if source == "auto" else "carga manual"
 extra = ""
@@ -139,8 +142,11 @@ try:
                     _default_idx = 0
             except Exception:
                 _default_idx = 0
+            # B6 fix: label descriptivo para lectores de pantalla
+            # (sigue collapsed visualmente para preservar layout)
             depto_sel = st.selectbox(
-                "Departamento", options=depto_list, index=_default_idx,
+                "Seleccionar departamento para el Panel Departamental",
+                options=depto_list, index=_default_idx,
                 format_func=lambda d: d.title() if d else d,
                 key="dash_depto_sel", label_visibility="collapsed",
             )

@@ -145,7 +145,9 @@ GLOBAL_CSS = """
         line-height: 1.3;
     }
     .page-header .page-desc {
-        color: rgba(255,255,255,0.65);
+        /* H2 fix: subimos opacidad de 0.65 a 0.85 para alcanzar
+           contraste WCAG 2.1 AA (>=4.5:1) sobre el gradiente navy */
+        color: rgba(255,255,255,0.85);
         font-size: 0.78rem;
         margin: 0.15rem 0 0;
     }
@@ -191,7 +193,8 @@ GLOBAL_CSS = """
         position: relative;
     }
     .hero .subtitle {
-        color: rgba(255,255,255,0.75);
+        /* H2 fix: subimos opacidad para WCAG AA (texto sobre gradient) */
+        color: rgba(255,255,255,0.92);
         font-size: 0.9rem;
         margin: 0;
         position: relative;
@@ -229,8 +232,11 @@ GLOBAL_CSS = """
         transition: all 0.3s ease;
     }
     .action-card:hover {
+        /* M7 fix: agregar cambio sutil de border en hover (más perceptible
+           que solo sombra) */
         box-shadow: 0 8px 40px rgba(0,0,0,0.08);
         transform: translateY(-3px);
+        border-color: #2980b9;
     }
     .action-card h2 { color: #0c2340; margin: 0.8rem 0 0.4rem; font-size: 1.5rem; font-weight: 700; }
     .action-card p { color: #64748b; font-size: 0.9rem; margin: 0; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.6; }
@@ -268,7 +274,12 @@ GLOBAL_CSS = """
         box-shadow: 0 2px 12px rgba(0,0,0,0.03);
         transition: all 0.25s ease;
     }
-    .metric-card-v2:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); transform: translateY(-2px); }
+    .metric-card-v2:hover {
+        /* M7 fix: hover más perceptible con cambio de borde */
+        box-shadow: 0 6px 24px rgba(0,0,0,0.07);
+        transform: translateY(-2px);
+        border-color: #2980b9;
+    }
     .metric-card-v2 .label { color: #64748b; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; margin-bottom: 0.5rem; }
     .metric-card-v2 .value { color: #0c2340; font-size: 1.4rem; font-weight: 800; line-height: 1.2; }
     .metric-card-v2 .delta { font-size: 0.78rem; margin-top: 0.3rem; font-weight: 500; }
@@ -407,6 +418,64 @@ GLOBAL_CSS = """
     .stDataFrame { border-radius: 10px; overflow: hidden; }
 
     /* ══════════════════════════════════════════
+       SIDEBAR — Indicador de página activa (H4)
+       Streamlit marca la activa con aria-current="page".
+       ══════════════════════════════════════════ */
+    [data-testid="stSidebarNav"] a[aria-current="page"],
+    [data-testid="stSidebarNav"] li[aria-current="page"] > a,
+    [data-testid="stSidebarNav"] [role="link"][aria-current="page"] {
+        background: linear-gradient(90deg, rgba(64,139,20,0.10) 0%, rgba(64,139,20,0.04) 100%) !important;
+        border-left: 3px solid #408B14 !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stSidebarNav"] a[aria-current="page"] span,
+    [data-testid="stSidebarNav"] li[aria-current="page"] > a span {
+        color: #0c2340 !important;
+    }
+
+    /* ══════════════════════════════════════════
+       SCROLLBARS CUSTOM (B5) — aplicado a tablas
+       y elementos con scroll interno.
+       ══════════════════════════════════════════ */
+    [data-testid="stDataFrame"] ::-webkit-scrollbar,
+    [data-testid="stDataFrameResizable"] ::-webkit-scrollbar,
+    .stDataFrame ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    [data-testid="stDataFrame"] ::-webkit-scrollbar-track,
+    [data-testid="stDataFrameResizable"] ::-webkit-scrollbar-track,
+    .stDataFrame ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 6px;
+    }
+    [data-testid="stDataFrame"] ::-webkit-scrollbar-thumb,
+    [data-testid="stDataFrameResizable"] ::-webkit-scrollbar-thumb,
+    .stDataFrame ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 6px;
+        border: 2px solid #f1f5f9;
+    }
+    [data-testid="stDataFrame"] ::-webkit-scrollbar-thumb:hover,
+    [data-testid="stDataFrameResizable"] ::-webkit-scrollbar-thumb:hover,
+    .stDataFrame ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* ══════════════════════════════════════════
+       FOCUS VISIBLE (accesibilidad) — outline
+       claro al navegar con teclado.
+       ══════════════════════════════════════════ */
+    button:focus-visible,
+    [role="button"]:focus-visible,
+    a:focus-visible,
+    [data-baseweb="tab"]:focus-visible {
+        outline: 2px solid #2980b9 !important;
+        outline-offset: 2px !important;
+        border-radius: 6px;
+    }
+
+    /* ══════════════════════════════════════════
        DARK MODE — activado por preferencia del
        SO (prefers-color-scheme) y también por el
        toggle de Streamlit (Settings → Theme:
@@ -436,8 +505,6 @@ GLOBAL_CSS = """
         .metric-card-v2,
         .action-card,
         .report-card,
-        .hero-left,
-        .hero-right,
         .status-banner,
         .tab-intro,
         .query-result-box,
@@ -512,8 +579,6 @@ GLOBAL_CSS = """
     [data-theme="dark"] .metric-card-v2,
     [data-theme="dark"] .action-card,
     [data-theme="dark"] .report-card,
-    [data-theme="dark"] .hero-left,
-    [data-theme="dark"] .hero-right,
     [data-theme="dark"] .status-banner,
     [data-theme="dark"] .tab-intro,
     [data-theme="dark"] .query-result-box,
