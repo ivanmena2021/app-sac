@@ -587,14 +587,20 @@ with col_f:
         key="chart_ind_count_acum", filename="casos_indemnizados_acumulados",
     )
 
-st.caption("Nota: Eventos reportados se registran por FECHA_AVISO (o FECHA_SINIESTRO como proxy). "
-           "Indemnizaciones se registran por FECHA_AJUSTE (fecha de reconocimiento en evaluación). "
-           "Meses alineados al ciclo de campaña agrícola: agosto → julio. "
-           "La campaña en curso se corta en el mes vigente (Perú UTC-5); los meses siguientes no se grafican.")
+# M2 fix: metodología y fuentes en expander colapsable (era ruido visual)
+with st.expander("Metodología y fuentes de datos"):
+    st.markdown("""
+**Cómo se construyen las series temporales:**
+- **Eventos reportados** se registran por `FECHA_AVISO` (o `FECHA_SINIESTRO` como proxy si falta).
+- **Indemnizaciones** se registran por `FECHA_AJUSTE` (fecha de reconocimiento en evaluación).
+- **Meses** alineados al ciclo de campaña agrícola: agosto → julio del año siguiente.
+- **Campaña en curso** se corta en el mes vigente (Perú UTC-5); los meses siguientes no se grafican.
 
-st.caption("Fuente: Datos históricos de 5 campañas SAC (resumen_departamental.json) + "
-           "Primas históricas (Primas_Totales_SAC_2020-2026.xlsx) + "
-           "Campaña actual desde datos consolidados descargados de aseguradoras.")
+**Fuentes:**
+- Datos históricos de 5 campañas SAC: `static_data/resumen_departamental.json`
+- Primas históricas: `Primas_Totales_SAC_2020-2026.xlsx`
+- Campaña actual: datos consolidados descargados automáticamente de Rímac y La Positiva.
+""")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -933,14 +939,17 @@ if dept_sel:
             filename=f"casos_indemnizados_acum_{_dept_slug}",
         )
 
-    st.caption(
-        f"Fuente histórica por depto: archivos Dashboard SAC 2020-2025 a nivel aviso "
-        f"(comportamiento_historico_sac_2020_xxxx/, hoja AVISOS), agregados por "
-        f"DEPARTAMENTO y mes con `gen_series_temporales_dept.py`. "
-        f"Campaña actual: consolidado dinámico filtrado a DEPARTAMENTO = '{dept_sel}'. "
-        f"Indemnizaciones se cuentan donde DICTAMEN = INDEMNIZABLE y se fechan por "
-        f"FECHA DE AJUSTE (ACTA > COSECHA > PROGRAMACION AJUSTE). "
-        f"Validado contra totales del JSON nacional (diff = 0 en las 5 campañas)."
-    )
+    # M2 fix: metodología en expander colapsable
+    with st.expander("Metodología y fuentes (departamental)"):
+        st.markdown(f"""
+- **Histórico por depto**: archivos `Dashboard SAC 2020-2025` a nivel aviso
+  (`comportamiento_historico_sac_2020_xxxx/`, hoja `AVISOS`), agregados por
+  `DEPARTAMENTO` y mes con `gen_series_temporales_dept.py`.
+- **Campaña actual**: consolidado dinámico filtrado a `DEPARTAMENTO = '{dept_sel}'`.
+- **Indemnizaciones** se cuentan donde `DICTAMEN = INDEMNIZABLE` y se fechan
+  por `FECHA DE AJUSTE` (prioridad: ACTA > COSECHA > PROGRAMACION AJUSTE).
+- **Validación**: totales por dept coinciden con el JSON nacional (diff = 0
+  en las 5 campañas históricas).
+""")
 
 footer()

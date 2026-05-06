@@ -268,16 +268,20 @@ def render_chart(fig, key, filename=None, show_downloads=True,
 # ═══════════════════════════════════════════════════════════════
 
 def add_reference_line(fig, y, label=None, color=None, dash="dash"):
-    """Añade una línea horizontal de referencia estilizada."""
+    """Añade una línea horizontal de referencia estilizada.
+
+    B3 fix: line_width 1.5 → 2.0 para mejor perceptibilidad en pantallas
+    de baja resolución y gráficos pequeños. Annotation en bold destaca.
+    """
     color = color or PALETTE["danger"]
     kwargs = dict(
-        y=y, line_dash=dash, line_color=color, line_width=1.5, opacity=0.85,
+        y=y, line_dash=dash, line_color=color, line_width=2.0, opacity=0.9,
     )
     if label:
         kwargs.update(
-            annotation_text=label,
+            annotation_text=f"<b>{label}</b>",
             annotation_position="top right",
-            annotation_font=dict(color=color, size=10, family=FONT_FAMILY),
+            annotation_font=dict(color=color, size=11, family=FONT_FAMILY),
         )
     fig.add_hline(**kwargs)
     return fig

@@ -111,12 +111,24 @@ try:
         with col:
             st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
 except Exception as e:
-    st.error(f"Error al renderizar KPIs: {e}")
+    # M6 fix: mensaje amigable + detalles colapsables
+    st.warning("No se pudieron cargar los indicadores nacionales. Recargue los datos.")
+    with st.expander("Detalles técnicos"):
+        st.code(f"{type(e).__name__}: {e}", language="text")
 
 # ═══════════════════════════════════════════════════════════════
 # PANEL DEPARTAMENTAL — mismo formato que Panel Nacional
 # ═══════════════════════════════════════════════════════════════
-st.markdown('<div class="spacer-md"></div>', unsafe_allow_html=True)
+# M1 fix: separador visual claro entre Panel Nacional y Departamental.
+# Background sutil de la sección + más espacio vertical para separar
+# semánticamente los dos niveles de análisis.
+st.markdown('<div class="spacer-lg"></div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="dept-panel-wrapper" style="background:#f8fafc;'
+    'border:1px solid #e2e8f0;border-radius:14px;padding:1.25rem 1.5rem;'
+    'margin-bottom:0.5rem;">',
+    unsafe_allow_html=True,
+)
 
 try:
     depto_list = sorted(datos.get("departamentos_list", []))
@@ -125,7 +137,7 @@ try:
         col_hdr, col_sel = st.columns([2.2, 1.3])
         with col_hdr:
             st.markdown("""
-            <div class="section-header">
+            <div class="section-header" style="margin-top:0;">
                 <div class="icon-box" style="background:#e8f8ec;">🗺️</div>
                 <h3>Panel Departamental</h3>
             </div>
@@ -213,11 +225,26 @@ try:
             with col:
                 st.markdown(render_metric(label, value, delta, accent), unsafe_allow_html=True)
 except Exception as e:
-    st.error(f"Error al renderizar Panel Departamental: {e}")
+    # M6 fix: mensaje amigable, detalles técnicos en expander
+    st.warning("No se pudo cargar el Panel Departamental. Verifique que los datos estén completos.")
+    with st.expander("Detalles técnicos"):
+        st.code(f"{type(e).__name__}: {e}", language="text")
 
-# Navegación rápida
-st.divider()
-st.markdown("**Acceso rápido:**")
+# Cierra el wrapper del Panel Departamental (M1)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# M8 fix: navegación rápida con jerarquía visual (wrapper con background +
+# título descriptivo). Los botones quedan iguales para no romper nada.
+st.markdown(
+    '<div class="quick-nav-wrapper" style="background:linear-gradient(135deg,#f0f7ff 0%,#e8f4f8 100%);'
+    'border:1px solid #d1d9e0;border-radius:14px;padding:1rem 1.25rem;'
+    'margin-top:1.5rem;margin-bottom:0.5rem;">'
+    '<div style="font-size:0.75rem;font-weight:700;color:#0c2340;'
+    'text-transform:uppercase;letter-spacing:0.6px;margin-bottom:0.7rem;">'
+    'Continuar análisis en otra sección'
+    '</div>',
+    unsafe_allow_html=True,
+)
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     if st.button("Consultas", use_container_width=True, key="nav_consultas"):
@@ -231,5 +258,6 @@ with c3:
 with c4:
     if st.button("Semáforo", use_container_width=True, key="nav_semaforo"):
         st.switch_page("pages/semaforo_page.py")
+st.markdown("</div>", unsafe_allow_html=True)
 
 footer()

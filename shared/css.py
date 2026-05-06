@@ -64,6 +64,19 @@ GLOBAL_CSS = """
     .spacer-lg { height: var(--space-5); }
     .spacer-xl { height: var(--space-6); }
 
+    /* M4 fix: ritmo vertical consistente para títulos de sección entre
+       todas las páginas (h3 inline = "#### título" en markdown). */
+    .stMarkdown h3 {
+        margin-top: 1.4rem !important;
+        margin-bottom: 0.5rem !important;
+        font-weight: 700;
+    }
+    .stMarkdown h4 {
+        margin-top: 1.1rem !important;
+        margin-bottom: 0.45rem !important;
+        font-weight: 700;
+    }
+
     /* Divider más sutil y consistente (aplicado a st.divider) */
     [data-testid="stDivider"] hr,
     hr {
@@ -247,10 +260,11 @@ GLOBAL_CSS = """
     .stepper { display: flex; justify-content: center; gap: 0; margin: 1.5rem 0; padding: 0 1rem; }
     .step { display: flex; align-items: center; gap: 0.5rem; }
     .step-circle { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; transition: all 0.3s ease; }
-    .step-pending .step-circle { background: #e8ecf1; color: #94a3b8; }
-    .step-active .step-circle { background: #2980b9; color: #fff; animation: pulse 1.5s infinite; }
-    .step-done .step-circle { background: #27ae60; color: #fff; }
-    .step-error .step-circle { background: #e74c3c; color: #fff; }
+    /* B4 fix: transición suave entre estados (active → done, etc.) */
+    .step-pending .step-circle { background: #e8ecf1; color: #94a3b8; transition: background 0.4s ease, color 0.4s ease; }
+    .step-active .step-circle { background: #2980b9; color: #fff; animation: pulse 1.5s infinite; transition: background 0.4s ease; }
+    .step-done .step-circle { background: #27ae60; color: #fff; transition: background 0.4s ease; }
+    .step-error .step-circle { background: #e74c3c; color: #fff; transition: background 0.4s ease; }
     .step-label { font-size: 0.82rem; font-weight: 500; }
     .step-pending .step-label { color: #94a3b8; }
     .step-active .step-label { color: #2980b9; font-weight: 600; }
