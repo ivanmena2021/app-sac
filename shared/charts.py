@@ -28,7 +28,7 @@ PALETTE = {
     "danger": "#e74c3c",
     "info": "#3498db",
     "neutral": "#64748b",
-    # Superficies
+    # Superficies (tema claro — default)
     "bg": "#ffffff",
     "surface": "#f8fafc",
     "grid_soft": "#f1f5f9",
@@ -38,6 +38,48 @@ PALETTE = {
     "text_soft": "#334155",
     "muted": "#64748b",
 }
+
+# M5 (Fase D) — paleta para charts en dark mode (cuando el usuario
+# activa Settings → Theme → Dark en Streamlit). Espeja los tokens del
+# CSS dark mode definidos en shared/css.py.
+PALETTE_DARK = {
+    **PALETTE,
+    "bg": "#111827",            # surface oscura para charts
+    "surface": "#0f1729",
+    "grid_soft": "#1e293b",
+    "grid": "#1f2a3d",
+    "border": "#1f2a3d",
+    "text": "#e2e8f0",
+    "text_soft": "#cbd5e1",
+    "muted": "#94a3b8",
+    # Mantenemos colores semánticos y de marca (verde MIDAGRI, navy)
+    # porque son identidad — no cambian entre temas.
+}
+
+
+def _is_dark_theme():
+    """Detecta si el tema activo de Streamlit es dark.
+
+    Estrategias en orden de prioridad:
+      1. Override manual desde sidebar (st.session_state["chart_theme"])
+      2. st.context.theme.type (Streamlit 1.41+)
+      3. Fallback: light
+    """
+    override = st.session_state.get("chart_theme")
+    if override == "dark":
+        return True
+    if override == "light":
+        return False
+    # Auto: intentar detectar el tema activo
+    try:
+        return getattr(getattr(st.context, "theme", None), "type", "light") == "dark"
+    except Exception:
+        return False
+
+
+def _palette():
+    """Devuelve PALETTE o PALETTE_DARK según el tema activo."""
+    return PALETTE_DARK if _is_dark_theme() else PALETTE
 
 # Secuencia de colores para series categóricas (múltiples campañas, tipos, etc.)
 SEQUENCE = [
@@ -85,13 +127,17 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
     Returns:
         fig (mutado in-place + retornado por conveniencia)
     """
+    # M5 (Fase D): paleta dinámica según tema activo
+    pal = _palette()
+    is_dark = _is_dark_theme()
+
     # Título compuesto
     title_html = None
     if title:
         if subtitle:
             title_html = (
                 f"<b>{title}</b>"
-                f"<br><span style='font-size:11px;color:{PALETTE['muted']};"
+                f"<br><span style='font-size:11px;color:{pal['muted']};"
                 f"font-weight:400'>{subtitle}</span>"
             )
         else:
@@ -102,15 +148,15 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
     bottom_margin = 90 if legend_position == "bottom" else 55
 
     layout_updates = dict(
-        template="simple_white",
-        font=dict(family=FONT_FAMILY, size=12, color=PALETTE["text_soft"]),
-        plot_bgcolor=PALETTE["bg"],
-        paper_bgcolor=PALETTE["bg"],
+        template="plotly_dark" if is_dark else "simple_white",
+        font=dict(family=FONT_FAMILY, size=12, color=pal["text_soft"]),
+        plot_bgcolor=pal["bg"],
+        paper_bgcolor=pal["bg"],
         colorway=SEQUENCE,
         hoverlabel=dict(
-            bgcolor="#ffffff",
-            bordercolor=PALETTE["border"],
-            font=dict(size=12, color=PALETTE["text"], family=FONT_FAMILY),
+            bgcolor=pal["surface"],
+            bordercolor=pal["border"],
+            font=dict(size=12, color=pal["text"], family=FONT_FAMILY),
         ),
         margin=dict(l=60, r=30, t=top_margin, b=bottom_margin),
         height=height,
@@ -119,31 +165,33 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
     if title_html:
         layout_updates["title"] = dict(
             text=title_html,
-            font=dict(size=16, color=PALETTE["text"], family=FONT_FAMILY),
+            font=dict(size=16, color=pal["text"], family=FONT_FAMILY),
             x=0.0, xanchor="left", y=0.98, yanchor="top", pad=dict(t=0, b=8),
         )
 
     # Posicionamiento de la leyenda sin colisionar con título
+    legend_bg_translucent = "rgba(17,24,39,0)" if is_dark else "rgba(255,255,255,0)"
+    legend_bg_solid = "rgba(17,24,39,0.85)" if is_dark else "rgba(255,255,255,0.85)"
     if legend_position == "bottom":
         layout_updates["legend"] = dict(
             orientation="h", yanchor="top", y=-0.18,
             xanchor="center", x=0.5,
-            font=dict(size=11, color=PALETTE["text_soft"], family=FONT_FAMILY),
-            bgcolor="rgba(255,255,255,0)",
+            font=dict(size=11, color=pal["text_soft"], family=FONT_FAMILY),
+            bgcolor=legend_bg_translucent,
         )
     elif legend_position == "top-right":
         layout_updates["legend"] = dict(
             orientation="v", yanchor="top", y=1.0,
             xanchor="right", x=1.0,
-            font=dict(size=11, color=PALETTE["text_soft"], family=FONT_FAMILY),
-            bgcolor="rgba(255,255,255,0.85)",
-            bordercolor=PALETTE["grid"], borderwidth=1,
+            font=dict(size=11, color=pal["text_soft"], family=FONT_FAMILY),
+            bgcolor=legend_bg_solid,
+            bordercolor=pal["grid"], borderwidth=1,
         )
     elif legend_position == "right":
         layout_updates["legend"] = dict(
             orientation="v", yanchor="middle", y=0.5,
             xanchor="left", x=1.02,
-            font=dict(size=11, color=PALETTE["text_soft"], family=FONT_FAMILY),
+            font=dict(size=11, color=pal["text_soft"], family=FONT_FAMILY),
         )
     elif legend_position == "none":
         layout_updates["showlegend"] = False
@@ -156,19 +204,19 @@ def apply_theme(fig, title=None, subtitle=None, height=420, show_legend=None,
     # Ejes estilo uniforme
     fig.update_xaxes(
         showgrid=False,
-        showline=True, linewidth=1, linecolor=PALETTE["grid"],
-        tickfont=dict(size=11, color=PALETTE["muted"]),
-        title_font=dict(size=12, color=PALETTE["text_soft"]),
+        showline=True, linewidth=1, linecolor=pal["grid"],
+        tickfont=dict(size=11, color=pal["muted"]),
+        title_font=dict(size=12, color=pal["text_soft"]),
         title_text=xaxis_title if xaxis_title is not None else None,
         zeroline=False,
     )
     fig.update_yaxes(
-        showgrid=True, gridcolor=PALETTE["grid_soft"], gridwidth=1,
+        showgrid=True, gridcolor=pal["grid_soft"], gridwidth=1,
         showline=False,
-        tickfont=dict(size=11, color=PALETTE["muted"]),
-        title_font=dict(size=12, color=PALETTE["text_soft"]),
+        tickfont=dict(size=11, color=pal["muted"]),
+        title_font=dict(size=12, color=pal["text_soft"]),
         title_text=yaxis_title if yaxis_title is not None else None,
-        zeroline=True, zerolinecolor=PALETTE["grid"],
+        zeroline=True, zerolinecolor=pal["grid"],
     )
     if y_is_currency:
         fig.update_yaxes(tickprefix="S/ ", tickformat=",.0f")
