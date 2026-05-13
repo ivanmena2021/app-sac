@@ -166,6 +166,18 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
         )
         page = context.new_page()
 
+        # Listener de descargas: el portal LP a veces dispara el evento
+        # como blob/JS y `expect_download` lo pierde. `page.on("download")`
+        # captura el evento en cualquier momento, no solo dentro de un with.
+        downloads_caught = []
+
+        def _on_download(dl):
+            downloads_caught.append(dl)
+
+        page.on("download", _on_download)
+
+        file_path = None
+
         try:
             # 1. Ir al login
             page.goto("https://catastrofico.agroevaluaciones.com/login",
@@ -202,17 +214,74 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     "No se encontró el botón Midagri de descarga en Agroevaluaciones"
                 )
 
-            # 5. Clic y esperar descarga (timeout largo: ~70-90 segundos)
-            with page.expect_download(timeout=300000) as download_info:
-                midagri_btn.click()
+            # 5. Clic y polling robusto (hasta 5 min)
+            # El portal LP no siempre dispara un download event tradicional —
+            # a veces genera un blob via JS. Por eso usamos varias estrategias:
+            #   A. Evento download capturado por _on_download
+            #   B. Link <a download> con href blob: que apareció en el DOM
+            # Si encontramos por A, listo. Si no, buscamos B y hacemos clic.
 
-            # 6. Guardar archivo
-            download = download_info.value
-            file_path = os.path.join(
-                download_dir,
-                f"lp_midagri_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-            )
-            download.save_as(file_path)
+            midagri_btn.click()
+            click_time = time.time()
+            max_wait = 300  # 5 minutos
+            check_interval = 3
+
+            while (time.time() - click_time) < max_wait:
+                page.wait_for_timeout(check_interval * 1000)
+
+                # Estrategia A: ¿se disparó un evento download?
+                if downloads_caught:
+                    dl = downloads_caught[0]
+                    file_path = os.path.join(
+                        download_dir,
+                        f"lp_midagri_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                    )
+                    dl.save_as(file_path)
+                    break
+
+                # Estrategia B: buscar link blob:/download en el DOM
+                try:
+                    blob_info = page.evaluate("""() => {
+                        const links = document.querySelectorAll(
+                            'a[href^="blob:"], a[download]'
+                        );
+                        return Array.from(links).map(a => ({
+                            download: a.download || '',
+                            href: a.href
+                        })).filter(x => x.download || x.href.startsWith('blob:'));
+                    }""")
+                    if blob_info:
+                        # Hay un link blob — hacer clic para forzar la descarga
+                        for bl in blob_info:
+                            try:
+                                sel = (f'a[download="{bl["download"]}"]'
+                                       if bl["download"]
+                                       else 'a[href^="blob:"]')
+                                link = page.query_selector(sel)
+                                if not link:
+                                    continue
+                                with page.expect_download(timeout=60000) as info:
+                                    link.click()
+                                dl = info.value
+                                file_path = os.path.join(
+                                    download_dir,
+                                    f"lp_midagri_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                                )
+                                dl.save_as(file_path)
+                                break
+                            except Exception:
+                                continue
+                        if file_path:
+                            break
+                except Exception:
+                    pass  # JS evaluation falla en algunas paginas, seguir
+
+            if not file_path:
+                raise TimeoutError(
+                    "La Positiva: pasaron 5 min y no se disparo descarga "
+                    "(ni evento download, ni link blob detectado). "
+                    "Posible cambio en el portal."
+                )
 
         finally:
             browser.close()
