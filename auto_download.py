@@ -134,25 +134,29 @@ def descargar_rimac(email: str = None, password: str = None,
 #  Agroevaluaciones — La Positiva
 # ============================================================
 
-def _find_bell_button(page):
-    """Encuentra el botón de la campanita de notificaciones en el header.
+# Selectores reales de Agroevaluaciones (Tailwind/Vue, no Angular Material).
+# Verificados con test_lp_bell_inspect.py el 2026-05-15:
+#
+#   Campanita:   <button class="relative p-1 ..."><svg>...<g id="icon/notification">...</svg></button>
+#   Descarga:    <button class="text-xs text-green-600 ... underline"> Descargar ahora </button>
+#
+_BELL_SELECTORS = [
+    # Primario: SVG con id explicito "icon/notification"
+    'button:has(svg g[id="icon/notification"])',
+    # Alternativos defensivos por si renombran el id
+    'button:has(svg[viewBox="0 0 24 24"]) >> nth=0',
+    'button.relative.p-1:has(svg)',
+    # Fallback Material/otros frameworks (por si cambian de stack)
+    'button:has(mat-icon:has-text("notifications"))',
+    'button[aria-label*="notif" i]',
+]
 
-    Estrategias en orden de preferencia:
-      1. mat-icon con texto "notifications" (Angular Material pattern)
-      2. Button con SVG/i de clase "bell"
-      3. Button con aria-label que menciona notificacion
-      4. Fallback: button en el header con un badge numerico al lado
-    """
-    selectors = [
-        'button:has(mat-icon:text-is("notifications"))',
-        'button:has(mat-icon:has-text("notifications"))',
-        'button:has(i[class*="bell"])',
-        'button:has(svg[class*="bell"])',
-        'button[aria-label*="notif" i]',
-        'button[aria-label*="campanita" i]',
-        'button[matbadge]',  # angular material badge directive
-    ]
-    for sel in selectors:
+_DESCARGAR_SELECTOR = 'button:has-text("Descargar ahora")'
+
+
+def _find_bell_button(page):
+    """Encuentra el botón de la campanita de notificaciones en el header."""
+    for sel in _BELL_SELECTORS:
         try:
             el = page.query_selector(sel)
             if el and el.is_visible():
@@ -160,20 +164,31 @@ def _find_bell_button(page):
         except Exception:
             continue
 
-    # Fallback: buscar buttons en zonas tipicas de header con badge numerico
+    # Fallback final: cualquier button en zona top-right con badge numerico
     try:
-        candidates = page.query_selector_all(
-            'header button, nav button, [role="banner"] button, '
-            'mat-toolbar button, .toolbar button'
-        )
-        for btn in candidates:
-            badge = btn.query_selector(
-                '[class*="badge"], [class*="count"], .mat-badge-content'
-            )
-            if badge:
-                txt = (badge.inner_text() or "").strip()
-                if txt and txt[0].isdigit():
-                    return btn
+        candidates = page.evaluate(r"""() => {
+            const all = document.querySelectorAll('button, a, [role="button"]');
+            const results = [];
+            for (const el of all) {
+                const txt = (el.textContent || '').trim();
+                const rect = el.getBoundingClientRect();
+                if (/\d/.test(txt) && rect.top < 200 &&
+                    rect.right > window.innerWidth * 0.5 &&
+                    rect.width < 100) {
+                    results.push(el.outerHTML.substring(0, 200));
+                }
+            }
+            return results;
+        }""")
+        if candidates:
+            # Volver a querar via Playwright usando el primer match
+            buttons = page.query_selector_all('button, a, [role="button"]')
+            for btn in buttons:
+                try:
+                    if btn.evaluate("e => e.outerHTML.substring(0, 200)") == candidates[0]:
+                        return btn
+                except Exception:
+                    continue
     except Exception:
         pass
 
@@ -181,14 +196,14 @@ def _find_bell_button(page):
 
 
 def _count_descargar_links(page, bell_button):
-    """Abre la campanita, cuenta los links 'Descargar ahora' y la cierra.
+    """Abre la campanita, cuenta los botones 'Descargar ahora' y la cierra.
 
     Devuelve 0 si algo falla (mejor que crashear el flujo entero).
     """
     try:
         bell_button.click()
         page.wait_for_timeout(1200)
-        links = page.query_selector_all('a:has-text("Descargar ahora")')
+        links = page.query_selector_all(_DESCARGAR_SELECTOR)
         count = len(links)
         try:
             page.keyboard.press("Escape")
@@ -328,7 +343,7 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     page.keyboard.press("Escape")
                     continue
 
-                links = page.query_selector_all('a:has-text("Descargar ahora")')
+                links = page.query_selector_all(_DESCARGAR_SELECTOR)
                 if len(links) > initial_count:
                     # Apareció una nueva notificación lista. La más nueva
                     # está al tope de la lista (links[0]).
