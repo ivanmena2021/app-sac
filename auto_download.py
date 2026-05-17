@@ -134,18 +134,89 @@ def descargar_rimac(email: str = None, password: str = None,
 #  Agroevaluaciones — La Positiva
 # ============================================================
 
+def _find_bell_button(page):
+    """Encuentra el botón de la campanita de notificaciones en el header.
+
+    Estrategias en orden de preferencia:
+      1. mat-icon con texto "notifications" (Angular Material pattern)
+      2. Button con SVG/i de clase "bell"
+      3. Button con aria-label que menciona notificacion
+      4. Fallback: button en el header con un badge numerico al lado
+    """
+    selectors = [
+        'button:has(mat-icon:text-is("notifications"))',
+        'button:has(mat-icon:has-text("notifications"))',
+        'button:has(i[class*="bell"])',
+        'button:has(svg[class*="bell"])',
+        'button[aria-label*="notif" i]',
+        'button[aria-label*="campanita" i]',
+        'button[matbadge]',  # angular material badge directive
+    ]
+    for sel in selectors:
+        try:
+            el = page.query_selector(sel)
+            if el and el.is_visible():
+                return el
+        except Exception:
+            continue
+
+    # Fallback: buscar buttons en zonas tipicas de header con badge numerico
+    try:
+        candidates = page.query_selector_all(
+            'header button, nav button, [role="banner"] button, '
+            'mat-toolbar button, .toolbar button'
+        )
+        for btn in candidates:
+            badge = btn.query_selector(
+                '[class*="badge"], [class*="count"], .mat-badge-content'
+            )
+            if badge:
+                txt = (badge.inner_text() or "").strip()
+                if txt and txt[0].isdigit():
+                    return btn
+    except Exception:
+        pass
+
+    return None
+
+
+def _count_descargar_links(page, bell_button):
+    """Abre la campanita, cuenta los links 'Descargar ahora' y la cierra.
+
+    Devuelve 0 si algo falla (mejor que crashear el flujo entero).
+    """
+    try:
+        bell_button.click()
+        page.wait_for_timeout(1200)
+        links = page.query_selector_all('a:has-text("Descargar ahora")')
+        count = len(links)
+        try:
+            page.keyboard.press("Escape")
+        except Exception:
+            pass
+        page.wait_for_timeout(400)
+        return count
+    except Exception:
+        return 0
+
+
 def descargar_lapositiva(usuario: str = None, password: str = None,
                          download_dir: str = None, headless: bool = True) -> pd.DataFrame:
     """
     Descarga el Excel MIDAGRI desde Agroevaluaciones (La Positiva).
 
-    Flujo confirmado:
-    1. GET catastrofico.agroevaluaciones.com/login
-    2. Llenar input[type="text"] (usuario) + input[type="password"]
-    3. Clic button "Iniciar sesión" → redirige a /
-    4. Menú: Avisos → Todos (URL: /todos)
-    5. Botón "Midagri" (sin FOGASA) → API /aviso/midagrid/export
-    6. Descarga toma ~70 segundos (4000+ registros)
+    Flujo actualizado (2026-05+) — el portal ahora usa cola asincrónica con
+    notificaciones en una "campanita" (top-right del header):
+
+    1. Login en catastrofico.agroevaluaciones.com/login
+    2. Menú: Avisos > Todos
+    3. Clic en botón "Midagri" → server inicia generación async
+    4. Aparece notificación "Estamos preparando tu archivo..." en la campanita
+    5. ~60s después se convierte en "Tu archivo está listo para descargar"
+       con un link "Descargar ahora"
+    6. Clic en "Descargar ahora" → dispara la descarga real
+
+    Tiempo total: ~70-120 segundos según carga del portal.
     """
     from playwright.sync_api import sync_playwright
 
@@ -214,22 +285,32 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     "No se encontró el botón Midagri de descarga en Agroevaluaciones"
                 )
 
-            # 5. Clic y polling robusto (hasta 5 min)
-            # El portal LP no siempre dispara un download event tradicional —
-            # a veces genera un blob via JS. Por eso usamos varias estrategias:
-            #   A. Evento download capturado por _on_download
-            #   B. Link <a download> con href blob: que apareció en el DOM
-            # Si encontramos por A, listo. Si no, buscamos B y hacemos clic.
+            # 5. Localizar la campanita de notificaciones (top-right del header)
+            bell_button = _find_bell_button(page)
+            if not bell_button:
+                raise ConnectionError(
+                    "No se encontro la campanita de notificaciones en el portal "
+                    "(selectores cambiaron o pagina en estado inesperado)."
+                )
 
+            # 6. Snapshot pre-click: contar cuantos 'Descargar ahora' ya hay
+            #    Esto permite detectar el nuevo despues del clic en Midagri.
+            initial_count = _count_descargar_links(page, bell_button)
+
+            # 7. Click en Midagri y polling de la campanita hasta que aparezca
+            #    una nueva entrada 'Descargar ahora' (~60s segun la app).
             midagri_btn.click()
             click_time = time.time()
-            max_wait = 300  # 5 minutos
-            check_interval = 3
+            max_wait = 240  # 4 minutos
+            poll_every = 8  # cada cuantos segundos chequear la campanita
 
+            new_link = None
             while (time.time() - click_time) < max_wait:
-                page.wait_for_timeout(check_interval * 1000)
+                page.wait_for_timeout(poll_every * 1000)
 
-                # Estrategia A: ¿se disparó un evento download?
+                # Estrategia de respaldo: si por algun motivo el server vuelve
+                # a disparar download directo (sin pasar por campanita), lo
+                # captamos via el listener persistente.
                 if downloads_caught:
                     dl = downloads_caught[0]
                     file_path = os.path.join(
@@ -239,49 +320,44 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     dl.save_as(file_path)
                     break
 
-                # Estrategia B: buscar link blob:/download en el DOM
+                # Abrir la campanita y contar 'Descargar ahora'
                 try:
-                    blob_info = page.evaluate("""() => {
-                        const links = document.querySelectorAll(
-                            'a[href^="blob:"], a[download]'
-                        );
-                        return Array.from(links).map(a => ({
-                            download: a.download || '',
-                            href: a.href
-                        })).filter(x => x.download || x.href.startsWith('blob:'));
-                    }""")
-                    if blob_info:
-                        # Hay un link blob — hacer clic para forzar la descarga
-                        for bl in blob_info:
-                            try:
-                                sel = (f'a[download="{bl["download"]}"]'
-                                       if bl["download"]
-                                       else 'a[href^="blob:"]')
-                                link = page.query_selector(sel)
-                                if not link:
-                                    continue
-                                with page.expect_download(timeout=60000) as info:
-                                    link.click()
-                                dl = info.value
-                                file_path = os.path.join(
-                                    download_dir,
-                                    f"lp_midagri_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                                )
-                                dl.save_as(file_path)
-                                break
-                            except Exception:
-                                continue
-                        if file_path:
-                            break
+                    bell_button.click()
+                    page.wait_for_timeout(1200)
                 except Exception:
-                    pass  # JS evaluation falla en algunas paginas, seguir
+                    page.keyboard.press("Escape")
+                    continue
 
-            if not file_path:
+                links = page.query_selector_all('a:has-text("Descargar ahora")')
+                if len(links) > initial_count:
+                    # Apareció una nueva notificación lista. La más nueva
+                    # está al tope de la lista (links[0]).
+                    new_link = links[0]
+                    break
+
+                # Cerrar dropdown para la próxima iteración
+                try:
+                    page.keyboard.press("Escape")
+                except Exception:
+                    pass
+
+            if file_path is None and new_link is None:
                 raise TimeoutError(
-                    "La Positiva: pasaron 5 min y no se disparo descarga "
-                    "(ni evento download, ni link blob detectado). "
-                    "Posible cambio en el portal."
+                    f"La Positiva: pasaron {max_wait}s y la notificacion "
+                    f"'archivo listo' no aparecio en la campanita. "
+                    f"Verificar manualmente en el portal."
                 )
+
+            # 8. Si el flujo fue por campanita, clic en 'Descargar ahora'
+            if new_link is not None and file_path is None:
+                with page.expect_download(timeout=120000) as info:
+                    new_link.click()
+                dl = info.value
+                file_path = os.path.join(
+                    download_dir,
+                    f"lp_midagri_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                )
+                dl.save_as(file_path)
 
         finally:
             browser.close()
