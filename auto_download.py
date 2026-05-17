@@ -316,12 +316,18 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
             #    una nueva entrada 'Descargar ahora' (~60s segun la app).
             midagri_btn.click()
             click_time = time.time()
-            max_wait = 240  # 4 minutos
-            poll_every = 8  # cada cuantos segundos chequear la campanita
+            max_wait = 360  # 6 minutos (margen extra por carga del portal)
+            poll_every = 10
 
             new_link = None
+            iter_count = 0
+            counts_history = []  # para diagnostico
+            saw_preparando = False
+
             while (time.time() - click_time) < max_wait:
+                iter_count += 1
                 page.wait_for_timeout(poll_every * 1000)
+                elapsed = int(time.time() - click_time)
 
                 # Estrategia de respaldo: si por algun motivo el server vuelve
                 # a disparar download directo (sin pasar por campanita), lo
@@ -335,32 +341,71 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     dl.save_as(file_path)
                     break
 
-                # Abrir la campanita y contar 'Descargar ahora'
+                # Asegurar que la campanita este ABIERTA antes de contar.
+                # Detectamos estado por el header "Notificaciones" visible.
+                panel_abierto = False
                 try:
-                    bell_button.click()
-                    page.wait_for_timeout(1200)
+                    notif_header = page.query_selector('text="Notificaciones"')
+                    panel_abierto = notif_header is not None and notif_header.is_visible()
                 except Exception:
-                    page.keyboard.press("Escape")
-                    continue
+                    panel_abierto = False
+
+                if not panel_abierto:
+                    try:
+                        bell_button.click()
+                        page.wait_for_timeout(1500)
+                    except Exception:
+                        try:
+                            page.keyboard.press("Escape")
+                        except Exception:
+                            pass
+                        continue
+
+                # Diagnostico: detectar "Estamos preparando" (confirma que el
+                # click en Midagri si dispato una notificacion nueva)
+                try:
+                    prep_el = page.query_selector('text=/Estamos preparando/i')
+                    if prep_el is not None and prep_el.is_visible():
+                        saw_preparando = True
+                except Exception:
+                    pass
 
                 links = page.query_selector_all(_DESCARGAR_SELECTOR)
+                counts_history.append(len(links))
+
                 if len(links) > initial_count:
-                    # Apareció una nueva notificación lista. La más nueva
-                    # está al tope de la lista (links[0]).
                     new_link = links[0]
                     break
 
-                # Cerrar dropdown para la próxima iteración
+                # Cerrar dropdown para que la proxima iteracion lo abra fresco
                 try:
                     page.keyboard.press("Escape")
+                    page.wait_for_timeout(400)
                 except Exception:
                     pass
 
             if file_path is None and new_link is None:
+                # Guardar screenshot para diagnostico (best-effort)
+                try:
+                    screenshot_path = os.path.join(
+                        download_dir,
+                        f"lp_timeout_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    )
+                    page.screenshot(path=screenshot_path)
+                except Exception:
+                    screenshot_path = "(no se pudo guardar)"
+
+                diag = (
+                    f"iteraciones={iter_count}, "
+                    f"counts_por_iter={counts_history[-10:]}, "
+                    f"initial_count={initial_count}, "
+                    f"preparando_visto={saw_preparando}"
+                )
                 raise TimeoutError(
                     f"La Positiva: pasaron {max_wait}s y la notificacion "
                     f"'archivo listo' no aparecio en la campanita. "
-                    f"Verificar manualmente en el portal."
+                    f"Diagnostico: {diag}. "
+                    f"Screenshot: {screenshot_path}"
                 )
 
             # 8. Si el flujo fue por campanita, clic en 'Descargar ahora'
