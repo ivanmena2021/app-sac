@@ -140,8 +140,17 @@ else:
                 lp_rows = len(df_midagri)
             except Exception as e:
                 status_ph.error(f"Error al descargar de La Positiva: {e}")
-                # Mostrar screenshot del momento del fallo si la excepcion lo trae
-                # (auto_download.py lo adjunta cuando es timeout de campanita).
+                # Diagnostico crucial: respuesta del POST /aviso/midagrid/export
+                _exp = getattr(e, "lp_export_response", None)
+                if _exp:
+                    with st.expander("Respuesta del server al POST /midagrid/export (CLAVE)", expanded=True):
+                        st.markdown(f"**POST request salio?** `{_exp.get('request_seen')}`")
+                        st.markdown(f"**HTTP status:** `{_exp.get('status')}`")
+                        st.markdown(f"**URL:** `{_exp.get('url')}`")
+                        st.markdown(f"**Headers:** `{_exp.get('headers')}`")
+                        st.markdown("**Body:**")
+                        st.code(_exp.get('body') or '(vacio)', language='json')
+                # Screenshot del momento del fallo
                 _shot = getattr(e, "lp_screenshot", None)
                 if _shot:
                     st.image(

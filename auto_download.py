@@ -262,6 +262,43 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
 
         page.on("download", _on_download)
 
+        # Listener de la respuesta del POST /export — clave para diagnosticar
+        # si el servidor LP acepta el click de Midagri o lo rechaza.
+        export_response = {
+            "status": None,
+            "body": "",
+            "headers": "",
+            "url": "",
+            "request_seen": False,
+        }
+
+        def _on_request(req):
+            if "midagri" in req.url.lower() and "export" in req.url.lower():
+                export_response["request_seen"] = True
+
+        def _on_response(resp):
+            if "midagri" in resp.url.lower() and "export" in resp.url.lower():
+                try:
+                    export_response["status"] = resp.status
+                    export_response["url"] = resp.url
+                    # Headers compactos
+                    h = resp.headers or {}
+                    export_response["headers"] = (
+                        f"content-type={h.get('content-type', '?')}, "
+                        f"content-length={h.get('content-length', '?')}"
+                    )
+                    # Body (best-effort, max 1500 chars)
+                    try:
+                        body = resp.text()
+                        export_response["body"] = body[:1500] if body else "(empty)"
+                    except Exception as e:
+                        export_response["body"] = f"(error leyendo body: {e})"
+                except Exception:
+                    pass
+
+        page.on("request", _on_request)
+        page.on("response", _on_response)
+
         file_path = None
 
         try:
@@ -406,15 +443,24 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     f"preparando_visto={saw_preparando}, "
                     f"url={page_url}"
                 )
+                # Info clave: que respondió el server al POST /export
+                export_diag = (
+                    f"POST_request_seen={export_response['request_seen']}, "
+                    f"POST_status={export_response['status']}, "
+                    f"POST_url={export_response['url']!r}, "
+                    f"POST_headers={export_response['headers']!r}, "
+                    f"POST_body={export_response['body']!r}"
+                )
                 err = TimeoutError(
-                    f"La Positiva: pasaron {max_wait}s y la notificacion "
-                    f"'archivo listo' no aparecio en la campanita. "
-                    f"Diagnostico: {diag}"
+                    f"La Positiva: pasaron {max_wait}s sin notificacion 'archivo listo'. "
+                    f"Diag: {diag}. "
+                    f"Export: {export_diag}"
                 )
                 # Adjuntar info para que inicio.py pueda mostrarla
                 err.lp_screenshot = screenshot_bytes
                 err.lp_page_text = page_html_snippet
                 err.lp_page_url = page_url
+                err.lp_export_response = export_response
                 raise err
 
             # 8. Si el flujo fue por campanita, clic en 'Descargar ahora'
