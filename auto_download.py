@@ -349,26 +349,45 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
             #    Esto permite detectar el nuevo despues del clic en Midagri.
             initial_count = _count_descargar_links(page, bell_button)
 
-            # 7. Click en Midagri y polling de la campanita hasta que aparezca
-            #    una nueva entrada 'Descargar ahora' (~60s segun la app).
+            # 7. Click en Midagri. El server LP nos responde 200 con un
+            #    notification_id. Pero la lista del bell en Vue/headless NO
+            #    se refresca con websocket — solo al recargar la pagina.
+            #    Por eso despues del click, esperamos y RECARGAMOS para
+            #    forzar al Vue store a re-fetchear las notificaciones.
             midagri_btn.click()
             click_time = time.time()
-            max_wait = 360  # 6 minutos (margen extra por carga del portal)
-            poll_every = 10
+
+            # Esperar a que el POST /export responda
+            post_wait = 0
+            while post_wait < 20 and export_response["status"] is None:
+                page.wait_for_timeout(1000)
+                post_wait += 1
+
+            # Verificar respuesta del server antes de seguir
+            if export_response["status"] not in (None, 200, 201, 202):
+                raise RuntimeError(
+                    f"LP rechazo el POST /midagrid/export: "
+                    f"status={export_response['status']}, "
+                    f"body={export_response['body'][:300]!r}"
+                )
+
+            # Esperar que el server procese (~60s tipico). Luego reload + check.
+            # Si no aparece, reintentar reload hasta agotar max_attempts.
+            initial_delay = 45  # segundos antes del primer reload
+            poll_after_reload = 25  # segundos entre reintentos
+            max_total = 240  # 4 min total
+
+            page.wait_for_timeout(initial_delay * 1000)
 
             new_link = None
             iter_count = 0
-            counts_history = []  # para diagnostico
+            counts_history = []
             saw_preparando = False
 
-            while (time.time() - click_time) < max_wait:
+            while (time.time() - click_time) < max_total:
                 iter_count += 1
-                page.wait_for_timeout(poll_every * 1000)
-                elapsed = int(time.time() - click_time)
 
-                # Estrategia de respaldo: si por algun motivo el server vuelve
-                # a disparar download directo (sin pasar por campanita), lo
-                # captamos via el listener persistente.
+                # Si el server termino de disparar download directo, listo
                 if downloads_caught:
                     dl = downloads_caught[0]
                     file_path = os.path.join(
@@ -378,28 +397,29 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     dl.save_as(file_path)
                     break
 
-                # Asegurar que la campanita este ABIERTA antes de contar.
-                # Detectamos estado por el header "Notificaciones" visible.
-                panel_abierto = False
+                # Reload para forzar refresh del Vue store
                 try:
-                    notif_header = page.query_selector('text="Notificaciones"')
-                    panel_abierto = notif_header is not None and notif_header.is_visible()
+                    page.reload(wait_until="networkidle", timeout=30000)
+                    page.wait_for_timeout(2500)
                 except Exception:
-                    panel_abierto = False
+                    page.wait_for_timeout(poll_after_reload * 1000)
+                    continue
 
-                if not panel_abierto:
-                    try:
-                        bell_button.click()
-                        page.wait_for_timeout(1500)
-                    except Exception:
-                        try:
-                            page.keyboard.press("Escape")
-                        except Exception:
-                            pass
-                        continue
+                # Re-find bell (referencia se invalida tras reload)
+                bell_button = _find_bell_button(page)
+                if not bell_button:
+                    page.wait_for_timeout(poll_after_reload * 1000)
+                    continue
 
-                # Diagnostico: detectar "Estamos preparando" (confirma que el
-                # click en Midagri si dispato una notificacion nueva)
+                # Abrir bell
+                try:
+                    bell_button.click()
+                    page.wait_for_timeout(2000)
+                except Exception:
+                    page.wait_for_timeout(poll_after_reload * 1000)
+                    continue
+
+                # Diagnostico
                 try:
                     prep_el = page.query_selector('text=/Estamos preparando/i')
                     if prep_el is not None and prep_el.is_visible():
@@ -414,12 +434,14 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     new_link = links[0]
                     break
 
-                # Cerrar dropdown para que la proxima iteracion lo abra fresco
+                # Cerrar y esperar antes del proximo reload
                 try:
                     page.keyboard.press("Escape")
-                    page.wait_for_timeout(400)
                 except Exception:
                     pass
+                page.wait_for_timeout(poll_after_reload * 1000)
+
+            max_wait = max_total  # mantener variable para el mensaje de error
 
             if file_path is None and new_link is None:
                 # Capturar screenshot en BYTES (no path) para mostrarlo en Streamlit.
