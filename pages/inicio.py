@@ -140,6 +140,22 @@ else:
                 lp_rows = len(df_midagri)
             except Exception as e:
                 status_ph.error(f"Error al descargar de La Positiva: {e}")
+                # Mostrar screenshot del momento del fallo si la excepcion lo trae
+                # (auto_download.py lo adjunta cuando es timeout de campanita).
+                _shot = getattr(e, "lp_screenshot", None)
+                if _shot:
+                    st.image(
+                        _shot,
+                        caption="Estado del portal de La Positiva al momento del timeout",
+                        use_container_width=True,
+                    )
+                _ptext = getattr(e, "lp_page_text", "")
+                if _ptext:
+                    with st.expander("Texto visible en la página"):
+                        st.text(_ptext)
+                _purl = getattr(e, "lp_page_url", "")
+                if _purl:
+                    st.caption(f"URL: {_purl}")
                 st.stop()
 
             # Paso 3: Procesar

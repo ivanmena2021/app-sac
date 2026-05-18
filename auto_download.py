@@ -385,28 +385,37 @@ def descargar_lapositiva(usuario: str = None, password: str = None,
                     pass
 
             if file_path is None and new_link is None:
-                # Guardar screenshot para diagnostico (best-effort)
+                # Capturar screenshot en BYTES (no path) para mostrarlo en Streamlit.
+                # El path en Railway es efimero y no accesible desde la UI.
+                screenshot_bytes = None
+                page_url = ""
+                page_html_snippet = ""
                 try:
-                    screenshot_path = os.path.join(
-                        download_dir,
-                        f"lp_timeout_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                    )
-                    page.screenshot(path=screenshot_path)
+                    screenshot_bytes = page.screenshot(full_page=False)
+                    page_url = page.url
+                    # Snippet del HTML para ver estado del DOM
+                    body_text = page.evaluate("() => document.body.innerText.substring(0, 1500)")
+                    page_html_snippet = body_text or ""
                 except Exception:
-                    screenshot_path = "(no se pudo guardar)"
+                    pass
 
                 diag = (
                     f"iteraciones={iter_count}, "
                     f"counts_por_iter={counts_history[-10:]}, "
                     f"initial_count={initial_count}, "
-                    f"preparando_visto={saw_preparando}"
+                    f"preparando_visto={saw_preparando}, "
+                    f"url={page_url}"
                 )
-                raise TimeoutError(
+                err = TimeoutError(
                     f"La Positiva: pasaron {max_wait}s y la notificacion "
                     f"'archivo listo' no aparecio en la campanita. "
-                    f"Diagnostico: {diag}. "
-                    f"Screenshot: {screenshot_path}"
+                    f"Diagnostico: {diag}"
                 )
+                # Adjuntar info para que inicio.py pueda mostrarla
+                err.lp_screenshot = screenshot_bytes
+                err.lp_page_text = page_html_snippet
+                err.lp_page_url = page_url
+                raise err
 
             # 8. Si el flujo fue por campanita, clic en 'Descargar ahora'
             if new_link is not None and file_path is None:
