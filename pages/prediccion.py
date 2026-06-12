@@ -20,6 +20,7 @@ from prediccion_siniestralidad import (
     evaluar_intensidad_campana,
     proyectar_serie_mensual,
     serie_actual_desde_df,
+    _mes_idx_int,
     CAMPANAS_HIST,
     MESES_CAMPANA,
     MAE_M5_POR_MES,
@@ -40,8 +41,19 @@ page_header("Predicción de Cierre de Campaña",
 # ═══════════════════════════════════════════════════════════════
 
 serie_n, serie_m, mes_corte_idx = serie_actual_desde_df(df_actual)
-mes_corte = MESES_CAMPANA[mes_corte_idx]
-mes_label = f"Mes {mes_corte_idx + 1}/12 — {mes_corte}"
+# mes_corte_idx puede ser float (posición fraccional del año).
+# mes_idx_int = índice entero del mes vigente (para slicing y label).
+mes_idx_int = _mes_idx_int(mes_corte_idx)
+mes_corte = MESES_CAMPANA[mes_idx_int]
+
+# Fracción del mes vigente transcurrido (para mostrar al usuario)
+import calendar
+from datetime import datetime, timezone, timedelta
+_TZ_PERU = timezone(timedelta(hours=-5))
+_today = datetime.now(_TZ_PERU).date()
+_dias_en_mes = calendar.monthrange(_today.year, _today.month)[1]
+_frac_pct = int(round(((_today.day - 1) / _dias_en_mes) * 100))
+mes_label = f"{mes_corte} — corte al {_today.strftime('%d/%m/%Y')} ({_frac_pct}% del mes transcurrido)"
 
 # Prima neta de la campaña actual
 primas = load_primas_historicas()
@@ -59,18 +71,18 @@ pred = predecir_cierre_campana(
 
 
 # ═══════════════════════════════════════════════════════════════
-# ALERTA DE CONFIABILIDAD POR MES
+# ALERTA DE CONFIABILIDAD POR MES (MAE interpolado al día actual)
 # ═══════════════════════════════════════════════════════════════
-mae_mes = MAE_M5_POR_MES.get(mes_corte_idx, 100.0)
+mae_mes = pred["MAE_mes_actual"]  # ya viene interpolado al punto fraccional
 if not pred["es_confiable"]:
     st.warning(
-        f"⚠ El modelo tiene MAE histórico de {mae_mes:.0f}% al mes **{mes_corte}**. "
+        f"⚠ El modelo tiene MAE histórico de {mae_mes:.0f}% al corte de **{mes_corte}**. "
         f"Las predicciones son orientativas y tienen alta incertidumbre. "
         f"El modelo es confiable desde **Mar** en adelante (MAE < {UMBRAL_MAE_CONFIABLE:.0f}%)."
     )
 elif mae_mes > 15:
     st.info(
-        f"Modelo activo. MAE histórico al mes **{mes_corte}**: {mae_mes:.1f}%. "
+        f"Modelo activo. MAE histórico al corte de **{mes_corte}**: {mae_mes:.1f}%. "
         f"Las predicciones tienen un margen de error promedio de ±{mae_mes:.0f}%."
     )
 
@@ -260,9 +272,9 @@ def make_advance_chart(metric_key: str, title: str, yaxis_title: str, fmt_prefix
 
     # Actual hasta el mes vigente
     serie = serie_n if metric_key == "n" else serie_m
-    cum_actual = list(np.cumsum(serie[: mes_corte_idx + 1]))
+    cum_actual = list(np.cumsum(serie[: mes_idx_int + 1]))
     fig.add_trace(go.Scatter(
-        x=MESES_CAMPANA[: mes_corte_idx + 1], y=cum_actual,
+        x=MESES_CAMPANA[: mes_idx_int + 1], y=cum_actual,
         mode="lines+markers", name="2025-2026 (actual)",
         line=dict(color=PALETTE["midagri"], width=4),
         marker=dict(size=9, line=dict(width=2, color="#fff")),
@@ -278,9 +290,9 @@ def make_advance_chart(metric_key: str, title: str, yaxis_title: str, fmt_prefix
         metodo="M5",
     )
     cum_proy = list(np.cumsum(proyectada))
-    # Línea punteada solo del corte en adelante
+    # Línea punteada solo del mes vigente en adelante
     fig.add_trace(go.Scatter(
-        x=MESES_CAMPANA[mes_corte_idx:], y=cum_proy[mes_corte_idx:],
+        x=MESES_CAMPANA[mes_idx_int:], y=cum_proy[mes_idx_int:],
         mode="lines+markers", name="2025-2026 (proyección M5)",
         line=dict(color=PALETTE["midagri"], width=3, dash="dash"),
         marker=dict(size=7, symbol="diamond"),

@@ -83,6 +83,66 @@ def _period_to_idx(period_str: str, campana: str) -> Optional[int]:
     return None
 
 
+# ─────────────────────────────────────────────────────────────────
+# Índice fraccional del mes — clave de la actualización diaria
+# ─────────────────────────────────────────────────────────────────
+# Convención: `mes_corte_idx` puede ser float. Representa la posición
+# real en la línea temporal Ago→Jul:
+#   -1.0  = inicio de Ago (campaña sin empezar)
+#    0.0  = fin de Ago (mes 1 cerrado)
+#    9.33 = ~33% del camino entre fin-de-May y fin-de-Jun (= Jun 11)
+#   10.0  = fin de Jun (Jul recién empieza)
+#   11.0  = fin de Jul (campaña 100% cerrada)
+#
+# Esto reemplaza la versión vieja que usaba un int (= mes vigente),
+# tratando todos los días del mes como si éste hubiese cerrado, lo
+# que subestimaba el total proyectado a media-mes.
+
+
+def _mes_idx_int(mes_corte_idx_float: float) -> int:
+    """Devuelve el índice ENTERO del mes vigente (0..11) a partir del float.
+
+    Para slicing de la serie actual: incluir hasta el mes en curso inclusive.
+    Ej: mes_corte_idx=9.33 (estamos en Jun) → 10 (idx de Jun en MESES_CAMPANA).
+    """
+    return max(0, min(11, int(np.floor(mes_corte_idx_float)) + 1))
+
+
+def _avance_en_idx(serie: List[float], idx_float: float) -> float:
+    """Avance acumulado interpolado en una posición fraccional del año.
+
+    Ej: idx_float=9.33 → interpola entre avance al fin de May (idx 9) y
+        avance al fin de Jun (idx 10), tomando 33% del recorrido.
+    """
+    avance_acu = _avance_acumulado(serie)
+    if idx_float >= 11:
+        return float(avance_acu[-1])
+    if idx_float <= -1:
+        return 0.0
+    idx_lo = int(np.floor(idx_float))
+    frac = float(idx_float - idx_lo)
+    avance_lo = float(avance_acu[idx_lo]) if idx_lo >= 0 else 0.0
+    avance_hi = float(avance_acu[idx_lo + 1]) if idx_lo + 1 < 12 else float(avance_acu[-1])
+    return avance_lo + frac * (avance_hi - avance_lo)
+
+
+def _mae_interpolado(idx_float: float) -> float:
+    """MAE histórico interpolado para un punto fraccional del año."""
+    idx_lo = max(0, min(11, int(np.floor(idx_float))))
+    idx_hi = min(11, idx_lo + 1)
+    frac = float(idx_float - idx_lo) if idx_lo == int(np.floor(idx_float)) else 0.0
+    mae_lo = MAE_M5_POR_MES.get(idx_lo, 100.0)
+    mae_hi = MAE_M5_POR_MES.get(idx_hi, 100.0)
+    inf = float("inf")
+    if mae_lo == inf and mae_hi == inf:
+        return inf
+    if mae_lo == inf:
+        return mae_hi
+    if mae_hi == inf:
+        return mae_lo
+    return mae_lo + frac * (mae_hi - mae_lo)
+
+
 def _load_serie(path: str, key: str, campana: str, sub_key: str) -> List[float]:
     """Carga la serie mensual de una métrica desde el JSON nacional."""
     with open(path, encoding="utf-8") as f:
@@ -149,7 +209,7 @@ def _predecir_avance_ultimas_n(avances_por_camp: List[float], n: int = 2) -> flo
 def predecir_cierre_campana(
     serie_actual_n: List[float],
     serie_actual_monto: List[float],
-    mes_corte_idx: int,
+    mes_corte_idx: float,
     prima_neta_actual: float,
     curvas_hist: Optional[Dict] = None,
 ) -> Dict:
@@ -160,7 +220,12 @@ def predecir_cierre_campana(
         serie_actual_n: 12 floats con el conteo mensual de indemnizaciones
                         acumuladas hasta el mes actual (resto en 0).
         serie_actual_monto: idem para monto.
-        mes_corte_idx: índice 0..11 del mes vigente (ej. Abr = 8).
+        mes_corte_idx: float fraccional 0..11 con la posición real en el año
+                       de campaña (Ago→Jul). Ej: 9.33 = 1/3 del camino entre
+                       fin-de-May y fin-de-Jun. Acepta int también
+                       (compatible con código viejo que lo pasaba como mes
+                       vigente entero). Usa interpolación lineal para no
+                       sobrestimar el avance a media-mes.
         prima_neta_actual: prima neta total de la campaña 2025-2026.
         curvas_hist: opcional, para inyectar datos históricos en tests.
 
@@ -176,19 +241,26 @@ def predecir_cierre_campana(
     if curvas_hist is None:
         curvas_hist = _curvas_historicas()
 
-    # Avance histórico al mes_corte para cada campaña
+    # Convención: mes_corte_idx puede ser float. Para el avance histórico
+    # interpolamos en el punto fraccional. Para slicing del acumulado actual
+    # usamos el mes entero vigente (incluir hasta el mes en curso).
+    mes_idx_int = _mes_idx_int(float(mes_corte_idx))
+
+    # Avance histórico interpolado a la posición fraccional del año
     avances_n_hist = [
-        _avance_acumulado(curvas_hist["n"][c])[mes_corte_idx]
+        _avance_en_idx(curvas_hist["n"][c], float(mes_corte_idx))
         for c in CAMPANAS_HIST
     ]
     avances_m_hist = [
-        _avance_acumulado(curvas_hist["monto"][c])[mes_corte_idx]
+        _avance_en_idx(curvas_hist["monto"][c], float(mes_corte_idx))
         for c in CAMPANAS_HIST
     ]
 
-    # Acumulados actuales hasta el mes vigente
-    acu_n = float(sum(serie_actual_n[: mes_corte_idx + 1]))
-    acu_m = float(sum(serie_actual_monto[: mes_corte_idx + 1]))
+    # Acumulados actuales — incluir hasta el mes vigente inclusive.
+    # La serie ya viene limitada por fecha desde serie_actual_desde_df
+    # (solo filas con FECHA ≤ hoy), así que esto da el acumulado real.
+    acu_n = float(sum(serie_actual_n[: mes_idx_int + 1]))
+    acu_m = float(sum(serie_actual_monto[: mes_idx_int + 1]))
 
     # Predicciones por modelo
     avance_M5_n = _predecir_avance_M5(avances_n_hist)
@@ -221,9 +293,14 @@ def predecir_cierre_campana(
     sin_min = min(sin_M3, sin_M4, sin_M5)
     sin_max = max(sin_M3, sin_M4, sin_M5)
 
+    mae_actual = _mae_interpolado(float(mes_corte_idx))
+    frac_mes = float(mes_corte_idx) - int(np.floor(float(mes_corte_idx)))
+
     return {
-        "mes_corte": MESES_CAMPANA[mes_corte_idx],
-        "mes_corte_idx": mes_corte_idx,
+        "mes_corte": MESES_CAMPANA[mes_idx_int],
+        "mes_corte_idx": float(mes_corte_idx),
+        "mes_corte_idx_int": mes_idx_int,
+        "fraccion_mes_transcurrido": max(0.0, min(1.0, frac_mes)),
         "acumulado_n_actual": acu_n,
         "acumulado_monto_actual": acu_m,
         "prima_neta": prima_neta_actual,
@@ -249,8 +326,8 @@ def predecir_cierre_campana(
                           "El error es mayor en monto que en casos porque hay más variabilidad "
                           "entre campañas en montos. Confiabilidad mejora desde Feb en adelante.",
         },
-        "MAE_mes_actual": MAE_M5_POR_MES.get(mes_corte_idx, 100.0),
-        "es_confiable": MAE_M5_POR_MES.get(mes_corte_idx, 100.0) <= UMBRAL_MAE_CONFIABLE,
+        "MAE_mes_actual": mae_actual,
+        "es_confiable": mae_actual <= UMBRAL_MAE_CONFIABLE,
         "limitaciones": [
             "El modelo asume que la tendencia de aceleración operativa continúa.",
             "Solo confiable desde el mes Feb en adelante (mes_idx >= 6).",
@@ -273,7 +350,7 @@ def _curvas_dept() -> Dict:
 
 def predecir_por_dept(
     df_actual,
-    mes_corte_idx: int,
+    mes_corte_idx: float,
     primas_actual_por_dept: Optional[Dict[str, float]] = None,
     today=None,
 ) -> List[Dict]:
@@ -377,12 +454,11 @@ def predecir_por_dept(
                 if idx is not None and isinstance(v, dict):
                     s_n[idx] = v.get("n", 0)
                     s_m[idx] = v.get("monto", 0)
-            cum_n, cum_m = np.cumsum(s_n), np.cumsum(s_m)
-            tot_n, tot_m = cum_n[-1], cum_m[-1]
-            if tot_n > 0:
-                avs_n_hist.append(cum_n[mes_corte_idx] / tot_n)
-            if tot_m > 0:
-                avs_m_hist.append(cum_m[mes_corte_idx] / tot_m)
+            # Interpolación fraccional del avance al mes_corte_idx (float)
+            if sum(s_n) > 0:
+                avs_n_hist.append(_avance_en_idx(s_n, float(mes_corte_idx)))
+            if sum(s_m) > 0:
+                avs_m_hist.append(_avance_en_idx(s_m, float(mes_corte_idx)))
 
         # Avance proyectado para el dept usando M4 (más estable con pocos puntos)
         if len(avs_n_hist) >= 1:
@@ -453,7 +529,7 @@ def predecir_por_dept(
 # ============================================================
 def evaluar_intensidad_campana(
     serie_actual_avisos: List[float],
-    mes_corte_idx: int,
+    mes_corte_idx: float,
 ) -> Dict:
     """
     Compara los avisos acumulados al mes vigente con la distribución
@@ -470,9 +546,11 @@ def evaluar_intensidad_campana(
     with open(PATH_NACIONAL, encoding="utf-8") as f:
         nac = json.load(f)
 
-    acu_actual = sum(serie_actual_avisos[: mes_corte_idx + 1])
+    mes_idx_int = _mes_idx_int(float(mes_corte_idx))
+    acu_actual = sum(serie_actual_avisos[: mes_idx_int + 1])
 
-    # Acumulados históricos al mismo mes
+    # Acumulados históricos al MISMO punto fraccional del año
+    # (interpolación entre fin-de-mes-anterior y fin-de-mes-actual).
     historicos = []
     for c in CAMPANAS_HIST:
         raw = nac.get("avisos", {}).get(c, {})
@@ -482,7 +560,18 @@ def evaluar_intensidad_campana(
             if idx is not None and isinstance(v, (int, float)):
                 s[idx] = v
         cum = np.cumsum(s)
-        historicos.append(float(cum[mes_corte_idx]))
+        # Interpolar el acumulado en el punto fraccional
+        idx_f = float(mes_corte_idx)
+        if idx_f >= 11:
+            historicos.append(float(cum[-1]))
+        elif idx_f <= -1:
+            historicos.append(0.0)
+        else:
+            idx_lo = int(np.floor(idx_f))
+            frac = float(idx_f - idx_lo)
+            cum_lo = float(cum[idx_lo]) if idx_lo >= 0 else 0.0
+            cum_hi = float(cum[idx_lo + 1]) if idx_lo + 1 < 12 else float(cum[-1])
+            historicos.append(cum_lo + frac * (cum_hi - cum_lo))
 
     if not historicos:
         return {"intensidad": "desconocida", "acumulado_actual": acu_actual,
@@ -516,18 +605,18 @@ def evaluar_intensidad_campana(
 
 def proyectar_serie_mensual(
     serie_actual: List[float],
-    mes_corte_idx: int,
+    mes_corte_idx: float,
     curvas_hist_camp: List[List[float]],
     metodo: str = "M5",
 ) -> List[float]:
     """
     Proyecta cómo evolucionará la serie mensual de aquí hasta Jul.
 
-    Para cada mes futuro m > mes_corte_idx:
-      avance_proyectado[m] = predicción según modelo (M5 por default)
-      total_proyectado = acu_actual / avance_proyectado[mes_corte_idx]
-      acumulado_proyectado[m] = avance_proyectado[m] * total_proyectado
-      mensual_proyectado[m] = acumulado_proyectado[m] - acumulado_proyectado[m-1]
+    El `mes_corte_idx` puede ser float (posición fraccional). Para el
+    cálculo del total proyectado usamos el avance interpolado al punto
+    fraccional. Para la proyección mensual futura (línea punteada del
+    gráfico) usamos los avances de fin-de-mes desde el mes vigente en
+    adelante.
     """
     avances_por_mes = []
     for mes in range(12):
@@ -539,16 +628,26 @@ def proyectar_serie_mensual(
         else:
             avances_por_mes.append(_predecir_avance_ultimas_n(avs, 2))
 
-    acu_actual = sum(serie_actual[: mes_corte_idx + 1])
-    avance_corte = avances_por_mes[mes_corte_idx]
+    mes_idx_int = _mes_idx_int(float(mes_corte_idx))
+    acu_actual = sum(serie_actual[: mes_idx_int + 1])
+
+    # Avance proyectado al PUNTO FRACCIONAL actual (no fin de mes)
+    avs_frac = [_avance_en_idx(s, float(mes_corte_idx)) for s in curvas_hist_camp]
+    if metodo == "M5":
+        avance_corte = _predecir_avance_M5(avs_frac)
+    elif metodo == "M4":
+        avance_corte = _predecir_avance_ultima(avs_frac)
+    else:
+        avance_corte = _predecir_avance_ultimas_n(avs_frac, 2)
+
     if avance_corte <= 1e-9:
         return list(serie_actual)
     total_proyectado = acu_actual / avance_corte
 
-    # Construir serie mensual proyectada
-    out = list(serie_actual[: mes_corte_idx + 1])
+    # Construir serie mensual proyectada (desde el mes siguiente al actual)
+    out = list(serie_actual[: mes_idx_int + 1])
     acu_prev = acu_actual
-    for mes in range(mes_corte_idx + 1, 12):
+    for mes in range(mes_idx_int + 1, 12):
         acu_proy = avances_por_mes[mes] * total_proyectado
         mensual = max(0, acu_proy - acu_prev)
         out.append(float(mensual))
@@ -559,16 +658,20 @@ def proyectar_serie_mensual(
 # ============================================================
 # Helper: extraer serie mensual de la campaña actual desde df dinámico
 # ============================================================
-def serie_actual_desde_df(df, today=None) -> Tuple[List[float], List[float], int]:
+def serie_actual_desde_df(df, today=None) -> Tuple[List[float], List[float], float]:
     """
     Extrae las series mensuales de count y monto de indemnizaciones para
     la campaña actual desde el DataFrame consolidado de la app.
 
-    Returns: (serie_n, serie_monto, mes_corte_idx)
+    Returns: (serie_n, serie_monto, mes_corte_idx_float)
       - serie_n: 12 floats con conteo INDEMNIZABLE por mes
       - serie_monto: 12 floats con monto indemnizado por mes
-      - mes_corte_idx: índice del mes vigente (last filled month)
+      - mes_corte_idx_float: posición FRACCIONAL del año de campaña
+            (ej. 9.33 = 1/3 del camino entre fin-de-May y fin-de-Jun).
+            Se actualiza cada día con `today`, permitiendo cortes con
+            resolución diaria (no más asumir que el mes vigente cerró).
     """
+    import calendar
     from datetime import datetime, timezone, timedelta
     if today is None:
         TZ_PERU = timezone(timedelta(hours=-5))
@@ -580,11 +683,18 @@ def serie_actual_desde_df(df, today=None) -> Tuple[List[float], List[float], int
     else:
         camp_actual = f"{today.year - 1}-{today.year}"
 
-    # Determinar mes vigente
+    # Mes vigente entero (0..11 en Ago→Jul)
     if today.month >= 8:
-        mes_corte_idx = today.month - 8
+        mes_idx_int_local = today.month - 8
     else:
-        mes_corte_idx = today.month + 4
+        mes_idx_int_local = today.month + 4
+
+    # Fracción del mes vigente transcurrida (día 1 → 0.0, último día → ~1.0)
+    dias_en_mes = calendar.monthrange(today.year, today.month)[1]
+    frac_mes = (today.day - 1) / dias_en_mes  # 0.0 al inicio del día 1
+
+    # Float = posición real entre fin-del-mes-anterior y fin-del-mes-actual
+    mes_corte_idx = mes_idx_int_local - 1 + frac_mes
 
     # Extraer fecha de ajuste de cada aviso indemnizable
     serie_n = [0.0] * 12
