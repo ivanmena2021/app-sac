@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from shared.css import inject_css
 from shared.state import init_session_state, is_data_loaded
+from shared.auth import require_auth
 from data_processor import filter_by_date_range
 
 # ═══════════════════════════════════════════════════════════════
@@ -48,6 +49,14 @@ with st.sidebar:
         <span class="badge-sb">MIDAGRI · FOGASA</span>
     </div>
     """, unsafe_allow_html=True)
+
+# ═══════════════════════════════════════════════════════════════
+# AUTENTICACIÓN — gate central: como app.py corre en cada carga de
+# página (st.navigation), esto protege las 12 páginas y deep-links.
+# Si no está autenticado: muestra login y st.stop() (nada de abajo
+# se ejecuta). Sin SAC_AUTH_USERS configurada: pasa con advertencia.
+# ═══════════════════════════════════════════════════════════════
+require_auth()
 
 # ═══════════════════════════════════════════════════════════════
 # NAVEGACIÓN MULTIPAGE
