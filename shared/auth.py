@@ -41,14 +41,17 @@ _FALLBACK_COOKIE_KEY = _secrets.token_hex(32)
 def _leer_config():
     """Lee usuarios y cookie_key de env vars o st.secrets.
 
-    Returns: (users: dict | None, cookie_key: str)
+    Returns: (users: dict | None, cookie_key: str, diag: str)
+      diag explica POR QUÉ users es None (para diagnóstico en el sidebar).
     """
     users_raw = os.environ.get("SAC_AUTH_USERS", "")
     cookie_key = os.environ.get("SAC_AUTH_COOKIE_KEY", "")
+    origen = "env var SAC_AUTH_USERS"
 
     if not users_raw:
         try:
             users_raw = st.secrets["auth"]["users"]
+            origen = "st.secrets[auth][users]"
         except Exception:
             users_raw = ""
     if not cookie_key:
@@ -58,16 +61,28 @@ def _leer_config():
             cookie_key = ""
 
     users = None
-    if users_raw:
+    diag = ""
+    if not users_raw:
+        diag = "SAC_AUTH_USERS no está definida (ni env var ni secrets)."
+    else:
         try:
-            users = (json.loads(users_raw) if isinstance(users_raw, str)
-                     else dict(users_raw))
-            if not isinstance(users, dict) or not users:
-                users = None
-        except Exception:
-            users = None  # JSON inválido → tratar como no configurado
+            parsed = (json.loads(users_raw) if isinstance(users_raw, str)
+                      else dict(users_raw))
+            if not isinstance(parsed, dict) or not parsed:
+                diag = (f"{origen} se leyó pero no contiene usuarios "
+                        f"(tipo: {type(parsed).__name__}).")
+            else:
+                users = parsed
+                diag = f"OK: {len(users)} usuario(s) cargado(s) desde {origen}."
+        except Exception as e:
+            # No mostramos el contenido (tiene hashes); solo el largo y el error.
+            n = len(users_raw) if isinstance(users_raw, str) else -1
+            diag = (f"{origen} no es JSON válido ({type(e).__name__}). "
+                    f"Largo recibido: {n} chars. "
+                    f"Revisar que el valor pegado en Railway esté completo "
+                    f"y sin saltos de línea.")
 
-    return users, (cookie_key or _FALLBACK_COOKIE_KEY)
+    return users, (cookie_key or _FALLBACK_COOKIE_KEY), diag
 
 
 def require_auth() -> None:
@@ -77,12 +92,12 @@ def require_auth() -> None:
       deliberado para el rollout; documentado arriba).
     - Con config → login form; si no está autenticado, st.stop().
     """
-    users, cookie_key = _leer_config()
+    users, cookie_key, diag = _leer_config()
 
     if not users:
         with st.sidebar:
-            st.caption("⚠ Acceso sin autenticación — configurar "
-                       "`SAC_AUTH_USERS` en Railway (ver generar_credenciales.py).")
+            st.caption("⚠ Acceso sin autenticación.")
+            st.caption(f"Diagnóstico: {diag}")
         return
 
     import streamlit_authenticator as stauth
