@@ -7,3 +7,4 @@ output/
 .DS_Store
 test_descarga*.py
 debug_*.png
+data_cache/

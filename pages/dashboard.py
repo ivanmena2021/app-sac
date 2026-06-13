@@ -26,11 +26,15 @@ page_header("Dashboard Nacional",
 
 # Status banner
 source = st.session_state.get("source", "manual")
-source_label = "descarga automática" if source == "auto" else "carga manual"
+source_label = {
+    "auto": "descarga automática",
+    "manual": "carga manual",
+    "snapshot": "última descarga guardada",
+}.get(source, source)
 extra = ""
-if source == "auto":
-    r = st.session_state.get("rimac_rows", "?")
-    l = st.session_state.get("lp_rows", "?")
+r = st.session_state.get("rimac_rows")
+l = st.session_state.get("lp_rows")
+if source in ("auto", "snapshot") and isinstance(r, int) and isinstance(l, int):
     extra = f" | Rímac: {r:,} + La Positiva: {l:,} filas"
 
 st.markdown(f'<div class="status-banner"><div class="dot"></div>'

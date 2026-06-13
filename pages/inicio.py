@@ -12,7 +12,56 @@ TZ_PERU = timezone(timedelta(hours=-5))
 from shared.components import page_header, render_stepper, footer
 from shared.data_loader import check_auto_download, check_credentials
 from shared.state import is_data_loaded
+from shared.data_snapshot import save_snapshot, snapshot_info, load_snapshot
 from data_processor import process_dynamic_data
+
+
+def _cargar_snapshot_cb():
+    """Callback del botón 'Usar última descarga exitosa'.
+
+    Va como on_click para que el clic se procese aunque el botón haya
+    sido renderizado en una rama que el rerun ya no alcanza (p. ej.
+    tras un error de descarga).
+    """
+    res = load_snapshot()
+    if res is None:
+        st.session_state["_snap_error"] = "El snapshot ya no está disponible en el servidor."
+        return
+    rimac_buf, lp_buf, meta = res
+    try:
+        datos = process_dynamic_data(lp_buf, rimac_buf)
+        st.session_state["datos"] = datos
+        st.session_state["processed"] = True
+        # Mostramos la fecha de la DESCARGA original, no la de ahora:
+        # es la fecha de corte real de los datos.
+        st.session_state["update_timestamp"] = meta.get("timestamp_display", "—")
+        st.session_state["source"] = "snapshot"
+        if isinstance(meta.get("rimac_rows"), int):
+            st.session_state["rimac_rows"] = meta["rimac_rows"]
+        if isinstance(meta.get("lp_rows"), int):
+            st.session_state["lp_rows"] = meta["lp_rows"]
+        st.session_state.pop("_snap_error", None)
+    except Exception as e:
+        st.session_state["_snap_error"] = f"{type(e).__name__}: {e}"
+
+
+def _render_snapshot_option():
+    """Botón secundario para cargar la última descarga exitosa (si existe)."""
+    snap = snapshot_info()
+    if not snap:
+        return
+    rr, lr = snap.get("rimac_rows"), snap.get("lp_rows")
+    filas = (f" · Rímac {rr:,} + La Positiva {lr:,} filas"
+             if isinstance(rr, int) and isinstance(lr, int) else "")
+    st.button(
+        f"Usar última descarga exitosa ({snap.get('timestamp_display', '—')})",
+        on_click=_cargar_snapshot_cb,
+        use_container_width=True,
+        key="btn_snapshot",
+        help=f"Carga los datos ya descargados sin volver a conectarse a los portales{filas}",
+    )
+    if st.session_state.get("_snap_error"):
+        st.error(f"No se pudo cargar la última descarga: {st.session_state.pop('_snap_error')}")
 
 # Si ya hay datos, mostrar opción de ir al dashboard
 if is_data_loaded():
@@ -105,6 +154,10 @@ else:
         with col_center:
             btn_auto = st.button("Actualizar Datos SAC", type="primary",
                                   use_container_width=True, key="btn_auto_main")
+            # Red de seguridad: cargar la última descarga buena sin scrapear.
+            # Se renderiza ANTES del flujo de descarga, así sigue clickeable
+            # en pantalla si la descarga falla a mitad de camino.
+            _render_snapshot_option()
 
         if btn_auto:
             from auto_download import descargar_rimac, descargar_lapositiva
@@ -125,6 +178,9 @@ else:
                 rimac_rows = len(df_siniestros)
             except Exception as e:
                 status_ph.error(f"Error al descargar de Rímac: {e}")
+                if snapshot_info():
+                    st.info("Puede continuar trabajando con el botón "
+                            "**Usar última descarga exitosa** (arriba).")
                 st.stop()
 
             # Paso 2: La Positiva
@@ -165,6 +221,9 @@ else:
                 _purl = getattr(e, "lp_page_url", "")
                 if _purl:
                     st.caption(f"URL: {_purl}")
+                if snapshot_info():
+                    st.info("Puede continuar trabajando con el botón "
+                            "**Usar última descarga exitosa** (arriba).")
                 st.stop()
 
             # Paso 3: Procesar
@@ -190,6 +249,11 @@ else:
                 st.session_state["source"] = "auto"
                 st.session_state["rimac_rows"] = rimac_rows
                 st.session_state["lp_rows"] = lp_rows
+                # Persistir como "última descarga exitosa": red de seguridad
+                # para cuando los portales fallen (y atajo para el resto del
+                # equipo, que comparte el mismo container).
+                save_snapshot(buf_sin.getvalue(), buf_mid.getvalue(),
+                              rimac_rows, lp_rows)
             except Exception as e:
                 status_ph.error(f"Error al procesar: {e}")
                 st.stop()
@@ -235,6 +299,8 @@ else:
             if not has_rimac: missing.append("Rímac")
             if not has_lp: missing.append("La Positiva")
             st.warning(f"Credenciales pendientes: {', '.join(missing)}")
+
+        _render_snapshot_option()
 
         st.markdown("### Cargar archivos")
         col_up1, col_up2 = st.columns(2)
