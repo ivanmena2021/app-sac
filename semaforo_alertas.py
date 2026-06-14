@@ -13,6 +13,18 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+# Cache decorator con fallback: si Streamlit no está en runtime (tests,
+# CLI), @_cache_data se vuelve un no-op y el cálculo corre directo.
+try:
+    _cache_data = st.cache_data
+except Exception:  # pragma: no cover
+    def _cache_data(*dargs, **dkwargs):
+        def _dec(fn):
+            return fn
+        if dargs and callable(dargs[0]):
+            return dargs[0]
+        return _dec
+
 # ═══════════════════════════════════════════════════════════════
 #  CONSTANTES
 # ═══════════════════════════════════════════════════════════════
@@ -54,7 +66,7 @@ def _safe_col(df, col):
     return pd.Series(pd.NaT, index=df.index)
 
 
-def compute_semaforo(df, today=None):
+def compute_semaforo(df, today=None, cache_key=None):
     """
     Calcula las 6 alertas independientes (ALERTA 01..06 + SEMAFORO 01..06)
     según las reglas oficiales del equipo SAC, y deriva las columnas
@@ -73,11 +85,32 @@ def compute_semaforo(df, today=None):
       - 5 de 6 alertas con >=99% match en clasificación de color.
       - Diferencias en conteo de días son por inconsistencias del Excel
         (algunas filas usan calendario, otras business, otras manual).
-    """
-    from sem_engine import compute_alerts
 
+    PERFORMANCE: este es el cálculo más pesado de la app (6 alertas con
+    aritmética de días hábiles sobre ~11k filas) y corría en CADA render
+    del dashboard (banner de alertas) y de la página del semáforo. Si se
+    pasa `cache_key` (tupla pequeña y estable, p.ej. (fecha_corte,
+    total_avisos)), el resultado se cachea por (cache_key, día). Sin
+    cache_key corre directo (tests / llamadas sueltas).
+    """
     if today is None:
         today = pd.Timestamp.now().normalize()
+    if cache_key is None:
+        return _compute_semaforo_impl(df, today)
+    return _compute_semaforo_cached(df, cache_key, today)
+
+
+@_cache_data(show_spinner=False, ttl=600)
+def _compute_semaforo_cached(_df, cache_key, today):
+    """Wrapper cacheado. `_df` lleva guion bajo → Streamlit NO lo hashea
+    (sería caro sobre 11k filas). La identidad del cache la dan cache_key
+    (cambia al recargar datos) y today (cambia cada día → cambian plazos)."""
+    return _compute_semaforo_impl(_df, today)
+
+
+def _compute_semaforo_impl(df, today):
+    """Cálculo real de las 6 alertas + derivación de columnas SEM_* (peor caso)."""
+    from sem_engine import compute_alerts
 
     # 1. Calcular las 6 alertas independientes
     result = compute_alerts(df, today=today)
@@ -175,7 +208,8 @@ def get_notification_banner_html(datos):
         return None
 
     today = pd.Timestamp.now().normalize()
-    df_sem = compute_semaforo(df, today)
+    _ck = (datos.get("fecha_corte", ""), datos.get("total_avisos", 0))
+    df_sem = compute_semaforo(df, today, cache_key=_ck)
     kpis = get_kpi_summary(df_sem)
 
     if kpis["total"] == 0:
@@ -549,7 +583,8 @@ match >99% en clasificación de color en 5 de 6 alertas.
 
     # ── Cálculo ──
     today = pd.Timestamp.now().normalize()
-    df_sem = compute_semaforo(df, today)
+    _ck = (datos.get("fecha_corte", ""), datos.get("total_avisos", 0))
+    df_sem = compute_semaforo(df, today, cache_key=_ck)
     pipeline = get_pipeline_summary(df_sem)
     kpis = get_kpi_summary(df_sem)
 
