@@ -8,3 +8,4 @@ output/
 test_descarga*.py
 debug_*.png
 data_cache/
+.pytest_cache/
