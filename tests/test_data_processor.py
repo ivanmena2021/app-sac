@@ -62,16 +62,16 @@ def test_siniestros_indemnizacion_es_numerica():
 # ─── _normalize_midagri (La Positiva, header real en fila 1) ───
 def test_midagri_detecta_header_en_fila_1():
     # LP trae una fila de título en la 0 y los encabezados reales en la 1.
-    # El comportamiento clave a proteger: que detecte el header en la fila 1
-    # (no en la 0) y mapee DEPARTAMENTO con su valor real. DEPARTAMENTO es
-    # idéntico en Rímac y LP, así que es la aserción robusta para este layout.
+    # Nombres de columna VERIFICADOS contra un Excel real de La Positiva
+    # (midagri_2026-02-26): la columna es "CÓDIGO DE AVISO" (con DE y tilde).
     raw = pd.DataFrame([
         ["REPORTE LISTAR TODOS LOS AVISOS", None, None],
-        ["CAMPAÑA", "CODIGO AVISO", "DEPARTAMENTO"],
+        ["CAMPAÑA", "CÓDIGO DE AVISO", "DEPARTAMENTO"],
         ["2025-2026", "999-1", "AMAZONAS"],
     ])
     # header=False para que la fila de título quede como datos (como en LP real)
     out = dp._normalize_midagri(_excel_bytes(raw, header=False))
+    assert "CODIGO_AVISO" in out.columns, "el header de LP debe detectarse en la fila 1"
     assert "DEPARTAMENTO" in out.columns
     assert "AMAZONAS" in set(out["DEPARTAMENTO"])
 
