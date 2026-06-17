@@ -6,6 +6,7 @@ combinados con datos estáticos (Materia Asegurada y Resumen SAC).
 import pandas as pd
 import numpy as np
 import os
+import re
 from datetime import datetime
 
 # Streamlit es opcional (para tests/CLI). Si no está disponible, los
@@ -498,6 +499,74 @@ def _normalize_tipo_siniestro_series(series):
     return s
 
 
+def _consolidar_columnas_duplicadas(df):
+    """Une columnas duplicadas del consolidado en una sola canónica.
+
+    Al combinar Rímac + LP, una fuente normaliza una columna a su nombre
+    canónico (con guion bajo) y la otra a veces la deja con el nombre crudo
+    (con espacios). El resultado tenía AMBAS columnas con los datos partidos.
+    Las reprogramaciones 04/05/06 nunca se normalizaban (solo 01-03) y, además,
+    venían duplicadas con y sin asterisco "(*)".
+
+    Esta función, post-combine:
+      - Fusiona cada variante cruda dentro de su canónica con combine_first
+        (recupera los valores que estaban en la columna cruda) y elimina la cruda.
+      - Renumera TODAS las reprogramaciones a FECHA_REPROGRAMACION_01..06
+        consecutivas, juntando las variantes con/sin asterisco.
+
+    Las columnas canónicas (las que usa la app: sem_engine, reportes, métricas)
+    se conservan; solo se eliminan las crudas redundantes.
+    """
+    df = df.copy()
+
+    def _merge_into(canonical, variantes):
+        presentes = [c for c in variantes if c in df.columns and c != canonical]
+        if canonical not in df.columns and not presentes:
+            return
+        es_fecha = canonical.startswith("FECHA") or canonical.startswith("FEC_")
+        if canonical not in df.columns:
+            df[canonical] = pd.NaT if es_fecha else pd.NA
+        if es_fecha:
+            df[canonical] = pd.to_datetime(df[canonical], errors="coerce")
+        for v in presentes:
+            col_v = pd.to_datetime(df[v], errors="coerce") if es_fecha else df[v]
+            # combine_first: conserva los valores no nulos de canonical y
+            # rellena sus nulos con los de la variante → recupera datos partidos.
+            df[canonical] = df[canonical].combine_first(col_v)
+            df.drop(columns=[v], inplace=True)
+
+    # Pares canónica ← variantes crudas (cubre con/sin tilde, con/sin "DE")
+    _merge_into("EMPRESA", ["COMPAÑIA DE SEGUROS", "COMPAÑÍA DE SEGUROS",
+                            "COMPANIA DE SEGUROS"])
+    _merge_into("FECHA_ATENCION", ["FECHA DE ATENCION", "FECHA DE ATENCIÓN",
+                                   "FECHA ATENCION", "FECHA ATENCIÓN"])
+    _merge_into("FECHA_SIEMBRA", ["FECHA DE SIEMBRA", "FECHA SIEMBRA"])
+    _merge_into("FECHA_COSECHA", ["FECHA DE COSECHA", "FECHA COSECHA"])
+    _merge_into("FECHA_ENVIO_DRAS",
+                ["FECHA DE ENVIO DE PADRON DRAS/AGENCIA AGRARIA",
+                 "FECHA ENVIO DRAS/AGENCIA AGRARIA",
+                 "FECHA DE ENVIO DRAS/AGENCIA AGRARIA",
+                 "FECHA ENVIO DRAS"])
+    _merge_into("TIPO_COBERTURA", ["TIPO DE COBERTURA", "TIPO COBERTURA"])
+
+    # Reprogramaciones: toda variante (con/sin asterisco, con/sin guion bajo,
+    # crudas 04/05/06) → FECHA_REPROGRAMACION_0N consecutivo.
+    reprog = {}
+    for c in list(df.columns):
+        cu = str(c).upper()
+        if "REPROGRAMAC" not in cu:
+            continue
+        m = re.search(r"0?([1-6])(?!\d)", cu)
+        if not m:
+            continue
+        canonical = f"FECHA_REPROGRAMACION_{int(m.group(1)):02d}"
+        reprog.setdefault(canonical, []).append(c)
+    for canonical, variantes in reprog.items():
+        _merge_into(canonical, variantes)
+
+    return df
+
+
 def process_dynamic_data(midagri_bytes, siniestros_bytes):
     """
     Procesa archivos dinámicos y genera métricas consolidadas.
@@ -564,6 +633,11 @@ def process_dynamic_data(midagri_bytes, siniestros_bytes):
     for _date_col in _date_cols:
         if _date_col in combined.columns:
             combined[_date_col] = pd.to_datetime(combined[_date_col], errors="coerce")
+
+    # Consolidar columnas duplicadas (cruda + canónica) en una sola, y
+    # renumerar reprogramaciones 01..06. Deja el consolidado descargable limpio.
+    combined = _consolidar_columnas_duplicadas(combined)
+
     # Usar combined como el dataset principal
     midagri = combined
     siniestros = siniestros_solo
