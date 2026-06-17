@@ -76,6 +76,69 @@ def test_midagri_detecta_header_en_fila_1():
     assert "AMAZONAS" in set(out["DEPARTAMENTO"])
 
 
+# ─── _consolidar_columnas_duplicadas (limpieza del consolidado) ───
+def test_consolida_empresa_y_dropea_compania():
+    df = pd.DataFrame({
+        "EMPRESA": ["RIMAC", "LA POSITIVA"],
+        "COMPAÑIA DE SEGUROS": ["RIMAC", "La Positiva Seguros"],
+    })
+    out = dp._consolidar_columnas_duplicadas(df)
+    assert "EMPRESA" in out.columns
+    assert "COMPAÑIA DE SEGUROS" not in out.columns
+    assert list(out["EMPRESA"]) == ["RIMAC", "LA POSITIVA"]  # EMPRESA gana
+
+
+def test_consolida_fechas_recupera_datos_partidos():
+    # Caso real: una fuente puso la fecha en la canónica, la otra en la cruda.
+    # combine_first debe recuperar AMBAS en una sola columna.
+    df = pd.DataFrame({
+        "FECHA_ATENCION":   [pd.Timestamp("2026-05-01"), pd.NaT],
+        "FECHA DE ATENCION": [pd.NaT,                     pd.Timestamp("2026-06-02")],
+    })
+    out = dp._consolidar_columnas_duplicadas(df)
+    assert "FECHA DE ATENCION" not in out.columns
+    assert out["FECHA_ATENCION"].iloc[0] == pd.Timestamp("2026-05-01")
+    assert out["FECHA_ATENCION"].iloc[1] == pd.Timestamp("2026-06-02")
+
+
+def test_consolida_tipo_cobertura_y_envio():
+    df = pd.DataFrame({
+        "TIPO_COBERTURA": ["CATASTROFICA", None],
+        "TIPO DE COBERTURA": [None, "COMPLEMENTARIA"],
+        "FECHA_ENVIO_DRAS": [pd.Timestamp("2026-05-01"), pd.NaT],
+        "FECHA DE ENVIO DE PADRON DRAS/AGENCIA AGRARIA": [pd.NaT, pd.Timestamp("2026-06-01")],
+    })
+    out = dp._consolidar_columnas_duplicadas(df)
+    assert "TIPO DE COBERTURA" not in out.columns
+    assert "FECHA DE ENVIO DE PADRON DRAS/AGENCIA AGRARIA" not in out.columns
+    assert list(out["TIPO_COBERTURA"]) == ["CATASTROFICA", "COMPLEMENTARIA"]
+
+
+def test_reprogramaciones_consecutivas_sin_asterisco_duplicado():
+    df = pd.DataFrame({
+        "FECHA_REPROGRAMACION_01": [pd.Timestamp("2026-01-01")],
+        "FECHA_REPROGRAMACION_02": [pd.NaT],
+        "FECHA_REPROGRAMACION_03": [pd.NaT],
+        "FECHA DE REPROGRAMACION 04": [pd.Timestamp("2026-04-04")],
+        "FECHA DE REPROGRAMACION 04 (*)": [pd.NaT],
+        "FECHA DE REPROGRAMACION 05": [pd.NaT],
+        "FECHA DE REPROGRAMACION 05 (*)": [pd.Timestamp("2026-05-05")],
+        "FECHA DE REPROGRAMACION 06": [pd.NaT],
+        "FECHA DE REPROGRAMACION 06 (*)": [pd.NaT],
+    })
+    out = dp._consolidar_columnas_duplicadas(df)
+    reprog = sorted(c for c in out.columns if "REPROGRAMAC" in c.upper())
+    # Solo deben quedar las 6 canónicas consecutivas, sin asterisco ni crudas
+    assert reprog == [
+        "FECHA_REPROGRAMACION_01", "FECHA_REPROGRAMACION_02",
+        "FECHA_REPROGRAMACION_03", "FECHA_REPROGRAMACION_04",
+        "FECHA_REPROGRAMACION_05", "FECHA_REPROGRAMACION_06",
+    ]
+    # Los valores se recuperan (incluso desde la variante con asterisco en 05)
+    assert out["FECHA_REPROGRAMACION_04"].iloc[0] == pd.Timestamp("2026-04-04")
+    assert out["FECHA_REPROGRAMACION_05"].iloc[0] == pd.Timestamp("2026-05-05")
+
+
 def test_midagri_no_incluye_fila_titulo_como_dato():
     raw = pd.DataFrame([
         ["REPORTE LISTAR TODOS LOS AVISOS", None, None],
