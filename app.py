@@ -41,14 +41,18 @@ init_session_state()
 # ═══════════════════════════════════════════════════════════════
 
 with st.sidebar:
-    # Branding MIDAGRI
-    st.markdown("""
-    <div class="sidebar-brand">
-        <h2>🌾 SAC 2025-2026</h2>
-        <p>Reportes Automatizados</p>
-        <span class="badge-sb">MIDAGRI · FOGASA</span>
-    </div>
-    """, unsafe_allow_html=True)
+    # Branding MIDAGRI — logo oficial + sub-rótulo SAC
+    _logo = os.path.join(os.path.dirname(__file__), "assets", "midagri_logo.png")
+    st.markdown('<div class="sidebar-brand">', unsafe_allow_html=True)
+    if os.path.exists(_logo):
+        st.image(_logo, use_container_width=True)
+    st.markdown(
+        '<h2>SAC 2025–2026</h2>'
+        '<p>Seguro Agrícola Catastrófico</p>'
+        '<span class="badge-sb">MIDAGRI · FOGASA</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 # ═══════════════════════════════════════════════════════════════
 # AUTENTICACIÓN — gate central: como app.py corre en cada carga de

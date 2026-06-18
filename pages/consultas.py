@@ -16,7 +16,9 @@ datos = get_datos()
 llm_ready = is_llm_available()
 engine_label = "IA + SQL" if llm_ready else "Motor Básico"
 engine_color = "#27ae60" if llm_ready else "#f39c12"
-engine_icon = "🤖" if llm_ready else "⚙️"
+engine_icon = ('<span class="ms" style="color:inherit;font-size:1rem;">smart_toy</span>'
+               if llm_ready else
+               '<span class="ms" style="color:inherit;font-size:1rem;">settings</span>')
 
 page_header("Consultas SAC",
             "Escriba su consulta en lenguaje natural. El sistema analiza los datos y genera texto profesional.",

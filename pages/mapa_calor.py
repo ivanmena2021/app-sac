@@ -75,7 +75,7 @@ with col_mapa:
 
 with col_ranking:
     nivel_label = NIVELES[nivel_seleccionado]["label"]
-    st.markdown(f'<div class="section-header"><div class="icon-box" style="background:#f0e8ff;">🏆</div>'
+    st.markdown(f'<div class="section-header"><div class="icon-box" style="background:#f0e8ff;"><span class="ms">leaderboard</span></div>'
                 f'<h3>Ranking {nivel_label}</h3></div>', unsafe_allow_html=True)
     try:
         df_ranking = get_ranking_table(datos, metrica_seleccionada, nivel_seleccionado, depto_filter)

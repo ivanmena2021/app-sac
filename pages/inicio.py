@@ -104,7 +104,7 @@ else:
                 <h1>SAC 2025 — 2026</h1>
                 <p class="subtitle">Herramientas de reporte y análisis del Seguro Agrícola Catastrófico</p>
             </div>
-            <div class="badge">🌾 MIDAGRI · {hora_actual}</div>
+            <div class="badge">MIDAGRI · {hora_actual}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -331,12 +331,12 @@ else:
     c1, c2 = st.columns(2)
     c3, c4 = st.columns(2)
     with c1:
-        st.markdown('<div class="report-card"><div class="icon">📄</div><h3>Ayuda Memoria Nacional</h3><p>Resumen de operatividad SAC a nivel nacional.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="report-card"><div class="icon"><span class="ms">description</span></div><h3>Ayuda Memoria Nacional</h3><p>Resumen de operatividad SAC a nivel nacional.</p></div>', unsafe_allow_html=True)
     with c2:
-        st.markdown('<div class="report-card"><div class="icon">🗺️</div><h3>Ayuda Memoria Departamental</h3><p>Detalle por cada departamento.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="report-card"><div class="icon"><span class="ms">map</span></div><h3>Ayuda Memoria Departamental</h3><p>Detalle por cada departamento.</p></div>', unsafe_allow_html=True)
     with c3:
-        st.markdown('<div class="report-card"><div class="icon">📋</div><h3>Operatividad SAC</h3><p>Siniestralidad, coberturas y desembolsos por empresa.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="report-card"><div class="icon"><span class="ms">checklist</span></div><h3>Operatividad SAC</h3><p>Siniestralidad, coberturas y desembolsos por empresa.</p></div>', unsafe_allow_html=True)
     with c4:
-        st.markdown('<div class="report-card"><div class="icon">📊</div><h3>Reporte EME</h3><p>Formato de reporte de emergencia por región.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="report-card"><div class="icon"><span class="ms">bar_chart</span></div><h3>Reporte EME</h3><p>Formato de reporte de emergencia por región.</p></div>', unsafe_allow_html=True)
 
     footer()
