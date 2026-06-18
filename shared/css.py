@@ -502,8 +502,14 @@ GLOBAL_CSS = """
 
 
 def inject_css():
-    """Inyecta el CSS global una sola vez por sesión."""
-    if st.session_state.get("_css_injected"):
-        return
+    """Inyecta el CSS global en CADA run.
+
+    IMPORTANTE: no usar un guard de "inyectar una sola vez por sesión".
+    En apps multipage (st.navigation) Streamlit reconcilia el DOM en cada
+    rerun y ELIMINA el bloque <style> si no se vuelve a emitir en ese run.
+    Con el guard, el CSS aparecía en la primera página y desaparecía al
+    navegar o interactuar (el diseño "se ocultaba"). Re-emitir el CSS en
+    cada run es la forma confiable; el costo de reenviar ~30 KB por rerun
+    es despreciable para esta app.
+    """
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
-    st.session_state["_css_injected"] = True
