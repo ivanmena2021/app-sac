@@ -113,7 +113,7 @@ st.caption(desc)
 # ═══════════════════════════════════════════════════════════════
 
 values = [all_data[c][key] for c in all_camps]
-# Históricas en azul corporativo, actual en verde MIDAGRI (resaltado)
+# Históricas en teal MIDAGRI, actual en verde (resaltado)
 colors = [PALETTE["primary_mid"]] * 5 + [PALETTE["midagri"]]
 
 fig = go.Figure()
@@ -126,7 +126,7 @@ fig.add_trace(go.Bar(
     ),
     text=[fmt.format(v) for v in values],
     textposition="outside",
-    textfont=dict(size=12, color=PALETTE["text_soft"], family="Segoe UI"),
+    textfont=dict(size=12, color=PALETTE["text_soft"]),
     hovertemplate=(
         "<b>Campaña %{x}</b><br>"
         + metrica_sel + ": %{text}<extra></extra>"
@@ -144,7 +144,7 @@ add_reference_line(
 apply_theme(
     fig,
     title=f"{metrica_sel} por Campaña Agrícola",
-    subtitle="Azul = históricas · Verde = campaña actual · Roja = promedio",
+    subtitle="Teal = históricas · Verde = campaña actual · Roja = promedio",
     height=470, show_legend=False, yaxis_title=metrica_sel,
     legend_position="none",
 )
@@ -740,7 +740,7 @@ with st.expander("Comparativo por Departamento — análisis individual", expand
             marker=dict(color=colors_d, line=dict(width=0), cornerradius=8),
             text=[fmt_d.format(v) for v in vals_d],
             textposition="outside",
-            textfont=dict(size=12, color=PALETTE["text_soft"], family="Segoe UI"),
+            textfont=dict(size=12, color=PALETTE["text_soft"]),
             hovertemplate=(
                 "<b>Campaña %{x}</b><br>"
                 + metrica_sel_d + ": %{text}<extra></extra>"
@@ -755,7 +755,7 @@ with st.expander("Comparativo por Departamento — análisis individual", expand
         apply_theme(
             fig_d,
             title=f"{metrica_sel_d} — {dept_sel.title()}",
-            subtitle="Azul = históricas · Verde = campaña actual · Roja = promedio",
+            subtitle="Teal = históricas · Verde = campaña actual · Roja = promedio",
             height=450, show_legend=False, yaxis_title=metrica_sel_d,
             legend_position="none",
         )
