@@ -86,7 +86,7 @@ with col_ref:
 try:
     st.markdown("""
     <div class="section-header">
-        <div class="icon-box" style="background:#e8f4f8;">📊</div>
+        <div class="icon-box" style="background:#e8f4f8;"><span class="ms">public</span></div>
         <h3>Panel Nacional</h3>
     </div>
     """, unsafe_allow_html=True)
@@ -142,7 +142,7 @@ try:
         with col_hdr:
             st.markdown("""
             <div class="section-header" style="margin-top:0;">
-                <div class="icon-box" style="background:#e8f8ec;">🗺️</div>
+                <div class="icon-box" style="background:#e8f8ec;"><span class="ms">location_on</span></div>
                 <h3>Panel Departamental</h3>
             </div>
             """, unsafe_allow_html=True)

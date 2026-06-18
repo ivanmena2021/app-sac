@@ -52,7 +52,7 @@ with tab_nac:
                     st.error(f"Error: {e}")
     with c2:
         if st.session_state.get("doc_nacional"):
-            st.download_button("⬇️ Descargar", data=st.session_state["doc_nacional"],
+            st.download_button(":material/download: Descargar", data=st.session_state["doc_nacional"],
                                file_name=st.session_state["doc_nacional_name"],
                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                use_container_width=True)
@@ -80,7 +80,7 @@ with tab_nac:
                     st.error(f"Error: {e}")
     with cp2:
         if st.session_state.get("pdf_exec"):
-            st.download_button("⬇️ Descargar PDF", data=st.session_state["pdf_exec"],
+            st.download_button(":material/download: Descargar PDF", data=st.session_state["pdf_exec"],
                                file_name=st.session_state["pdf_exec_name"], mime="application/pdf",
                                use_container_width=True)
 
@@ -111,7 +111,7 @@ with tab_depto:
                         st.error(f"Error: {e}")
         with cd:
             if st.session_state.get("doc_depto"):
-                st.download_button(f"⬇️ Descargar", data=st.session_state["doc_depto"],
+                st.download_button(f":material/download: Descargar", data=st.session_state["doc_depto"],
                                    file_name=st.session_state["doc_depto_name"],
                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                    use_container_width=True)
@@ -134,7 +134,7 @@ with tab_oper:
                     st.error(f"Error: {e}")
     with cd:
         if st.session_state.get("doc_operatividad"):
-            st.download_button("⬇️ Descargar", data=st.session_state["doc_operatividad"],
+            st.download_button(":material/download: Descargar", data=st.session_state["doc_operatividad"],
                                file_name=st.session_state["doc_operatividad_name"],
                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                use_container_width=True)
@@ -157,7 +157,7 @@ with tab_eme:
                     st.error(f"Error: {e}")
     with cd:
         if st.session_state.get("xls_eme"):
-            st.download_button("⬇️ Descargar EME", data=st.session_state["xls_eme"],
+            st.download_button(":material/download: Descargar EME", data=st.session_state["xls_eme"],
                                file_name=st.session_state["xls_eme_name"],
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                use_container_width=True)
@@ -225,7 +225,7 @@ with tab_ppt:
                     st.error(f"Error: {e}")
     with cd:
         if st.session_state.get("ppt_dinamico"):
-            st.download_button("⬇️ Descargar PPT", data=st.session_state["ppt_dinamico"],
+            st.download_button(":material/download: Descargar PPT", data=st.session_state["ppt_dinamico"],
                                file_name=st.session_state.get("ppt_dinamico_name", "SAC.pptx"),
                                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                                use_container_width=True)
@@ -240,7 +240,7 @@ with tab_hist:
     <div style="background:linear-gradient(135deg,#2C5F2D 0%,#1a3a1a 100%);
          padding:14px 20px;border-radius:10px;margin-bottom:14px;">
         <span style="color:#fff;font-size:18px;font-weight:700;">
-        📈 Análisis Histórico de Siniestralidad</span><br>
+        <span class="ms" style="color:inherit;">trending_up</span> Análisis Histórico de Siniestralidad</span><br>
         <span style="color:#d4edda;font-size:12px;">
         PPT con siniestralidad de 5 campañas + la actual. Siniestralidad = Indemnización / Prima Neta.</span>
     </div>
@@ -264,7 +264,7 @@ with tab_hist:
                         st.error(f"Error: {e}")
         with cd:
             if st.session_state.get("ppt_historico"):
-                st.download_button("⬇️ Descargar PPT Histórica",
+                st.download_button(":material/download: Descargar PPT Histórica",
                                    data=st.session_state["ppt_historico"],
                                    file_name=st.session_state.get("ppt_historico_name", "historico.pptx"),
                                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",

@@ -16,27 +16,27 @@ import streamlit as st
 # ═══════════════════════════════════════════════════════════════
 
 PALETTE = {
-    # Institucional MIDAGRI
-    "primary": "#0c2340",       # Navy corporate
-    "primary_mid": "#1a5276",   # Mid blue
-    "accent": "#2980b9",        # Blue accent
-    "midagri": "#408B14",       # Verde MIDAGRI
-    "midagri_soft": "#5FAE2E",  # Verde claro
+    # Institucional MIDAGRI 2024
+    "primary": "#1f3d2b",       # verde forest (títulos/ejes)
+    "primary_mid": "#00758d",   # teal PANTONE 3145 C (series secundarias)
+    "accent": "#008f49",        # PANTONE P 142-15 C (acción / serie principal)
+    "midagri": "#45a041",       # PANTONE 7738 C (campaña actual)
+    "midagri_soft": "#76bc21",  # PANTONE 368 C
     # Semánticos
-    "success": "#27ae60",
-    "warning": "#f39c12",
-    "danger": "#e74c3c",
-    "info": "#3498db",
-    "neutral": "#64748b",
-    # Superficies (tema claro — default)
+    "success": "#45a041",
+    "warning": "#da8824",       # PANTONE 7569 C
+    "danger": "#c0392b",
+    "info": "#00b2e3",          # PANTONE 306 C
+    "neutral": "#8a938f",
+    # Superficies (tema claro)
     "bg": "#ffffff",
-    "surface": "#f8fafc",
-    "grid_soft": "#f1f5f9",
-    "grid": "#e2e8f0",
-    "border": "#cbd5e1",
-    "text": "#0c2340",
-    "text_soft": "#334155",
-    "muted": "#64748b",
+    "surface": "#f5f7f4",
+    "grid_soft": "#eef2ee",
+    "grid": "#e6eae6",
+    "border": "#cdd6cf",
+    "text": "#1f3d2b",
+    "text_soft": "#3f4a44",
+    "muted": "#8a938f",
 }
 
 # M5 (Fase D) — paleta para charts en dark mode (cuando el usuario
@@ -44,15 +44,15 @@ PALETTE = {
 # CSS dark mode definidos en shared/css.py.
 PALETTE_DARK = {
     **PALETTE,
-    "bg": "#111827",            # surface oscura para charts
-    "surface": "#0f1729",
-    "grid_soft": "#1e293b",
-    "grid": "#1f2a3d",
-    "border": "#1f2a3d",
-    "text": "#e2e8f0",
-    "text_soft": "#cbd5e1",
-    "muted": "#94a3b8",
-    # Mantenemos colores semánticos y de marca (verde MIDAGRI, navy)
+    "bg": "#121a15",            # surface oscura verdosa para charts
+    "surface": "#0e1611",
+    "grid_soft": "#1a2820",
+    "grid": "#20312a",
+    "border": "#20312a",
+    "text": "#e6efe8",
+    "text_soft": "#9fb0a6",
+    "muted": "#7e8f85",
+    # Mantenemos colores de marca (verde/teal MIDAGRI) y semánticos
     # porque son identidad — no cambian entre temas.
 }
 
@@ -83,14 +83,14 @@ def _palette():
 
 # Secuencia de colores para series categóricas (múltiples campañas, tipos, etc.)
 SEQUENCE = [
-    "#1a5276",  # Dark blue
-    "#e67e22",  # Orange
-    "#16a085",  # Teal
-    "#8e44ad",  # Purple
-    "#c0392b",  # Red
-    "#408B14",  # Verde MIDAGRI (reservado p/ campaña actual)
-    "#d4af37",  # Gold
-    "#6c5ce7",  # Violet
+    "#00758d",  # teal
+    "#da8824",  # ámbar
+    "#45a041",  # verde medio
+    "#00b2e3",  # cyan
+    "#e47e3d",  # naranja
+    "#008f49",  # verde MIDAGRI (reservado p/ campaña actual)
+    "#ffb71b",  # dorado
+    "#1f3d2b",  # verde forest
 ]
 
 # Escalas continuas recomendadas
@@ -101,7 +101,7 @@ SCALE = {
     "cool": "Blues",
 }
 
-FONT_FAMILY = "Segoe UI, Inter, Arial, sans-serif"
+FONT_FAMILY = "Raleway, system-ui, Arial, sans-serif"
 
 
 # ═══════════════════════════════════════════════════════════════
