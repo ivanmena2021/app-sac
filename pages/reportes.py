@@ -237,7 +237,7 @@ with tab_batch:
 # ═══ Análisis Histórico ═══
 with tab_hist:
     st.markdown("""
-    <div style="background:linear-gradient(135deg,#2C5F2D 0%,#1a3a1a 100%);
+    <div style="background:#1f3d2b;
          padding:14px 20px;border-radius:10px;margin-bottom:14px;">
         <span style="color:#fff;font-size:18px;font-weight:700;">
         <span class="ms" style="color:inherit;">trending_up</span> Análisis Histórico de Siniestralidad</span><br>
