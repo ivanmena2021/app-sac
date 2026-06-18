@@ -76,7 +76,7 @@ pred = predecir_cierre_campana(
 mae_mes = pred["MAE_mes_actual"]  # ya viene interpolado al punto fraccional
 if not pred["es_confiable"]:
     st.warning(
-        f"⚠ El modelo tiene MAE histórico de {mae_mes:.0f}% al corte de **{mes_corte}**. "
+        f"El modelo tiene MAE histórico de {mae_mes:.0f}% al corte de **{mes_corte}**. "
         f"Las predicciones son orientativas y tienen alta incertidumbre. "
         f"El modelo es confiable desde **Mar** en adelante (MAE < {UMBRAL_MAE_CONFIABLE:.0f}%)."
     )

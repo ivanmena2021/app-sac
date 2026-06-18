@@ -528,10 +528,10 @@ def render_semaforo_tab(datos):
     st.markdown(_css_semaforo(), unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="background:linear-gradient(135deg,#408B14 0%,#2C5F2D 100%);
+    <div style="background:#1f3d2b;
          padding:18px 24px;border-radius:10px;margin-bottom:18px;">
         <span style="color:#fff;font-size:22px;font-weight:700;">
-        🚦 Semáforo de Alertas — Control de Plazos SAC</span><br>
+        <span class="ms" style="color:inherit;">traffic</span> Semáforo de Alertas — Control de Plazos SAC</span><br>
         <span style="color:#d4edda;font-size:13px;">
         Monitoreo en tiempo real de los 6 procesos del Seguro Agrícola Catastrófico</span>
     </div>
@@ -568,7 +568,7 @@ match >99% en clasificación de color en 5 de 6 alertas.
 
     if not check_semaforo_columns(df):
         st.error(
-            "⚠️ **Datos insuficientes para el Semáforo de Alertas**\n\n"
+            "**Datos insuficientes para el Semáforo de Alertas**\n\n"
             "Los datos cargados no contienen las columnas necesarias para el control de plazos. "
             "Para habilitar esta funcionalidad, suba el archivo Excel expandido que incluye:\n"
             "- Fecha de Atención\n"
@@ -698,7 +698,7 @@ match >99% en clasificación de color en 5 de 6 alertas.
                             .groupby("DEPARTAMENTO").size()
                             .sort_values(ascending=False).head(5))
                 if not top_rojo.empty:
-                    st.markdown('<div class="sem-drilldown-title">🔴 Top 5 departamentos con más alertas rojas</div>',
+                    st.markdown('<div class="sem-drilldown-title"><span class="ms" style="color:var(--color-danger);">priority_high</span> Top 5 departamentos con más alertas rojas</div>',
                                 unsafe_allow_html=True)
                     for depto, cnt in top_rojo.items():
                         st.markdown(f"&nbsp;&nbsp;&nbsp;**{depto}**: {cnt} avisos")
@@ -726,7 +726,7 @@ match >99% en clasificación de color en 5 de 6 alertas.
     with col_exp2:
         if st.session_state.get("sem_excel"):
             st.download_button(
-                "⬇️ Descargar Excel Semáforo",
+                ":material/download: Descargar Excel Semáforo",
                 data=st.session_state["sem_excel"],
                 file_name=st.session_state["sem_excel_name"],
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -86,7 +86,7 @@ with col_ref:
 try:
     st.markdown("""
     <div class="section-header">
-        <div class="icon-box" style="background:#e8f4f8;"><span class="ms">public</span></div>
+        <div class="icon-box" style="background:#e8f8ec;"><span class="ms">public</span></div>
         <h3>Panel Nacional</h3>
     </div>
     """, unsafe_allow_html=True)
@@ -243,8 +243,8 @@ st.markdown("</div>", unsafe_allow_html=True)
 # M8 fix: navegación rápida con jerarquía visual (wrapper con background +
 # título descriptivo). Los botones quedan iguales para no romper nada.
 st.markdown(
-    '<div class="quick-nav-wrapper" style="background:linear-gradient(135deg,#f0f7ff 0%,#e8f4f8 100%);'
-    'border:1px solid #d1d9e0;border-radius:14px;padding:1rem 1.25rem;'
+    '<div class="quick-nav-wrapper" style="background:#f1f6f1;'
+    'border:1px solid #e6eae6;border-radius:14px;padding:1rem 1.25rem;'
     'margin-top:1.5rem;margin-bottom:0.5rem;">'
     '<div style="font-size:0.75rem;font-weight:700;color:#0c2340;'
     'text-transform:uppercase;letter-spacing:0.6px;margin-bottom:0.7rem;">'

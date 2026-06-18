@@ -652,7 +652,7 @@ def _render_semaforo_grid(risks, location_col="Departamento"):
         )
 
     header = (
-        '<tr style="background:#2C5F2D;color:#fff;">'
+        '<tr style="background:#1f3d2b;color:#fff;">'
         f'<th style="padding:6px 8px;text-align:left;">{location_col}</th>'
         '<th style="padding:6px 8px;text-align:center;">Lluvia</th>'
         '<th style="padding:6px 8px;text-align:center;">Temperatura</th>'
@@ -938,17 +938,17 @@ def render_clima_tab(datos):
     """Punto de entrada: renderiza la pestaña Clima y Riesgo."""
 
     st.markdown("""
-    <div style="background:linear-gradient(135deg,#1a73e8 0%,#0d47a1 100%);
+    <div style="background:#1f3d2b;
          padding:18px 24px;border-radius:10px;margin-bottom:18px;">
         <span style="color:#fff;font-size:22px;font-weight:700;">
-        🌦️ Clima y Riesgo — Pronóstico Meteorológico SAC</span><br>
-        <span style="color:#bbdefb;font-size:13px;">
+        <span class="ms" style="color:inherit;">rainy</span> Clima y Riesgo — Pronóstico Meteorológico SAC</span><br>
+        <span style="color:#cfe8d6;font-size:13px;">
         Pronóstico a 7 días con granularidad distrital · Datos de Open-Meteo (actualización cada hora)</span>
     </div>
     """, unsafe_allow_html=True)
 
     # Explicación de criterios
-    with st.expander("ℹ️ ¿Cómo funciona? — Umbrales, Grid-Snap y fuente de datos", expanded=False):
+    with st.expander(":material/info: ¿Cómo funciona? — Umbrales, Grid-Snap y fuente de datos", expanded=False):
         st.markdown("""
 **Fuente:** [Open-Meteo API](https://open-meteo.com/) — pronóstico global gratuito, sin API key.
 
@@ -1032,7 +1032,7 @@ def _render_district_flow(datos, df):
 
     # 7. Info de grid
     st.caption(
-        f"📊 {len(district_coords):,} distritos → {n_grid} puntos de cuadrícula · "
+        f"{len(district_coords):,} distritos → {n_grid} puntos de cuadrícula · "
         f"{available}/{n_grid} con datos"
     )
 
