@@ -1,4 +1,8 @@
-streamlit>=1.36.0
+# Pin de minor: un cambio de minor de Streamlit (auto-instalado en el
+# rebuild de Railway) introdujo poda más estricta de <style> huérfanos y
+# rompió el CSS. ~=1.54.0 fija el minor (permite parches) para que un
+# redeploy no cambie comportamiento por debajo. Bump deliberado al subir.
+streamlit~=1.54.0
 openpyxl>=3.1.0
 pandas>=2.0.0
 python-docx>=1.1.0
