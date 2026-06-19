@@ -207,12 +207,65 @@ with p4:
 
 st.caption(
     f"**Modelo recomendado:** {pred['modelo_recomendado']} (regresión lineal sobre el "
-    f"avance entre campañas). MAE en validación leave-one-out: "
-    f"**{pred['desempeno_validacion']['MAE_casos']:.1f}% en casos**, "
-    f"**{pred['desempeno_validacion']['MAE_monto']:.1f}% en monto**. "
-    f"En la última campaña histórica (2024-25) acertó con error de "
-    f"{pred['desempeno_validacion']['ultima_campana_test']['err_casos']:.1f}% en casos."
+    f"avance entre campañas). Error REAL al corte de **{pred['mes_corte']}**: "
+    f"**{pred['MAE_mes_actual']:.1f}%** en casos — calculado por backtesting "
+    f"leave-one-out sobre las 5 campañas ya cerradas (no es una estimación). "
+    f"Ver el detalle por campaña abajo."
 )
+
+
+# ═══════════════════════════════════════════════════════════════
+# VALIDACIÓN DEL MODELO — backtesting leave-one-out (en vivo)
+# ═══════════════════════════════════════════════════════════════
+bt = pred.get("backtest")
+if bt:
+    with st.expander("Validación del modelo — backtesting sobre campañas cerradas", expanded=False):
+        st.caption(
+            "Cada campaña ya cerrada se predice usando SOLO las otras 4 y se "
+            "compara con su cierre real conocido. Es el error real del modelo, "
+            "reproducible — no una estimación. MAE = error absoluto medio."
+        )
+
+        # 1) Track record al mes de corte actual: predicho vs real por campaña
+        idx_int = pred["mes_corte_idx_int"]
+        filas_bt = bt["detalle"].get(idx_int, [])
+        if filas_bt:
+            st.markdown(f"**Al corte de {pred['mes_corte']} — predicho vs. real, por campaña:**")
+            bt_rows = []
+            for f in filas_bt:
+                bt_rows.append({
+                    "Campaña": f["campana"],
+                    "Real (casos)": f"{f['real_n']:,.0f}",
+                    "Predicho (casos)": f"{f['pred_n']:,.0f}",
+                    "Error casos": f"{f['err_n']:.1f}%" if f["err_n"] is not None else "—",
+                    "Error monto": f"{f['err_monto']:.1f}%" if f["err_monto"] is not None else "—",
+                })
+            st.dataframe(pd.DataFrame(bt_rows), use_container_width=True, hide_index=True)
+
+        # 2) Curva de error del modelo a lo largo del ciclo
+        meses_lbl, mae_c, mae_mo = [], [], []
+        for m in range(12):
+            mm = bt["mae_por_mes"][m]
+            meses_lbl.append(MESES_CAMPANA[m])
+            mae_c.append(min(mm["casos"], 200) if mm["casos"] != float("inf") else None)
+            mae_mo.append(min(mm["monto"], 200) if mm["monto"] != float("inf") else None)
+
+        fig_bt = go.Figure()
+        fig_bt.add_trace(go.Scatter(
+            x=meses_lbl, y=mae_c, mode="lines+markers", name="MAE casos",
+            line=dict(color=PALETTE["accent"], width=2.5), connectgaps=False))
+        fig_bt.add_trace(go.Scatter(
+            x=meses_lbl, y=mae_mo, mode="lines+markers", name="MAE monto",
+            line=dict(color=PALETTE["warning"], width=2.5), connectgaps=False))
+        add_reference_line(fig_bt, y=UMBRAL_MAE_CONFIABLE, color=PALETTE["danger"],
+                           label=f"Umbral confiable ({UMBRAL_MAE_CONFIABLE:.0f}%)", dash="dot")
+        apply_theme(
+            fig_bt,
+            title="Error del modelo por mes del ciclo (backtesting)",
+            subtitle="Más bajo = más confiable · capado a 200% para visualización",
+            height=380, yaxis_title="MAE (%)",
+        )
+        render_chart(fig_bt, key="chart_backtest_mae", filename="backtest_mae_por_mes")
 
 
 # ═══════════════════════════════════════════════════════════════

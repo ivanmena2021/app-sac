@@ -204,6 +204,98 @@ def _predecir_avance_ultimas_n(avances_por_camp: List[float], n: int = 2) -> flo
 
 
 # ============================================================
+# Backtesting — validación leave-one-out del modelo M5
+# ============================================================
+def _avance_loo(avances_full: List[float], holdout_idx: int) -> float:
+    """Regresión lineal sobre los avances de TODAS las campañas excepto la
+    holdout_idx, evaluada en la posición de la campaña excluida.
+
+    Mide qué tan bien el modelo "adivina" el avance de una campaña que no
+    vio — el núcleo del backtesting leave-one-out.
+    """
+    xs = [i for i in range(len(avances_full)) if i != holdout_idx]
+    ys = [avances_full[i] for i in xs]
+    if len(xs) < 2:
+        return float(np.mean(ys)) if ys else 0.0
+    slope, intercept = np.polyfit(xs, ys, 1)
+    return float(np.clip(slope * holdout_idx + intercept, 0.0, 1.0))
+
+
+def backtest_modelo(curvas_hist: Optional[Dict] = None) -> Dict:
+    """Backtesting leave-one-out del modelo M5 sobre las 5 campañas históricas.
+
+    Para cada mes del ciclo y cada campaña histórica: se predice el cierre de
+    ESA campaña usando solo las otras 4 (regresión sobre sus avances al mismo
+    mes) y se compara con el cierre REAL conocido (la campaña ya terminó). Es
+    la base empírica de MAE_M5_POR_MES, ahora calculada en vivo y verificable.
+
+    Returns dict:
+      - mae_por_mes: {mes_idx: {"casos": %MAE, "monto": %MAE, "n": nº válidas}}
+      - detalle:     {mes_idx: [ {campana, real_n, pred_n, err_n,
+                                  real_monto, pred_monto, err_monto} ]}
+    """
+    if curvas_hist is None:
+        curvas_hist = _curvas_historicas()
+
+    mae_por_mes: Dict[int, Dict] = {}
+    detalle: Dict[int, List[Dict]] = {}
+
+    for m in range(12):
+        av_n = [_avance_acumulado(curvas_hist["n"][c])[m] for c in CAMPANAS_HIST]
+        av_m = [_avance_acumulado(curvas_hist["monto"][c])[m] for c in CAMPANAS_HIST]
+        errs_n: List[float] = []
+        errs_m: List[float] = []
+        filas: List[Dict] = []
+        for i, c in enumerate(CAMPANAS_HIST):
+            real_n = float(sum(curvas_hist["n"][c]))
+            real_m = float(sum(curvas_hist["monto"][c]))
+            acu_n = float(np.cumsum(curvas_hist["n"][c])[m])
+            acu_m = float(np.cumsum(curvas_hist["monto"][c])[m])
+            pa_n = _avance_loo(av_n, i)
+            pa_m = _avance_loo(av_m, i)
+            pred_n = acu_n / pa_n if pa_n > 1e-9 else 0.0
+            pred_m = acu_m / pa_m if pa_m > 1e-9 else 0.0
+            e_n = abs(pred_n - real_n) / real_n * 100 if real_n > 0 else None
+            e_m = abs(pred_m - real_m) / real_m * 100 if real_m > 0 else None
+            if e_n is not None:
+                errs_n.append(e_n)
+            if e_m is not None:
+                errs_m.append(e_m)
+            filas.append({
+                "campana": c,
+                "real_n": real_n, "pred_n": pred_n, "err_n": e_n,
+                "real_monto": real_m, "pred_monto": pred_m, "err_monto": e_m,
+            })
+        mae_por_mes[m] = {
+            "casos": float(np.mean(errs_n)) if errs_n else float("inf"),
+            "monto": float(np.mean(errs_m)) if errs_m else float("inf"),
+            "n": len(errs_n),
+        }
+        detalle[m] = filas
+
+    return {"mae_por_mes": mae_por_mes, "detalle": detalle}
+
+
+def _interp_backtest_mae(mae_por_mes: Dict, idx_float: float, metric: str = "casos") -> float:
+    """Interpola el MAE del backtest en un punto fraccional del año
+    (mismo criterio que _mae_interpolado, pero sobre el resultado en vivo)."""
+    def val(m):
+        return mae_por_mes.get(max(0, min(11, m)), {}).get(metric, float("inf"))
+    idx_lo = max(0, min(11, int(np.floor(idx_float))))
+    idx_hi = min(11, idx_lo + 1)
+    frac = float(idx_float - idx_lo) if idx_lo == int(np.floor(idx_float)) else 0.0
+    lo, hi = val(idx_lo), val(idx_hi)
+    inf = float("inf")
+    if lo == inf and hi == inf:
+        return inf
+    if lo == inf:
+        return hi
+    if hi == inf:
+        return lo
+    return lo + frac * (hi - lo)
+
+
+# ============================================================
 # API pública
 # ============================================================
 def predecir_cierre_campana(
@@ -293,7 +385,14 @@ def predecir_cierre_campana(
     sin_min = min(sin_M3, sin_M4, sin_M5)
     sin_max = max(sin_M3, sin_M4, sin_M5)
 
-    mae_actual = _mae_interpolado(float(mes_corte_idx))
+    # Validación EN VIVO: backtesting leave-one-out sobre las 5 campañas ya
+    # cerradas → error real del modelo. Reemplaza los MAE hardcodeados (que
+    # resultaron optimistas en media-temporada). MAE_M5_POR_MES queda como
+    # fallback documentado si el backtest no es computable en ese punto.
+    bt = backtest_modelo(curvas_hist)
+    mae_actual = _interp_backtest_mae(bt["mae_por_mes"], float(mes_corte_idx), "casos")
+    if mae_actual == float("inf"):
+        mae_actual = _mae_interpolado(float(mes_corte_idx))
     frac_mes = float(mes_corte_idx) - int(np.floor(float(mes_corte_idx)))
 
     return {
@@ -328,6 +427,8 @@ def predecir_cierre_campana(
         },
         "MAE_mes_actual": mae_actual,
         "es_confiable": mae_actual <= UMBRAL_MAE_CONFIABLE,
+        "mae_fuente": "backtest leave-one-out (en vivo)",
+        "backtest": bt,
         "limitaciones": [
             "El modelo asume que la tendencia de aceleración operativa continúa.",
             "Solo confiable desde el mes Feb en adelante (mes_idx >= 6).",

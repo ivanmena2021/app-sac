@@ -127,3 +127,59 @@ def test_predecir_cierre_compat_int():
     serie_m[8] = 500_000
     res = p.predecir_cierre_campana(serie_n, serie_m, 8, 5_000_000)
     assert "predicciones" in res and "intervalo_n" in res
+
+
+# ─── Backtesting leave-one-out ───
+def _curvas_fake():
+    # 5 campañas con curvas crecientes plausibles (cumsum termina en total)
+    base = [0, 0, 1, 2, 4, 6, 9, 13, 18, 24, 28, 30]
+    return {
+        "n": {c: [b * (i + 1) for b in base] for i, c in enumerate(p.CAMPANAS_HIST)},
+        "monto": {c: [b * (i + 1) * 1000 for b in base] for i, c in enumerate(p.CAMPANAS_HIST)},
+    }
+
+
+def test_backtest_estructura():
+    bt = p.backtest_modelo(_curvas_fake())
+    assert set(bt.keys()) == {"mae_por_mes", "detalle"}
+    assert set(bt["mae_por_mes"].keys()) == set(range(12))
+    # cada mes valida las 5 campañas
+    assert all(len(bt["detalle"][m]) == 5 for m in range(12))
+
+
+def test_backtest_jul_error_cero():
+    # En el último mes (Jul, idx 11) el avance acumulado es 100% → el modelo
+    # predice el total exacto → error ~0 para todas las campañas.
+    bt = p.backtest_modelo(_curvas_fake())
+    assert bt["mae_por_mes"][11]["casos"] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_backtest_mejora_hacia_el_cierre():
+    # Con las curvas REALES, el MAE cerca del cierre (Jun, idx 10) debe ser
+    # menor que a mitad de ciclo (Feb, idx 6): el modelo gana certeza con el
+    # tiempo. (Con curvas fake escalares las avances son idénticas y el error
+    # es ~0 en todos lados, así que esta propiedad se testea con datos reales.)
+    bt = p.backtest_modelo()  # usa _curvas_historicas() reales
+    assert bt["mae_por_mes"][10]["casos"] < bt["mae_por_mes"][6]["casos"]
+
+
+def test_backtest_loo_no_usa_la_campana_evaluada():
+    # _avance_loo excluye la campaña holdout: con 5 puntos, al excluir idx=2
+    # la regresión se ajusta solo a [0,1,3,4]
+    avances = [0.1, 0.2, 0.9, 0.4, 0.5]  # idx 2 es outlier
+    sin_outlier = p._avance_loo(avances, 2)
+    # La predicción en idx=2 debe ignorar el 0.9 outlier → quedar cerca de la
+    # tendencia de los otros (~0.3), no cerca de 0.9
+    assert sin_outlier < 0.6
+
+
+def test_predecir_cierre_incluye_backtest():
+    serie_n = [0] * 12
+    serie_n[10] = 50
+    serie_m = [0] * 12
+    serie_m[10] = 1_000_000
+    res = p.predecir_cierre_campana(serie_n, serie_m, 9.33, 5_000_000)
+    assert "backtest" in res and "mae_por_mes" in res["backtest"]
+    assert res["mae_fuente"].startswith("backtest")
+    # MAE reportado debe ser un número finito y no negativo
+    assert res["MAE_mes_actual"] >= 0
