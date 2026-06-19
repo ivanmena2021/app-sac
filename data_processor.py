@@ -873,8 +873,10 @@ def _get_departamento_data_impl(datos, depto):
     midagri = datos["midagri"]
     materia = datos["materia"]
 
-    # Filtrar MIDAGRI por departamento (sin copy — solo lectura)
-    df_depto = midagri[midagri["DEPARTAMENTO"] == depto_upper]
+    # Filtrar MIDAGRI por departamento. .copy() explícito: más abajo se le
+    # agrega la columna "_fecha"; sin la copia es un slice y pandas emite
+    # SettingWithCopyWarning (y el resultado podría no escribirse).
+    df_depto = midagri[midagri["DEPARTAMENTO"] == depto_upper].copy()
     mat_depto = materia[materia["DEPARTAMENTO"] == depto_upper]
 
     # Datos estáticos del departamento
