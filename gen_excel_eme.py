@@ -39,8 +39,11 @@ def generate_reporte_eme(datos):
 
     # Distritos por departamento
     if "DISTRITO" in midagri.columns and "PROVINCIA" in midagri.columns:
+        # include_groups=False: pandas>=2.2 deprecó que apply opere sobre la
+        # columna de agrupación. _build_district_text solo usa PROVINCIA/DISTRITO
+        # (no DEPARTAMENTO), así que excluirla no cambia el resultado.
         dist_info = midagri.groupby("DEPARTAMENTO").apply(
-            lambda g: _build_district_text(g)
+            lambda g: _build_district_text(g), include_groups=False
         ).reset_index()
         dist_info.columns = ["DEPARTAMENTO", "DISTRITOS"]
         dept_data = dept_data.merge(dist_info, on="DEPARTAMENTO", how="left")
