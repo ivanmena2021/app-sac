@@ -1,7 +1,9 @@
 """
 Semáforo de Alertas SAC — Motor de cálculo y UI Streamlit.
-Sistema de control de plazos para las 6 etapas del flujo del
-Seguro Agrícola Catastrófico (SAC).
+Sistema de control de plazos para las 7 etapas del flujo del
+Seguro Agrícola Catastrófico (SAC). El cálculo por etapa vive en
+sem_engine.compute_alerts (port fiel del Excel oficial, reconciliado
+fila-a-fila — ver tests/test_reconciliacion_semaforo.py).
 """
 
 import io
@@ -32,13 +34,21 @@ except Exception:  # pragma: no cover
 COLS_MINIMAS = ["FECHA_AVISO", "FECHA_ATENCION"]
 
 STAGES = [
-    {"key": "atencion",        "label": "Atención",              "icon": "1", "emoji": "📋"},
-    {"key": "programacion",    "label": "Programación",          "icon": "2", "emoji": "📅"},
-    {"key": "ajuste",          "label": "Ajuste",                "icon": "3", "emoji": "🔍"},
-    {"key": "reprogramacion",  "label": "Reprogramación",        "icon": "4", "emoji": "🔄"},
-    {"key": "padron",          "label": "Padrón y Validación",   "icon": "5", "emoji": "📝"},
-    {"key": "pago",            "label": "Pago SAC",              "icon": "6", "emoji": "💰"},
+    {"key": "atencion",        "label": "Atención",        "icon": "1", "emoji": "📋"},
+    {"key": "programacion",    "label": "Programación",    "icon": "2", "emoji": "📅"},
+    {"key": "ajuste",          "label": "Ajuste 01",       "icon": "3", "emoji": "🔍"},
+    {"key": "reprogramacion",  "label": "Reprogramación",  "icon": "4", "emoji": "🔄"},
+    {"key": "padron",          "label": "Padrón",          "icon": "5", "emoji": "📝"},
+    {"key": "validacion",      "label": "Validación",      "icon": "6", "emoji": "✅"},
+    {"key": "pago",            "label": "Pago SAC",        "icon": "7", "emoji": "💰"},
 ]
+
+# Etapa (key UI) → columna de semáforo del motor (SEMAFORO_01..07).
+STAGE_SEM_COL = {
+    "atencion": "SEMAFORO_01", "programacion": "SEMAFORO_02",
+    "ajuste": "SEMAFORO_03", "reprogramacion": "SEMAFORO_04",
+    "padron": "SEMAFORO_05", "validacion": "SEMAFORO_06", "pago": "SEMAFORO_07",
+}
 
 COLORS = {
     "verde":  {"hex": "#27ae60", "bg": "#d4edda", "label": "En plazo"},
@@ -68,11 +78,11 @@ def _safe_col(df, col):
 
 def compute_semaforo(df, today=None, cache_key=None):
     """
-    Calcula las 6 alertas independientes (ALERTA 01..06 + SEMAFORO 01..06)
+    Calcula las 7 etapas independientes (ALERTA 01..07 + SEMAFORO 01..07)
     según las reglas oficiales del equipo SAC, y deriva las columnas
     de resumen SEM_* (peor caso) para compatibilidad con la UI existente.
 
-    Las 6 alertas se calculan en sem_engine.compute_alerts(). Esta función
+    Las 7 etapas se calculan en sem_engine.compute_alerts(). Esta función
     luego deriva:
       - SEM_ETAPA: la etapa con la peor alerta (más crítica) o
                    "completado" si no hay ninguna alerta activa.
@@ -81,13 +91,13 @@ def compute_semaforo(df, today=None, cache_key=None):
       - SEM_DIAS: los días de la peor alerta (si aplica).
       - SEM_DETALLE: el texto descriptivo de la alerta crítica.
 
-    Validado contra "Dashboard SAC 25-26 ... Con semáforo.xlsx":
-      - 5 de 6 alertas con >=99% match en clasificación de color.
-      - Diferencias en conteo de días son por inconsistencias del Excel
-        (algunas filas usan calendario, otras business, otras manual).
+    Validado contra "Dashboard_SAC_25-26_..._SEMAFOROS.xlsx":
+      - Reconciliación fila-a-fila: 7/7 etapas con 100% de match en el
+        semáforo (-1/0/1/2/3) sobre las 12,914 filas reales del corte.
+      - Días calendario en A01-A06 y días hábiles en A07, tal cual el Excel.
 
-    PERFORMANCE: este es el cálculo más pesado de la app (6 alertas con
-    aritmética de días hábiles sobre ~11k filas) y corría en CADA render
+    PERFORMANCE: este es el cálculo más pesado de la app (7 etapas
+    vectorizadas sobre ~13k filas) y corría en CADA render
     del dashboard (banner de alertas) y de la página del semáforo. Si se
     pasa `cache_key` (tupla pequeña y estable, p.ej. (fecha_corte,
     total_avisos)), el resultado se cachea por (cache_key, día). Sin
@@ -109,23 +119,24 @@ def _compute_semaforo_cached(_df, cache_key, today):
 
 
 def _compute_semaforo_impl(df, today):
-    """Cálculo real de las 6 alertas + derivación de columnas SEM_* (peor caso)."""
+    """Cálculo real de las 7 etapas + derivación de columnas SEM_* (peor caso)."""
     from sem_engine import compute_alerts
 
-    # 1. Calcular las 6 alertas independientes
+    # 1. Calcular las 7 etapas independientes
     result = compute_alerts(df, today=today)
 
-    # 2. Derivar SEM_* desde las 6 alertas (peor caso)
+    # 2. Derivar SEM_* desde las 7 etapas (peor caso)
     n = len(result)
 
-    # Mapeo etapa → columnas de salida
+    # Mapeo etapa → columnas de salida (7 etapas, A01..A07 del Excel)
     stages_info = [
-        ("atencion",        "ALERTA_01_ATENCION",         "SEMAFORO_01"),
-        ("programacion",    "ALERTA_02_PROGRAMACION",     "SEMAFORO_02"),
-        ("ajuste",          "ALERTA_03_AJUSTE",           "SEMAFORO_03"),
-        ("reprogramacion",  "ALERTA_04_REPROGRAMACION",   "SEMAFORO_04"),
-        ("padron",          "ALERTA_05_PADRON_VALIDACION","SEMAFORO_05"),
-        ("pago",            "ALERTA_06_PAGO",             "SEMAFORO_06"),
+        ("atencion",        "ALERTA_01",   "SEMAFORO_01"),
+        ("programacion",    "ALERTA_02",   "SEMAFORO_02"),
+        ("ajuste",          "ALERTA_03",   "SEMAFORO_03"),
+        ("reprogramacion",  "ALERTA_04",   "SEMAFORO_04"),
+        ("padron",          "ALERTA_05",   "SEMAFORO_05"),
+        ("validacion",      "ALERTA_06",   "SEMAFORO_06"),
+        ("pago",            "ALERTA_07",   "SEMAFORO_07"),
     ]
 
     sem_etapa   = pd.Series("completado", index=result.index, dtype="object")
@@ -165,17 +176,28 @@ def _compute_semaforo_impl(df, today):
 
 
 def get_pipeline_summary(df_sem):
-    """Genera resumen por etapa: conteo de verde/ámbar/rojo."""
-    df_active = df_sem[df_sem["SEM_ETAPA"] != "completado"]
+    """Resumen por etapa con conteo INDEPENDIENTE por etapa (igual que el
+    Excel/R1): cada aviso cuenta en TODAS sus etapas, no solo en la peor.
+
+    Por etapa devuelve verde/ámbar/rojo (alertas activas) + conforme/excluido
+    (informativos). Esto es lo que debe coincidir con la hoja R1 del Excel.
+    """
     summary = {}
     for s in STAGES:
         k = s["key"]
-        sub = df_active[df_active["SEM_ETAPA"] == k]
+        col = STAGE_SEM_COL[k]
+        if col not in df_sem.columns:
+            summary[k] = {"verde": 0, "ambar": 0, "rojo": 0,
+                          "conforme": 0, "excluido": 0, "total": 0}
+            continue
+        v = pd.to_numeric(df_sem[col], errors="coerce")
+        verde = int((v == 1).sum()); ambar = int((v == 2).sum())
+        rojo = int((v == 3).sum()); conforme = int((v == 0).sum())
+        excluido = int((v == -1).sum())
         summary[k] = {
-            "verde": int((sub["SEM_ALERTA"] == "verde").sum()),
-            "ambar": int((sub["SEM_ALERTA"] == "ambar").sum()),
-            "rojo":  int((sub["SEM_ALERTA"] == "rojo").sum()),
-            "total": len(sub),
+            "verde": verde, "ambar": ambar, "rojo": rojo,
+            "conforme": conforme, "excluido": excluido,
+            "total": verde + ambar + rojo,
         }
     return summary
 
@@ -244,7 +266,8 @@ def generate_sankey_figure(df_sem):
 
     stage_keys = [s["key"] for s in STAGES]
     stage_labels = [s["label"] for s in STAGES] + ["Completado"]
-    node_colors = ["#3498db", "#2980b9", "#1a5276", "#f39c12", "#e67e22", "#27ae60", "#95a5a6"]
+    node_colors = ["#3498db", "#2980b9", "#1a5276", "#f39c12", "#e67e22",
+                   "#16a085", "#27ae60", "#95a5a6"]
 
     # Contar avisos por etapa y alerta
     sources, targets, values, link_colors = [], [], [], []
@@ -533,32 +556,32 @@ def render_semaforo_tab(datos):
         <span style="color:#fff;font-size:22px;font-weight:700;">
         <span class="ms" style="color:inherit;">traffic</span> Semáforo de Alertas — Control de Plazos SAC</span><br>
         <span style="color:#d4edda;font-size:13px;">
-        Monitoreo en tiempo real de los 6 procesos del Seguro Agrícola Catastrófico</span>
+        Monitoreo en tiempo real de las 7 etapas del Seguro Agrícola Catastrófico</span>
     </div>
     """, unsafe_allow_html=True)
 
     # ── Explicación de criterios ──
     with st.expander("¿Cómo funciona el Semáforo? — Reglas por etapa", expanded=False):
         st.markdown("""
-**El semáforo evalúa cada aviso en 6 etapas independientes del flujo SAC.** Cada etapa tiene su propio nivel de alerta (verde / ámbar / rojo) según el plazo transcurrido. El "Pipeline" muestra la peor etapa de cada aviso para priorizar.
+**El semáforo evalúa cada aviso en 7 etapas independientes del flujo SAC.** Cada etapa tiene su propio nivel de alerta (verde / ámbar / rojo) según el plazo transcurrido. El "Pipeline" cuenta cada etapa de forma independiente (igual que la hoja R1 del Excel); el indicador de "peor etapa" prioriza por aviso.
 
-**Casos especiales (`ALERTA ATENCION OK` en todas las alertas):**
-- DUPLICIDAD = REPETIDO o OBSERVACION contiene "REPETIDO"
-- OBSERVACION contiene "NUL" (avisos nulos)
-- OBSERVACION contiene "SIN COBERTURA" (aplica a alertas 02-06)
+**Días calendario** en las etapas 1-6; **días hábiles** (sáb+dom y feriados no laborables) en la etapa 7 (Pago).
+
+**Avisos EXCLUIDOS (no entran al semáforo):** OBSERVACIÓN/DUPLICIDAD = REPETIDO, NULO (incl. OBS 03) o SIN COBERTURA (incl. OBS 08).
 
 | # | Etapa | Verde | Ámbar | Rojo |
 |---|-------|-------|-------|------|
-| 1 | **Atención** | Sin atención 1-6 días | Sin atención 7-10 días | Sin atención >10 días |
-| 2 | **Programación** | 1-11 días | 12-15 días | >15 días sin programar |
-| 3 | **Ajuste** | 1-11 días | 12-14 días | >15 días sin acta |
-| 4 | **Reprogramación** | Reprog futura >7 días → OK | Reprog futura 1-7 días | Reprog ya pasó |
-| 5 | **Padrón y Validación** | Sin padrón 1-15 / Sin validación 1-6 | 16-20 / 7-15 | >20 / >15 días |
-| 6 | **Pago SAC** (días hábiles) | 1-11 días | 12-15 días | >15 días sin desembolso |
+| 1 | **Atención** | ≤6 días | 7-10 días | >10 días |
+| 2 | **Programación** | ≤11 días | 12-15 días | >15 días |
+| 3 | **Ajuste 01** | ≤11 días | 12-15 días | >15 días |
+| 4 | **Reprogramación** | reprog. ya pasó / faltan ≤3 | faltan 4-7 días | faltan >7 días |
+| 5 | **Padrón** | ≤15 días | 16-20 días | >20 días |
+| 6 | **Validación** | ≤6 días | 7-15 días | >15 días |
+| 7 | **Pago SAC** (días hábiles) | ≤11 días | 12-15 días | >15 días |
 
-**Nota:** El motor calcula 12 columnas internas (`ALERTA_01..06` + `SEMAFORO_01..06`).
-La UI muestra la **peor etapa** de cada aviso. Validado contra Excel oficial:
-match >99% en clasificación de color en 5 de 6 alertas.
+**Nota:** El motor calcula 14 columnas internas (`ALERTA_01..07` + `SEMAFORO_01..07`),
+port fiel de las fórmulas del Excel oficial. Reconciliación fila-a-fila: **100% de match
+en las 7 etapas** sobre las 12,914 filas del corte (ver `tools/reconciliar_semaforo.py`).
         """)
 
     df = datos.get("midagri")

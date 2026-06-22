@@ -1,9 +1,10 @@
 """Tests del motor del semáforo — foco en _networkdays_intl.
 
-Esta función replica NETWORKDAYS.INTL de Excel y es el corazón de las 6
-alertas. El equipo validó que las fórmulas coinciden 100% con el Excel
-oficial; estos tests congelan ese comportamiento para que un refactor no
-lo rompa en silencio (un día hábil mal contado = alerta en color equivocado).
+Esta función replica NETWORKDAYS.INTL de Excel y se usa en la etapa 7 (Pago,
+días hábiles). La reconciliación fila-a-fila de las 7 etapas vive en
+test_reconciliacion_semaforo.py; estos tests congelan el conteo de días
+hábiles para que un refactor no lo rompa en silencio (un día mal contado =
+alerta en color equivocado).
 
 Referencia de calendario (verificado): 2026-06-01 es LUNES, por lo tanto
 2026-06-07 es domingo y 2026-06-29 es lunes (además feriado en FERIADOS_SAC).
