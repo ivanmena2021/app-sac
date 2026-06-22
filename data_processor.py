@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import os
 import re
+import unicodedata
 from datetime import datetime
 
 # Streamlit es opcional (para tests/CLI). Si no está disponible, los
@@ -536,7 +537,8 @@ def _consolidar_columnas_duplicadas(df):
             df.drop(columns=[v], inplace=True)
 
     # Pares canónica ← variantes crudas (cubre con/sin tilde, con/sin "DE")
-    _merge_into("EMPRESA", ["COMPAÑIA DE SEGUROS", "COMPAÑÍA DE SEGUROS",
+    _merge_into("EMPRESA", ["EMPRESA DE SEGUROS", "EMPRESA DE SEGURO",
+                            "COMPAÑIA DE SEGUROS", "COMPAÑÍA DE SEGUROS",
                             "COMPANIA DE SEGUROS"])
     _merge_into("FECHA_ATENCION", ["FECHA DE ATENCION", "FECHA DE ATENCIÓN",
                                    "FECHA ATENCION", "FECHA ATENCIÓN"])
@@ -565,6 +567,75 @@ def _consolidar_columnas_duplicadas(df):
         _merge_into(canonical, variantes)
 
     return df
+
+
+# Orden oficial de campos del Anexo 12 (doc "Orden de campos Anexo 12 - APP
+# SAC"). Nombres canónicos de la app; el matching al exportar es FLEXIBLE
+# (ignora mayúsc/acentos y trata "_" ≈ espacio) y las columnas no listadas se
+# anexan al final — nunca se descartan.
+ORDEN_ANEXO_12 = [
+    "CAMPAÑA", "EMPRESA DE SEGUROS", "CODIGO_AVISO", "DEPARTAMENTO", "PROVINCIA",
+    "DISTRITO", "SECTOR_ESTADISTICO", "TIPO_CULTIVO", "FENOLOGIA",
+    "FECHA_SIEMBRA", "FECHA_COSECHA", "SUP_SEMBRADA", "SUP_ASEGURADA",
+    "TIPO_SINIESTRO", "FECHA_SINIESTRO", "FECHA_AVISO", "FECHA_ATENCION",
+    "FECHA_PROGRAMACION_AJUSTE", "FECHA_AJUSTE_ACTA_1", "ESTADO_SINIESTRO",
+    "ACTA DE AJUSTE 01", "FECHA_REPROGRAMACION_01", "FECHA_REPROGRAMACION_02",
+    "FECHA_REPROGRAMACION_03", "FECHA_REPROGRAMACION_04",
+    "FECHA_REPROGRAMACION_05", "FECHA_REPROGRAMACION_06",
+    "FECHA_AJUSTE_ACTA_FINAL", "ESTADO_INSPECCION", "ACTA DE AJUSTE FINAL",
+    "PRIMA_NETA_DPTO", "TIPO_COBERTURA", "SUP_AFECTADA", "SUP_PERDIDA",
+    "RENDIMIENTO OBTENIDO", "RENDIMIENTO ASEGURADO", "DICTAMEN",
+    "SUP_INDEMNIZADA", "INDEMNIZACION", "PRIORIZADO", "CODIGO_PADRON",
+    "FECHA_ENVIO_DRAS", "FECHA_VALIDACION", "FECHA_DESEMBOLSO",
+    "MONTO_DESEMBOLSADO", "SUP_DESEMBOLSO", "N_PRODUCTORES", "OBSERVACION",
+    "DETALLE_OBSERVACION",
+]
+
+
+def _norm_col(s):
+    """Normaliza un nombre de columna para comparar: sin acentos, mayúsculas,
+    '_' y espacios equivalentes."""
+    s = "".join(c for c in unicodedata.normalize("NFD", str(s))
+                if unicodedata.category(c) != "Mn")
+    return " ".join(s.upper().replace("_", " ").split())
+
+
+def reordenar_consolidado_export(df):
+    """Devuelve una COPIA del consolidado lista para exportar (descarga):
+      - unifica la columna de aseguradora en una sola llamada EMPRESA DE SEGUROS
+        (el marcador interno EMPRESA + cualquier variante cruda),
+      - ordena las columnas según el Anexo 12 oficial (ORDEN_ANEXO_12).
+
+    Matching flexible (sin acentos, '_'≈espacio). Las columnas que no estén en
+    el orden oficial se anexan al final preservando su orden actual — nunca se
+    pierde información. Solo afecta la exportación; no toca datos["midagri"].
+    """
+    df = df.copy()
+
+    # Unificar aseguradora → "EMPRESA DE SEGUROS"
+    for v in ("EMPRESA DE SEGUROS", "EMPRESA DE SEGURO", "COMPAÑIA DE SEGUROS",
+              "COMPAÑÍA DE SEGUROS", "COMPANIA DE SEGUROS"):
+        if v in df.columns and "EMPRESA" in df.columns and v != "EMPRESA":
+            df["EMPRESA"] = df["EMPRESA"].combine_first(df[v])
+            df.drop(columns=[v], inplace=True)
+    if "EMPRESA" in df.columns and "EMPRESA DE SEGUROS" not in df.columns:
+        df = df.rename(columns={"EMPRESA": "EMPRESA DE SEGUROS"})
+
+    # Ordenar según Anexo 12 (match flexible), no listadas al final
+    norm_to_actual = {}
+    for c in df.columns:
+        norm_to_actual.setdefault(_norm_col(c), c)
+    ordenadas, usadas = [], set()
+    for campo in ORDEN_ANEXO_12:
+        actual = norm_to_actual.get(_norm_col(campo))
+        if actual is not None and actual not in usadas:
+            ordenadas.append(actual)
+            usadas.add(actual)
+    for c in df.columns:
+        if c not in usadas:
+            ordenadas.append(c)
+            usadas.add(c)
+    return df[ordenadas]
 
 
 def process_dynamic_data(midagri_bytes, siniestros_bytes):
