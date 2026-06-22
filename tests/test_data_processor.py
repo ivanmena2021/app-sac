@@ -149,3 +149,79 @@ def test_midagri_no_incluye_fila_titulo_como_dato():
     # El título no debe aparecer como un valor de departamento
     assert "REPORTE LISTAR TODOS LOS AVISOS" not in set(out["DEPARTAMENTO"].astype(str))
     assert len(out) == 1   # solo la fila de datos real
+
+
+# ─── reordenar_consolidado_export (descarga del consolidado, Anexo 12) ───
+def test_export_unifica_empresa_de_seguros():
+    # El consolidado real trae el marcador interno EMPRESA (RIMAC/LA POSITIVA)
+    # y, partido, una columna cruda "EMPRESA DE SEGUROS". Deben unificarse en
+    # una sola columna llamada "EMPRESA DE SEGUROS".
+    df = pd.DataFrame({
+        "EMPRESA": ["RIMAC", "LA POSITIVA"],
+        "EMPRESA DE SEGUROS": [None, "LA POSITIVA SEGUROS"],
+        "CAMPAÑA": ["2025-2026", "2025-2026"],
+    })
+    out = dp.reordenar_consolidado_export(df)
+    assert "EMPRESA DE SEGUROS" in out.columns
+    assert "EMPRESA" not in out.columns
+    # EMPRESA (canónica) gana cuando hay valor; combine_first rellena lo faltante
+    assert list(out["EMPRESA DE SEGUROS"]) == ["RIMAC", "LA POSITIVA"]
+
+
+def test_export_renombra_empresa_cuando_no_hay_cruda():
+    df = pd.DataFrame({
+        "EMPRESA": ["RIMAC"],
+        "CAMPAÑA": ["2025-2026"],
+    })
+    out = dp.reordenar_consolidado_export(df)
+    assert "EMPRESA DE SEGUROS" in out.columns
+    assert "EMPRESA" not in out.columns
+    assert list(out["EMPRESA DE SEGUROS"]) == ["RIMAC"]
+
+
+def test_export_ordena_segun_anexo_12():
+    # Columnas en orden arbitrario → deben salir en el orden del Anexo 12.
+    df = pd.DataFrame({
+        "DISTRITO": ["x"], "CAMPAÑA": ["2025-2026"], "EMPRESA": ["RIMAC"],
+        "DEPARTAMENTO": ["CUSCO"], "CODIGO_AVISO": ["1-1"], "PROVINCIA": ["y"],
+    })
+    out = dp.reordenar_consolidado_export(df)
+    assert list(out.columns) == [
+        "CAMPAÑA", "EMPRESA DE SEGUROS", "CODIGO_AVISO",
+        "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
+    ]
+
+
+def test_export_match_flexible_acentos_y_guiones():
+    # El orden debe reconocer variantes sin acento y con espacios en vez de "_".
+    df = pd.DataFrame({
+        "TIPO COBERTURA": ["CATASTROFICA"],   # Anexo: TIPO_COBERTURA
+        "CAMPANA": ["2025-2026"],             # Anexo: CAMPAÑA
+        "EMPRESA": ["RIMAC"],
+    })
+    out = dp.reordenar_consolidado_export(df)
+    # CAMPAÑA primero, luego EMPRESA DE SEGUROS, TIPO_COBERTURA al final
+    assert list(out.columns) == ["CAMPANA", "EMPRESA DE SEGUROS", "TIPO COBERTURA"]
+
+
+def test_export_no_descarta_columnas_desconocidas():
+    df = pd.DataFrame({
+        "CAMPAÑA": ["2025-2026"], "EMPRESA": ["RIMAC"],
+        "COLUMNA_RARA_NUEVA": ["z"], "OTRA_EXTRA": ["w"],
+    })
+    out = dp.reordenar_consolidado_export(df)
+    # Las conocidas primero, en orden Anexo 12; las desconocidas al final
+    assert list(out.columns) == [
+        "CAMPAÑA", "EMPRESA DE SEGUROS", "COLUMNA_RARA_NUEVA", "OTRA_EXTRA",
+    ]
+    # No se pierde ninguna columna
+    assert set(out.columns) == {
+        "CAMPAÑA", "EMPRESA DE SEGUROS", "COLUMNA_RARA_NUEVA", "OTRA_EXTRA",
+    }
+
+
+def test_export_no_muta_el_dataframe_original():
+    df = pd.DataFrame({"EMPRESA": ["RIMAC"], "CAMPAÑA": ["2025-2026"]})
+    cols_antes = list(df.columns)
+    dp.reordenar_consolidado_export(df)
+    assert list(df.columns) == cols_antes, "no debe mutar datos['midagri']"

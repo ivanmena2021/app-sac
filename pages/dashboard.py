@@ -11,7 +11,7 @@ TZ_PERU = timezone(timedelta(hours=-5))
 
 from shared.state import require_data, get_datos
 from shared.components import render_metric, page_header, footer
-from data_processor import get_departamento_data
+from data_processor import get_departamento_data, reordenar_consolidado_export
 
 require_data()
 datos = get_datos()
@@ -54,18 +54,21 @@ except Exception:
 col_spacer, col_dl, col_ref = st.columns([2, 1, 1])
 with col_dl:
     try:
-        df_clean = datos["midagri"].copy()
+        # Unifica EMPRESA/EMPRESA DE SEGUROS en una sola columna y ordena los
+        # campos según el Anexo 12 oficial (solo para la descarga).
+        df_clean = reordenar_consolidado_export(datos["midagri"])
         for col in df_clean.columns:
             if df_clean[col].dtype == "object":
                 df_clean[col] = df_clean[col].astype(str).replace("nan", "")
+        col_emp = "EMPRESA DE SEGUROS"
         buf = io.BytesIO()
         with pd.ExcelWriter(buf, engine="openpyxl") as writer:
             df_clean.to_excel(writer, index=False, sheet_name="Consolidado SAC")
-            if "EMPRESA" in df_clean.columns:
-                for emp in sorted(df_clean["EMPRESA"].dropna().unique()):
+            if col_emp in df_clean.columns:
+                for emp in sorted(df_clean[col_emp].dropna().unique()):
                     if str(emp).strip() in ("", "nan"):
                         continue
-                    df_clean[df_clean["EMPRESA"] == emp].to_excel(
+                    df_clean[df_clean[col_emp] == emp].to_excel(
                         writer, index=False, sheet_name=str(emp)[:31])
         buf.seek(0)
         st.download_button(
