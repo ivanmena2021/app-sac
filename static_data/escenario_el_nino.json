@@ -1,0 +1,1269 @@
+{
+ "meta": {
+  "campanas": [
+   "2021-2022",
+   "2022-2023",
+   "2023-2024",
+   "2024-2025"
+  ],
+  "total_avisos_hist": 54479,
+  "n_sectores": 5040,
+  "tasa_2026": 1000.0,
+  "peor_ano": "2024-2025",
+  "excluye": "2020-2021 (superficie no comparable)",
+  "nota": "Escenario de stress sobre 4 campañas (2021-2025). Cada valor de hectáreas es un máximo histórico observado (envolvente por celda territorio×sector×siniestro×cultivo). Monto = ha × S/1000. No es un pronóstico."
+ },
+ "exposicion": {
+  "ha_asegurada_total": 2001988,
+  "valor_asegurado_S": 2001987520,
+  "prima_total_S": 73727431,
+  "productores": 834160,
+  "suma_aseg_ha": 1000.0
+ },
+ "banda_nacional": {
+  "peor_ano_real": {
+   "campana": "2024-2025",
+   "ha": 63498,
+   "monto_S1000": 63498038
+  },
+  "ancla": {
+   "ha": 93387,
+   "monto_S1000": 93387460
+  },
+  "envolvente": {
+   "ha": 188474,
+   "monto_S1000": 188474158
+  }
+ },
+ "escalera": {
+  "base_cronica": {
+   "ha": 51276,
+   "monto": 51276025
+  },
+  "shock_el_nino": {
+   "ha": 89606,
+   "monto": 89605936,
+   "costa_lluvia": {
+    "ha": 43223,
+    "monto": 43223281
+   },
+   "sierra_seq_hel": {
+    "ha": 46383,
+    "monto": 46382655
+   }
+  },
+  "campana_el_nino": {
+   "monto": 140881961
+  },
+  "stress_costero": {
+   "supuesto": "30% de siniestralidad en costa norte (anclado en Tumbes 44%/Ica 59% ya observados)",
+   "ha": 135835,
+   "monto": 135835305,
+   "detalle": {
+    "PIURA": {
+     "ha_asegurada": 223818,
+     "ha_stress": 67146,
+     "monto": 67145505
+    },
+    "LAMBAYEQUE": {
+     "ha_asegurada": 112331,
+     "ha_stress": 33699,
+     "monto": 33699300
+    },
+    "LA LIBERTAD": {
+     "ha_asegurada": 108333,
+     "ha_stress": 32500,
+     "monto": 32499999
+    },
+    "TUMBES": {
+     "ha_asegurada": 8302,
+     "ha_stress": 2491,
+     "monto": 2490501
+    }
+   }
+  }
+ },
+ "por_departamento": [
+  {
+   "departamento": "AYACUCHO",
+   "region": "SIERRA",
+   "ha_asegurada": 87307,
+   "ha_envolvente": 28282,
+   "monto_envolvente": 28282273,
+   "ha_shock": 11862,
+   "siniestralidad": 32.4,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "APURIMAC",
+   "region": "SIERRA",
+   "ha_asegurada": 86887,
+   "ha_envolvente": 26970,
+   "monto_envolvente": 26969997,
+   "ha_shock": 9534,
+   "siniestralidad": 31.0,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "PUNO",
+   "region": "SIERRA",
+   "ha_asegurada": 129257,
+   "ha_envolvente": 24910,
+   "monto_envolvente": 24910180,
+   "ha_shock": 17794,
+   "siniestralidad": 19.3,
+   "top_peligro": "HELADA",
+   "top_cultivo": "AVENA FORRAJERA"
+  },
+  {
+   "departamento": "HUANCAVELICA",
+   "region": "SIERRA",
+   "ha_asegurada": 89522,
+   "ha_envolvente": 17537,
+   "monto_envolvente": 17537083,
+   "ha_shock": 8327,
+   "siniestralidad": 19.6,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "CUSCO",
+   "region": "SIERRA",
+   "ha_asegurada": 156250,
+   "ha_envolvente": 13318,
+   "monto_envolvente": 13317692,
+   "ha_shock": 6726,
+   "siniestralidad": 8.5,
+   "top_peligro": "GRANIZO",
+   "top_cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "HUANUCO",
+   "region": "SIERRA",
+   "ha_asegurada": 98684,
+   "ha_envolvente": 7705,
+   "monto_envolvente": 7704788,
+   "ha_shock": 2461,
+   "siniestralidad": 7.8,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "PAPA"
+  },
+  {
+   "departamento": "CAJAMARCA",
+   "region": "SIERRA",
+   "ha_asegurada": 27439,
+   "ha_envolvente": 7192,
+   "monto_envolvente": 7192218,
+   "ha_shock": 4399,
+   "siniestralidad": 26.2,
+   "top_peligro": "SEQUIA",
+   "top_cultivo": "CAFE"
+  },
+  {
+   "departamento": "PASCO",
+   "region": "SIERRA",
+   "ha_asegurada": 123851,
+   "ha_envolvente": 7044,
+   "monto_envolvente": 7043777,
+   "ha_shock": 2154,
+   "siniestralidad": 5.7,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "PAPA"
+  },
+  {
+   "departamento": "JUNIN",
+   "region": "SIERRA",
+   "ha_asegurada": 125000,
+   "ha_envolvente": 7030,
+   "monto_envolvente": 7029663,
+   "ha_shock": 4680,
+   "siniestralidad": 5.6,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "PAPA"
+  },
+  {
+   "departamento": "PIURA",
+   "region": "COSTA_NORTE",
+   "ha_asegurada": 223818,
+   "ha_envolvente": 5217,
+   "monto_envolvente": 5216841,
+   "ha_shock": 1305,
+   "siniestralidad": 2.3,
+   "top_peligro": "SEQUIA",
+   "top_cultivo": "ARROZ"
+  },
+  {
+   "departamento": "ICA",
+   "region": "COSTA_CENTRO_SUR",
+   "ha_asegurada": 8333,
+   "ha_envolvente": 5082,
+   "monto_envolvente": 5082485,
+   "ha_shock": 1269,
+   "siniestralidad": 61.0,
+   "top_peligro": "PLAGAS",
+   "top_cultivo": "PECANO"
+  },
+  {
+   "departamento": "AMAZONAS",
+   "region": "SELVA",
+   "ha_asegurada": 14706,
+   "ha_envolvente": 4464,
+   "monto_envolvente": 4463916,
+   "ha_shock": 1504,
+   "siniestralidad": 30.4,
+   "top_peligro": "SEQUIA",
+   "top_cultivo": "CAFE"
+  },
+  {
+   "departamento": "LIMA",
+   "region": "COSTA_CENTRO_SUR",
+   "ha_asegurada": 72917,
+   "ha_envolvente": 4396,
+   "monto_envolvente": 4395669,
+   "ha_shock": 1748,
+   "siniestralidad": 6.0,
+   "top_peligro": "HUAYCO",
+   "top_cultivo": "PALTO"
+  },
+  {
+   "departamento": "TUMBES",
+   "region": "COSTA_NORTE",
+   "ha_asegurada": 8302,
+   "ha_envolvente": 4001,
+   "monto_envolvente": 4000845,
+   "ha_shock": 3796,
+   "siniestralidad": 48.2,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "BANANO"
+  },
+  {
+   "departamento": "HUÁNUCO",
+   "region": "SIERRA",
+   "ha_asegurada": null,
+   "ha_envolvente": 3619,
+   "monto_envolvente": 3618935,
+   "ha_shock": 1311,
+   "siniestralidad": null,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "PAPA"
+  },
+  {
+   "departamento": "AREQUIPA",
+   "region": "SIERRA",
+   "ha_asegurada": 45000,
+   "ha_envolvente": 3470,
+   "monto_envolvente": 3470079,
+   "ha_shock": 1213,
+   "siniestralidad": 7.7,
+   "top_peligro": "ALTAS_TEMPERATURAS",
+   "top_cultivo": "OLIVO"
+  },
+  {
+   "departamento": "LA LIBERTAD",
+   "region": "COSTA_NORTE",
+   "ha_asegurada": 108333,
+   "ha_envolvente": 2928,
+   "monto_envolvente": 2927542,
+   "ha_shock": 627,
+   "siniestralidad": 2.7,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "PAPA"
+  },
+  {
+   "departamento": "LORETO",
+   "region": "SELVA",
+   "ha_asegurada": 82386,
+   "ha_envolvente": 2620,
+   "monto_envolvente": 2620004,
+   "ha_shock": 2471,
+   "siniestralidad": 3.2,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "PLATANO"
+  },
+  {
+   "departamento": "UCAYALI",
+   "region": "SELVA",
+   "ha_asegurada": 117188,
+   "ha_envolvente": 2572,
+   "monto_envolvente": 2571674,
+   "ha_shock": 1834,
+   "siniestralidad": 2.2,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "PLATANO"
+  },
+  {
+   "departamento": "SAN MARTIN",
+   "region": "SELVA",
+   "ha_asegurada": 166667,
+   "ha_envolvente": 2078,
+   "monto_envolvente": 2077752,
+   "ha_shock": 889,
+   "siniestralidad": 1.2,
+   "top_peligro": "SEQUIA",
+   "top_cultivo": "MAÍZ AMARILLO DURO"
+  },
+  {
+   "departamento": "SAN MARTÍN",
+   "region": "SIERRA",
+   "ha_asegurada": null,
+   "ha_envolvente": 1578,
+   "monto_envolvente": 1577671,
+   "ha_shock": 1032,
+   "siniestralidad": null,
+   "top_peligro": "SEQUIA",
+   "top_cultivo": "MAIZ AMARILLO DURO"
+  },
+  {
+   "departamento": "MADRE DE DIOS",
+   "region": "SELVA",
+   "ha_asegurada": 18625,
+   "ha_envolvente": 1575,
+   "monto_envolvente": 1574997,
+   "ha_shock": 993,
+   "siniestralidad": 8.5,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "PLATANO"
+  },
+  {
+   "departamento": "ANCASH",
+   "region": "SIERRA",
+   "ha_asegurada": 76923,
+   "ha_envolvente": 1540,
+   "monto_envolvente": 1539530,
+   "ha_shock": 623,
+   "siniestralidad": 2.0,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "PAPA"
+  },
+  {
+   "departamento": "MOQUEGUA",
+   "region": "COSTA_CENTRO_SUR",
+   "ha_asegurada": 5814,
+   "ha_envolvente": 1537,
+   "monto_envolvente": 1536802,
+   "ha_shock": 89,
+   "siniestralidad": 26.4,
+   "top_peligro": "HELADA",
+   "top_cultivo": "ALFALFA"
+  },
+  {
+   "departamento": "LAMBAYEQUE",
+   "region": "COSTA_NORTE",
+   "ha_asegurada": 112331,
+   "ha_envolvente": 1348,
+   "monto_envolvente": 1347997,
+   "ha_shock": 915,
+   "siniestralidad": 1.2,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "MAIZ AMARILLO DURO"
+  },
+  {
+   "departamento": "TACNA",
+   "region": "COSTA_CENTRO_SUR",
+   "ha_asegurada": 16447,
+   "ha_envolvente": 464,
+   "monto_envolvente": 463749,
+   "ha_shock": 50,
+   "siniestralidad": 2.8,
+   "top_peligro": "ALTAS_TEMPERATURAS",
+   "top_cultivo": "OLIVO"
+  }
+ ],
+ "por_siniestro": [
+  {
+   "peligro": "ENFERMEDADES",
+   "ha": 40646,
+   "monto": 40645977,
+   "grupo_clim": "ENFERMEDADES",
+   "es_shock": false
+  },
+  {
+   "peligro": "SEQUIA",
+   "ha": 31655,
+   "monto": 31654853,
+   "grupo_clim": "DEFICIT_HIDRICO",
+   "es_shock": true
+  },
+  {
+   "peligro": "HELADA",
+   "ha": 23904,
+   "monto": 23904025,
+   "grupo_clim": "TEMP_BAJA",
+   "es_shock": true
+  },
+  {
+   "peligro": "GRANIZO",
+   "ha": 22786,
+   "monto": 22785735,
+   "grupo_clim": "TEMP_BAJA",
+   "es_shock": false
+  },
+  {
+   "peligro": "INUNDACION",
+   "ha": 22602,
+   "monto": 22601503,
+   "grupo_clim": "PRECIP_EXTREMA",
+   "es_shock": true
+  },
+  {
+   "peligro": "PLAGAS",
+   "ha": 10630,
+   "monto": 10630048,
+   "grupo_clim": "PRECIP_EXTREMA",
+   "es_shock": false
+  },
+  {
+   "peligro": "LLUVIA_EXCESIVA",
+   "ha": 10412,
+   "monto": 10411710,
+   "grupo_clim": "PRECIP_EXTREMA",
+   "es_shock": true
+  },
+  {
+   "peligro": "VIENTO_FUERTE",
+   "ha": 8041,
+   "monto": 8041396,
+   "grupo_clim": "VIENTO",
+   "es_shock": false
+  },
+  {
+   "peligro": "EXCESO_HUMEDAD",
+   "ha": 4506,
+   "monto": 4505567,
+   "grupo_clim": "PRECIP_EXTREMA",
+   "es_shock": true
+  },
+  {
+   "peligro": "HUAYCO",
+   "ha": 3895,
+   "monto": 3894830,
+   "grupo_clim": "PRECIP_EXTREMA",
+   "es_shock": true
+  },
+  {
+   "peligro": "ALTAS_TEMPERATURAS",
+   "ha": 3882,
+   "monto": 3882076,
+   "grupo_clim": "TEMP_ALTA",
+   "es_shock": false
+  },
+  {
+   "peligro": "DESLIZAMIENTO",
+   "ha": 1707,
+   "monto": 1706971,
+   "grupo_clim": "PRECIP_EXTREMA",
+   "es_shock": true
+  },
+  {
+   "peligro": "TAPONAMIENTO",
+   "ha": 1621,
+   "monto": 1620972,
+   "grupo_clim": "NO_CLIMATICO",
+   "es_shock": false
+  },
+  {
+   "peligro": "INCENDIO",
+   "ha": 1552,
+   "monto": 1552333,
+   "grupo_clim": "NO_CLIMATICO",
+   "es_shock": false
+  },
+  {
+   "peligro": "NIEVE",
+   "ha": 377,
+   "monto": 377383,
+   "grupo_clim": "TEMP_BAJA",
+   "es_shock": false
+  },
+  {
+   "peligro": "ERUPCION_VOLCANICA",
+   "ha": 155,
+   "monto": 155000,
+   "grupo_clim": "NO_CLIMATICO",
+   "es_shock": false
+  },
+  {
+   "peligro": "FALTA_PISO",
+   "ha": 103,
+   "monto": 102701,
+   "grupo_clim": "PRECIP_EXTREMA",
+   "es_shock": true
+  },
+  {
+   "peligro": "SISMO",
+   "ha": 1,
+   "monto": 1080,
+   "grupo_clim": "NO_CLIMATICO",
+   "es_shock": false
+  }
+ ],
+ "por_cultivo": [
+  {
+   "cultivo": "PAPA",
+   "ha": 43017,
+   "monto": 43016546
+  },
+  {
+   "cultivo": "MAIZ AMILACEO",
+   "ha": 37682,
+   "monto": 37681835
+  },
+  {
+   "cultivo": "AVENA FORRAJERA",
+   "ha": 9265,
+   "monto": 9265175
+  },
+  {
+   "cultivo": "QUINUA",
+   "ha": 8940,
+   "monto": 8939733
+  },
+  {
+   "cultivo": "MAÍZ AMILÁCEO",
+   "ha": 8665,
+   "monto": 8664834
+  },
+  {
+   "cultivo": "HABA GRANO SECO",
+   "ha": 7269,
+   "monto": 7269352
+  },
+  {
+   "cultivo": "PLATANO",
+   "ha": 6426,
+   "monto": 6426026
+  },
+  {
+   "cultivo": "ARROZ",
+   "ha": 6173,
+   "monto": 6172522
+  },
+  {
+   "cultivo": "CAFE",
+   "ha": 5804,
+   "monto": 5803642
+  },
+  {
+   "cultivo": "CEBADA GRANO",
+   "ha": 5254,
+   "monto": 5253663
+  },
+  {
+   "cultivo": "MAIZ AMARILLO DURO",
+   "ha": 3177,
+   "monto": 3176554
+  },
+  {
+   "cultivo": "PALTO",
+   "ha": 2952,
+   "monto": 2951558
+  },
+  {
+   "cultivo": "MAÍZ AMARILLO DURO",
+   "ha": 2907,
+   "monto": 2907328
+  },
+  {
+   "cultivo": "CACAO",
+   "ha": 2800,
+   "monto": 2799799
+  },
+  {
+   "cultivo": "YUCA",
+   "ha": 2669,
+   "monto": 2668774
+  },
+  {
+   "cultivo": "ARVEJA GRANO VERDE",
+   "ha": 2634,
+   "monto": 2633758
+  },
+  {
+   "cultivo": "OLIVO",
+   "ha": 2485,
+   "monto": 2485080
+  },
+  {
+   "cultivo": "FRIJOL GRANO SECO",
+   "ha": 2134,
+   "monto": 2133787
+  },
+  {
+   "cultivo": "ALFALFA",
+   "ha": 2052,
+   "monto": 2052254
+  },
+  {
+   "cultivo": "CAFÉ",
+   "ha": 2018,
+   "monto": 2018343
+  }
+ ],
+ "por_sector": [
+  {
+   "departamento": "AREQUIPA",
+   "provincia": "CARAVELI",
+   "distrito": "BELLA UNION",
+   "sector": "BELLA UNIÓN",
+   "ha": 1096,
+   "monto": 1096050,
+   "peligro": "ALTAS_TEMPERATURAS",
+   "cultivo": "OLIVO"
+  },
+  {
+   "departamento": "PUNO",
+   "provincia": "CARABAYA",
+   "distrito": "USICAYOS",
+   "sector": "COYORANA",
+   "ha": 665,
+   "monto": 665000,
+   "peligro": "PLAGAS",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "AYACUCHO",
+   "provincia": "HUAMANGA",
+   "distrito": "ACOCRO",
+   "sector": "PARCCAHUANCA",
+   "ha": 492,
+   "monto": 491892,
+   "peligro": "EXCESO_HUMEDAD",
+   "cultivo": "QUINUA"
+  },
+  {
+   "departamento": "AREQUIPA",
+   "provincia": "CARAVELI",
+   "distrito": "YAUCA",
+   "sector": "YAUCA - SAN FRANCISCO",
+   "ha": 480,
+   "monto": 480000,
+   "peligro": "ALTAS_TEMPERATURAS",
+   "cultivo": "OLIVO"
+  },
+  {
+   "departamento": "AYACUCHO",
+   "provincia": "HUANTA",
+   "distrito": "HUANTA",
+   "sector": "HUANCAYOCC",
+   "ha": 441,
+   "monto": 440579,
+   "peligro": "SEQUIA",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "CUSCO",
+   "provincia": "LA CONVENCION",
+   "distrito": "ECHARATE",
+   "sector": "KORIBENI - CINTA VERDE",
+   "ha": 431,
+   "monto": 431410,
+   "peligro": "INUNDACION",
+   "cultivo": "YUCA"
+  },
+  {
+   "departamento": "PASCO",
+   "provincia": "OXAPAMPA",
+   "distrito": "CHONTABAMBA",
+   "sector": "PUSAPNO",
+   "ha": 425,
+   "monto": 424569,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "CAFÉ"
+  },
+  {
+   "departamento": "PUNO",
+   "provincia": "LAMPA",
+   "distrito": "CABANILLA",
+   "sector": "QUINSACHATA",
+   "ha": 363,
+   "monto": 363000,
+   "peligro": "HELADA",
+   "cultivo": "ALFALFA"
+  },
+  {
+   "departamento": "TUMBES",
+   "provincia": "TUMBES",
+   "distrito": "CORRALES",
+   "sector": "MALVA",
+   "ha": 363,
+   "monto": 362770,
+   "peligro": "INUNDACION",
+   "cultivo": "ARROZ"
+  },
+  {
+   "departamento": "TUMBES",
+   "provincia": "TUMBES",
+   "distrito": "TUMBES",
+   "sector": "EL PALMAR",
+   "ha": 354,
+   "monto": 354402,
+   "peligro": "INUNDACION",
+   "cultivo": "ARROZ"
+  },
+  {
+   "departamento": "PUNO",
+   "provincia": "CARABAYA",
+   "distrito": "AYAPATA",
+   "sector": "AYAPATA",
+   "ha": 350,
+   "monto": 350000,
+   "peligro": "GRANIZO",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "PASCO",
+   "provincia": "PASCO",
+   "distrito": "PAUCARTAMBO",
+   "sector": "ACO",
+   "ha": 346,
+   "monto": 345533,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "MAÍZ AMILÁCEO"
+  },
+  {
+   "departamento": "TUMBES",
+   "provincia": "TUMBES",
+   "distrito": "SAN JACINTO",
+   "sector": "CASA BLANQUEADA",
+   "ha": 335,
+   "monto": 335439,
+   "peligro": "INUNDACION",
+   "cultivo": "BANANO"
+  },
+  {
+   "departamento": "AYACUCHO",
+   "provincia": "HUAMANGA",
+   "distrito": "CHIARA",
+   "sector": "CHIARA",
+   "ha": 334,
+   "monto": 333670,
+   "peligro": "LLUVIA_EXCESIVA",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "PASCO",
+   "provincia": "OXAPAMPA",
+   "distrito": "POZUZO",
+   "sector": "CHUMALLE - CAÑACHACRA",
+   "ha": 333,
+   "monto": 333250,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "CAFÉ"
+  },
+  {
+   "departamento": "PUNO",
+   "provincia": "AZANGARO",
+   "distrito": "ASILLO",
+   "sector": "ÑAUPAPAMPA",
+   "ha": 325,
+   "monto": 325430,
+   "peligro": "SEQUIA",
+   "cultivo": "AVENA FORRAJERA"
+  },
+  {
+   "departamento": "PASCO",
+   "provincia": "PASCO",
+   "distrito": "PAUCARTAMBO",
+   "sector": "PAUCARTAMBO",
+   "ha": 324,
+   "monto": 324146,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "MAÍZ AMILÁCEO"
+  },
+  {
+   "departamento": "CUSCO",
+   "provincia": "URUBAMBA",
+   "distrito": "CHINCHERO",
+   "sector": "YANACONA CHAQUELLCOCHA",
+   "ha": 324,
+   "monto": 324000,
+   "peligro": "GRANIZO",
+   "cultivo": "AVENA GRANO SECO"
+  },
+  {
+   "departamento": "AYACUCHO",
+   "provincia": "HUAMANGA",
+   "distrito": "SAN JOSE DE TICLLAS",
+   "sector": "CAMPAMENTO",
+   "ha": 320,
+   "monto": 320196,
+   "peligro": "SEQUIA",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "PUNO",
+   "provincia": "HUANCANE",
+   "distrito": "HUANCANE",
+   "sector": "CUCHO YANAOCO",
+   "ha": 317,
+   "monto": 317000,
+   "peligro": "EXCESO_HUMEDAD",
+   "cultivo": "AVENA FORRAJERA"
+  },
+  {
+   "departamento": "HUANCAVELICA",
+   "provincia": "ACOBAMBA",
+   "distrito": "CAJA",
+   "sector": "POMACANCHA",
+   "ha": 314,
+   "monto": 314256,
+   "peligro": "HELADA",
+   "cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "HUANCAVELICA",
+   "provincia": "ACOBAMBA",
+   "distrito": "ACOBAMBA",
+   "sector": "BELLAVISTA",
+   "ha": 314,
+   "monto": 313527,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "ARVEJA GRANO VERDE"
+  },
+  {
+   "departamento": "SAN MARTIN",
+   "provincia": "TOCACHE",
+   "distrito": "TOCACHE",
+   "sector": "SAN AGUSTIN DE HUAQUISHA",
+   "ha": 312,
+   "monto": 311966,
+   "peligro": "INUNDACION",
+   "cultivo": "PLÁTANO"
+  },
+  {
+   "departamento": "CAJAMARCA",
+   "provincia": "JAEN",
+   "distrito": "SAN JOSE DEL ALTO",
+   "sector": "ANGASH",
+   "ha": 298,
+   "monto": 298030,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "CAFE"
+  },
+  {
+   "departamento": "APURIMAC",
+   "provincia": "ANDAHUAYLAS",
+   "distrito": "ANDARAPA",
+   "sector": "ANDARAPA",
+   "ha": 295,
+   "monto": 295000,
+   "peligro": "VIENTO_FUERTE",
+   "cultivo": "MAÍZ AMILÁCEO"
+  },
+  {
+   "departamento": "PUNO",
+   "provincia": "AZANGARO",
+   "distrito": "ARAPA",
+   "sector": "RIVERA",
+   "ha": 293,
+   "monto": 293000,
+   "peligro": "SEQUIA",
+   "cultivo": "AVENA FORRAJERA"
+  },
+  {
+   "departamento": "CAJAMARCA",
+   "provincia": "JAEN",
+   "distrito": "JAEN",
+   "sector": "JAEN",
+   "ha": 292,
+   "monto": 292150,
+   "peligro": "SEQUIA",
+   "cultivo": "CAFE"
+  },
+  {
+   "departamento": "JUNIN",
+   "provincia": "SATIPO",
+   "distrito": "SATIPO",
+   "sector": "NARANKIARI",
+   "ha": 291,
+   "monto": 290900,
+   "peligro": "SEQUIA",
+   "cultivo": "MAIZ AMARILLO DURO"
+  },
+  {
+   "departamento": "CAJAMARCA",
+   "provincia": "JAEN",
+   "distrito": "SAN JOSE DEL ALTO",
+   "sector": "PEÑA BLANCA",
+   "ha": 288,
+   "monto": 287900,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "CAFE"
+  },
+  {
+   "departamento": "CAJAMARCA",
+   "provincia": "JAEN",
+   "distrito": "JAEN",
+   "sector": "VISTA ALEGRE DE ZONANGA",
+   "ha": 288,
+   "monto": 287900,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "CAFE"
+  },
+  {
+   "departamento": "ICA",
+   "provincia": "ICA",
+   "distrito": "OCUCAJE",
+   "sector": "PINILLA",
+   "ha": 285,
+   "monto": 285472,
+   "peligro": "INUNDACION",
+   "cultivo": "PALLAR GRANO SECO"
+  },
+  {
+   "departamento": "AYACUCHO",
+   "provincia": "LA MAR",
+   "distrito": "CHUNGUI",
+   "sector": "CHUNGUI",
+   "ha": 282,
+   "monto": 282000,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "LA LIBERTAD",
+   "provincia": "VIRU",
+   "distrito": "VIRU",
+   "sector": "HUACAPONGO",
+   "ha": 280,
+   "monto": 280000,
+   "peligro": "SEQUIA",
+   "cultivo": "PALTO"
+  },
+  {
+   "departamento": "LORETO",
+   "provincia": "LORETO",
+   "distrito": "NAUTA",
+   "sector": "MIRAFLORES",
+   "ha": 277,
+   "monto": 277190,
+   "peligro": "INUNDACION",
+   "cultivo": "YUCA"
+  },
+  {
+   "departamento": "HUANCAVELICA",
+   "provincia": "ACOBAMBA",
+   "distrito": "ACOBAMBA",
+   "sector": "SACHAORCCO",
+   "ha": 277,
+   "monto": 276846,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "ARVEJA GRANO VERDE"
+  },
+  {
+   "departamento": "CUSCO",
+   "provincia": "URUBAMBA",
+   "distrito": "CHINCHERO",
+   "sector": "HUAYPO",
+   "ha": 270,
+   "monto": 270000,
+   "peligro": "GRANIZO",
+   "cultivo": "AVENA GRANO SECO"
+  },
+  {
+   "departamento": "APURIMAC",
+   "provincia": "ANDAHUAYLAS",
+   "distrito": "POMACOCHA",
+   "sector": "POMACOCHA",
+   "ha": 265,
+   "monto": 265000,
+   "peligro": "HELADA",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "APURIMAC",
+   "provincia": "ANDAHUAYLAS",
+   "distrito": "PACUCHA",
+   "sector": "ARGAMA PARQUE",
+   "ha": 263,
+   "monto": 263000,
+   "peligro": "SEQUIA",
+   "cultivo": "CEBADA GRANO"
+  },
+  {
+   "departamento": "CAJAMARCA",
+   "provincia": "JAEN",
+   "distrito": "POMAHUACA",
+   "sector": "LIMON PAMPA",
+   "ha": 261,
+   "monto": 261030,
+   "peligro": "SEQUIA",
+   "cultivo": "CAFE"
+  },
+  {
+   "departamento": "TUMBES",
+   "provincia": "TUMBES",
+   "distrito": "CORRALES",
+   "sector": "LA VARIANTE",
+   "ha": 261,
+   "monto": 260991,
+   "peligro": "INUNDACION",
+   "cultivo": "BANANO CONVENCIONAL"
+  },
+  {
+   "departamento": "AYACUCHO",
+   "provincia": "HUAMANGA",
+   "distrito": "ACOCRO",
+   "sector": "CHONTACA",
+   "ha": 259,
+   "monto": 259022,
+   "peligro": "VIENTO_FUERTE",
+   "cultivo": "QUINUA"
+  },
+  {
+   "departamento": "PASCO",
+   "provincia": "PASCO",
+   "distrito": "PAUCARTAMBO",
+   "sector": "LA VICTORIA",
+   "ha": 255,
+   "monto": 255000,
+   "peligro": "HELADA",
+   "cultivo": "PAPA"
+  },
+  {
+   "departamento": "CUSCO",
+   "provincia": "LA CONVENCION",
+   "distrito": "PICHARI",
+   "sector": "OTARI - SAN MARTIN",
+   "ha": 253,
+   "monto": 252755,
+   "peligro": "INUNDACION",
+   "cultivo": "CACAO"
+  },
+  {
+   "departamento": "PUNO",
+   "provincia": "AZANGARO",
+   "distrito": "SANTIAGO DE PUPUJA",
+   "sector": "CAMPUCO",
+   "ha": 253,
+   "monto": 252670,
+   "peligro": "SEQUIA",
+   "cultivo": "AVENA FORRAJERA"
+  },
+  {
+   "departamento": "JUNIN",
+   "provincia": "SATIPO",
+   "distrito": "RIO TAMBO",
+   "sector": "VALLE ESMERALDA",
+   "ha": 252,
+   "monto": 252311,
+   "peligro": "INUNDACION",
+   "cultivo": "PLATANO"
+  },
+  {
+   "departamento": "APURIMAC",
+   "provincia": "ANDAHUAYLAS",
+   "distrito": "PACUCHA",
+   "sector": "LAGUNA",
+   "ha": 250,
+   "monto": 250000,
+   "peligro": "GRANIZO",
+   "cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "APURIMAC",
+   "provincia": "ANDAHUAYLAS",
+   "distrito": "HUANCARAY",
+   "sector": "MOLLEPATA",
+   "ha": 249,
+   "monto": 249346,
+   "peligro": "GRANIZO",
+   "cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "HUANCAVELICA",
+   "provincia": "ACOBAMBA",
+   "distrito": "MARCAS",
+   "sector": "MARCAS",
+   "ha": 249,
+   "monto": 248850,
+   "peligro": "HELADA",
+   "cultivo": "MAIZ AMILACEO"
+  },
+  {
+   "departamento": "UCAYALI",
+   "provincia": "CORONEL PORTILLO",
+   "distrito": "MASISEA",
+   "sector": "MASISEA RIO",
+   "ha": 249,
+   "monto": 248709,
+   "peligro": "INUNDACION",
+   "cultivo": "PLATANO"
+  },
+  {
+   "departamento": "AYACUCHO",
+   "provincia": "HUAMANGA",
+   "distrito": "OCROS",
+   "sector": "CCERAOCRO",
+   "ha": 246,
+   "monto": 246250,
+   "peligro": "ENFERMEDADES",
+   "cultivo": "PAPA"
+  }
+ ],
+ "severidad": [
+  {
+   "peligro": "ENFERMEDADES",
+   "intensidad": 0.43,
+   "n": 2064
+  },
+  {
+   "peligro": "INUNDACION",
+   "intensidad": 0.63,
+   "n": 1972
+  },
+  {
+   "peligro": "HELADA",
+   "intensidad": 0.43,
+   "n": 1467
+  },
+  {
+   "peligro": "GRANIZO",
+   "intensidad": 0.38,
+   "n": 1355
+  },
+  {
+   "peligro": "SEQUIA",
+   "intensidad": 0.42,
+   "n": 1222
+  },
+  {
+   "peligro": "HUAYCO",
+   "intensidad": 0.7,
+   "n": 844
+  },
+  {
+   "peligro": "PLAGAS",
+   "intensidad": 0.62,
+   "n": 809
+  },
+  {
+   "peligro": "LLUVIA_EXCESIVA",
+   "intensidad": 0.44,
+   "n": 759
+  },
+  {
+   "peligro": "VIENTO_FUERTE",
+   "intensidad": 0.51,
+   "n": 562
+  },
+  {
+   "peligro": "INCENDIO",
+   "intensidad": 0.7,
+   "n": 385
+  },
+  {
+   "peligro": "DESLIZAMIENTO",
+   "intensidad": 0.66,
+   "n": 323
+  },
+  {
+   "peligro": "EXCESO_HUMEDAD",
+   "intensidad": 0.31,
+   "n": 156
+  }
+ ],
+ "comodines": [
+  {
+   "departamento": "PIURA",
+   "region": "COSTA_NORTE",
+   "ha_asegurada": 223818,
+   "ha_envolvente": 5217,
+   "monto_envolvente": 5216841,
+   "ha_shock": 1305,
+   "siniestralidad": 2.3,
+   "top_peligro": "SEQUIA",
+   "top_cultivo": "ARROZ"
+  },
+  {
+   "departamento": "SAN MARTIN",
+   "region": "SELVA",
+   "ha_asegurada": 166667,
+   "ha_envolvente": 2078,
+   "monto_envolvente": 2077752,
+   "ha_shock": 889,
+   "siniestralidad": 1.2,
+   "top_peligro": "SEQUIA",
+   "top_cultivo": "MAÍZ AMARILLO DURO"
+  },
+  {
+   "departamento": "UCAYALI",
+   "region": "SELVA",
+   "ha_asegurada": 117188,
+   "ha_envolvente": 2572,
+   "monto_envolvente": 2571674,
+   "ha_shock": 1834,
+   "siniestralidad": 2.2,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "PLATANO"
+  },
+  {
+   "departamento": "LAMBAYEQUE",
+   "region": "COSTA_NORTE",
+   "ha_asegurada": 112331,
+   "ha_envolvente": 1348,
+   "monto_envolvente": 1347997,
+   "ha_shock": 915,
+   "siniestralidad": 1.2,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "MAIZ AMARILLO DURO"
+  },
+  {
+   "departamento": "LA LIBERTAD",
+   "region": "COSTA_NORTE",
+   "ha_asegurada": 108333,
+   "ha_envolvente": 2928,
+   "monto_envolvente": 2927542,
+   "ha_shock": 627,
+   "siniestralidad": 2.7,
+   "top_peligro": "ENFERMEDADES",
+   "top_cultivo": "PAPA"
+  },
+  {
+   "departamento": "LORETO",
+   "region": "SELVA",
+   "ha_asegurada": 82386,
+   "ha_envolvente": 2620,
+   "monto_envolvente": 2620004,
+   "ha_shock": 2471,
+   "siniestralidad": 3.2,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "PLATANO"
+  },
+  {
+   "departamento": "LIMA",
+   "region": "COSTA_CENTRO_SUR",
+   "ha_asegurada": 72917,
+   "ha_envolvente": 4396,
+   "monto_envolvente": 4395669,
+   "ha_shock": 1748,
+   "siniestralidad": 6.0,
+   "top_peligro": "HUAYCO",
+   "top_cultivo": "PALTO"
+  },
+  {
+   "departamento": "MADRE DE DIOS",
+   "region": "SELVA",
+   "ha_asegurada": 18625,
+   "ha_envolvente": 1575,
+   "monto_envolvente": 1574997,
+   "ha_shock": 993,
+   "siniestralidad": 8.5,
+   "top_peligro": "INUNDACION",
+   "top_cultivo": "PLATANO"
+  },
+  {
+   "departamento": "TACNA",
+   "region": "COSTA_CENTRO_SUR",
+   "ha_asegurada": 16447,
+   "ha_envolvente": 464,
+   "monto_envolvente": 463749,
+   "ha_shock": 50,
+   "siniestralidad": 2.8,
+   "top_peligro": "ALTAS_TEMPERATURAS",
+   "top_cultivo": "OLIVO"
+  }
+ ]
+}
