@@ -77,19 +77,21 @@ def _bar(label, monto, ref, color, sub="", dashed=False):
             + (f'<div class="esc-row-sub">{sub}</div>' if sub else ""))
 
 
+def _ref(d):
+    esc = d["escalera"]
+    return max(d["banda_nacional"]["envolvente"]["monto_S1000"],
+               esc["campana_el_nino"]["monto"] + esc["stress_costero"]["monto"]) * 1.02
+
+
 def _escalera(d):
     esc = d["escalera"]
-    band = d["banda_nacional"]
     cron = esc["base_cronica"]["monto"]
     shock = esc["shock_el_nino"]["monto"]
     camp = esc["campana_el_nino"]["monto"]
     sierra = esc["shock_el_nino"]["sierra_seq_hel"]["monto"]
     costa = esc["shock_el_nino"]["costa_lluvia"]["monto"]
-    stress = esc["stress_costero"]["monto"]
-    techo = band["envolvente"]["monto_S1000"]
-    ref = max(techo, camp, stress) * 1.05
-
-    st.markdown('<div class="esc-h">Escalera de planificación — campaña El Niño 2026-2027</div>',
+    ref = _ref(d)
+    st.markdown('<div class="esc-h">Cómo se construye el presupuesto base</div>',
                 unsafe_allow_html=True)
     html = '<div class="esc-block">'
     html += _bar("Base crónica", cron, ref, CRON_C, "enfermedades + plagas (endémicas, siempre presentes)")
@@ -97,22 +99,41 @@ def _escalera(d):
                  f"sierra sequía/helada {_M(sierra)} · lluvia/inundación {_M(costa)}")
     html += _bar("= Campaña El Niño", camp, ref, VERDE,
                  "presupuesto base sugerido (crónica + shock climático)")
-    html += '<div class="esc-div"></div>'
-    html += _bar("⚠ Sensibilidad costa norte", stress, ref, COSTA_C,
-                 esc["stress_costero"]["supuesto"], dashed=True)
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
 
-    st.markdown('<div class="esc-h">Banda de severidad histórica (referencia)</div>',
-                unsafe_allow_html=True)
+
+def _banda(d):
+    band = d["banda_nacional"]
+    ref = _ref(d)
     html = '<div class="esc-block">'
     html += _bar(f"Peor año real ({band['peor_ano_real']['campana']})",
                  band["peor_ano_real"]["monto_S1000"], ref, GRIS)
     html += _bar("Ancla (peor año × depto)", band["ancla"]["monto_S1000"], ref, "#5a9")
-    html += _bar("Envolvente (techo)", techo, ref, ROJO,
+    html += _bar("Envolvente (techo)", band["envolvente"]["monto_S1000"], ref, ROJO,
                  "todos los extremos por celda, a la vez")
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
+    st.caption("La banda muestra el rango realmente observado, de un año malo al "
+               "peor caso combinable. El presupuesto base (S/{:.0f}M) cae dentro de "
+               "ella.".format(d["escalera"]["campana_el_nino"]["monto"] / 1e6))
+
+
+def _coastal_callout(d):
+    sc = d["escalera"]["stress_costero"]
+    det = sc.get("detalle", {})
+    chips = "".join(
+        f'<span class="esc-tchip">{k.title()} · {v["ha_stress"]/1000:.0f}K ha · {_M(v["monto"])}</span>'
+        for k, v in sorted(det.items(), key=lambda x: -x[1]["monto"]))
+    st.markdown(
+        f'<div class="esc-tail"><div class="esc-tail-h">'
+        f'<span class="ms">warning</span> Tail costero — el riesgo que el histórico no captura</div>'
+        f'<div class="esc-tail-b">Las grandes carteras de la <b>costa norte</b> '
+        f'(Piura, Lambayeque, La Libertad) <b>nunca</b> fueron golpeadas por un Niño '
+        f'costero fuerte en 2021-2025. Si alcanzan {sc["supuesto"]}, suman '
+        f'<b>{_M(sc["monto"])}</b> — más que toda la envolvente andina. '
+        f'Actívalo en el interruptor de arriba para sumarlo al presupuesto.</div>'
+        f'<div class="esc-tchips">{chips}</div></div>', unsafe_allow_html=True)
 
 
 def _geojson_disponible():
@@ -289,6 +310,16 @@ def _css():
     .esc-div{height:1px;background:#cdd6cf;margin:10px 0;}
     .esc-chip{display:inline-block;background:#e8f4fb;color:#00657d;border-radius:20px;padding:3px 11px;margin:3px 4px 0 0;font-size:11.5px;font-weight:600;}
     .esc-com{background:#f0f8fd;border:1px solid #cfe8f5;border-radius:12px;padding:11px 14px;margin-top:10px;font-size:12.5px;color:#345;line-height:1.7;}
+    .esc-hero{background:#1f3d2b;border-radius:14px;padding:16px 22px;text-align:center;margin:8px 0 2px;}
+    .esc-hero-label{font-size:11.5px;font-weight:600;color:#a9d6b5;text-transform:uppercase;letter-spacing:.7px;}
+    .esc-hero-num{font-size:46px;font-weight:800;color:#fff;line-height:1.05;margin:3px 0 2px;}
+    .esc-hero-sub{font-size:13px;color:#d4edda;}
+    .esc-tail{background:#f0f8fd;border:1px solid #bfe3f2;border-left:4px solid #00758d;border-radius:12px;padding:13px 16px;margin:14px 0 4px;}
+    .esc-tail-h{font-size:13.5px;font-weight:700;color:#00657d;display:flex;align-items:center;gap:6px;}
+    .esc-tail-h .ms{font-size:18px;}
+    .esc-tail-b{font-size:12.5px;color:#2a3b44;line-height:1.6;margin:6px 0 9px;}
+    .esc-tchips{display:flex;flex-wrap:wrap;gap:6px;}
+    .esc-tchip{background:#fff;border:1px solid #cfe8f5;color:#00657d;border-radius:8px;padding:4px 10px;font-size:11.5px;font-weight:600;}
     </style>
     """
 
@@ -311,13 +342,33 @@ def render_escenario():
                  "Genéralo con `escenario_el_nino_2026_2027/exportar_escenario_app.py`.")
         return
 
-    st.info("**No es un pronóstico — es un techo de planificación.** Cada cifra de "
-            "hectáreas es un máximo realmente observado en 2021-2025; el monto usa la "
-            "tasa 2026 de **S/1,000/ha**. 2020-2021 se excluye (su superficie indemnizada "
-            "no es comparable).", icon=":material/info:")
+    esc = d["escalera"]
+    camp = esc["campana_el_nino"]["monto"]
+    stress = esc["stress_costero"]["monto"]
+    cron = esc["base_cronica"]["monto"]
+    shock = esc["shock_el_nino"]["monto"]
+
+    # ── Número-héroe + toggle del tail costero ──
+    hero = st.empty()
+    incluir = st.toggle(
+        f"Incluir escenario de Niño costero fuerte (tail costa norte · +{_M(stress)})",
+        value=False, key="esc_tail_toggle")
+    total = camp + (stress if incluir else 0)
+    sub = (f"campaña El Niño {_M(camp)} + tail costa norte {_M(stress)}" if incluir
+           else f"base crónica {_M(cron)} + shock El Niño {_M(shock)}")
+    hero.markdown(
+        f'<div class="esc-hero"><div class="esc-hero-label">'
+        f'Presupuesto sugerido · Campaña El Niño 2026-2027</div>'
+        f'<div class="esc-hero-num">{_M(total)}</div>'
+        f'<div class="esc-hero-sub">{sub}</div></div>', unsafe_allow_html=True)
+    st.caption("No es un pronóstico — es un techo de planificación. Cada hectárea es un "
+               "máximo observado en 2021-2025; el monto usa la tasa 2026 de S/1,000/ha.")
 
     _kpi_row(d)
     _escalera(d)
+    _coastal_callout(d)
+    with st.expander("Ver rango histórico de severidad"):
+        _banda(d)
 
     st.divider()
     tabs = st.tabs(["Mapa y departamentos", "Peligros", "Cultivos",
