@@ -441,32 +441,51 @@ def _css_semaforo():
     """CSS para el pipeline visual y badges."""
     return """
     <style>
-    .sem-pipeline {
-        display: flex; align-items: center; justify-content: center;
-        gap: 0; padding: 15px 0; overflow-x: auto;
+    /* ── Info de fecha de corte ── */
+    .sem-corte-info {
+        display:flex; align-items:center; gap:10px; height:100%;
+        background:#f4f8f5; border:1px solid #e1ebe4; border-radius:10px;
+        padding:8px 14px; color:#3a4a41; font-size:12.5px;
     }
-    .sem-stage {
-        background: #fff; border: 2px solid #e2e8f0; border-radius: 12px;
-        padding: 12px 14px; min-width: 130px; text-align: center;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    .sem-corte-info .ms { font-size:22px; color:#408B14; }
+    .sem-corte-info span { color:#7c8a82; font-size:11.5px; }
+    /* ── Grid de etapas ── */
+    .sem-grid {
+        display:grid; grid-template-columns:repeat(auto-fit, minmax(168px, 1fr));
+        gap:12px; margin:14px 0 4px;
     }
-    .sem-stage-label {
-        font-size: 12px; font-weight: 700; color: #2C3E50;
-        margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+    .sem-card {
+        background:#fff; border:1px solid #e6ece8; border-radius:14px;
+        padding:13px 13px 9px; box-shadow:0 1px 3px rgba(16,40,28,.06);
+        transition:transform .12s ease, box-shadow .12s ease;
     }
-    .sem-stage-num { font-size: 10px; color: #95a5a6; margin-bottom: 4px; }
-    .sem-badges { display: flex; gap: 4px; justify-content: center; }
-    .sem-badge {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 28px; height: 22px; border-radius: 11px;
-        font-size: 11px; font-weight: 700; color: #fff; padding: 0 6px;
+    .sem-card:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(16,40,28,.10); }
+    .sem-card-head { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .sem-card-num {
+        width:26px; height:26px; border-radius:50%; flex:0 0 auto;
+        display:flex; align-items:center; justify-content:center;
+        background:var(--accent); color:#fff; font-weight:800; font-size:13px;
+        box-shadow:0 1px 3px rgba(0,0,0,.18);
     }
-    .sem-badge-v { background: #27ae60; }
-    .sem-badge-a { background: #f39c12; }
-    .sem-badge-r { background: #e74c3c; }
-    .sem-arrow {
-        font-size: 18px; color: #bdc3c7; margin: 0 2px;
-        display: flex; align-items: center;
+    .sem-card-name {
+        font-size:12px; font-weight:700; color:#1f3d2b;
+        text-transform:uppercase; letter-spacing:.3px; line-height:1.15;
+    }
+    .sem-bar {
+        display:flex; height:8px; border-radius:6px; overflow:hidden;
+        background:#eef2f0; margin-bottom:10px;
+    }
+    .sem-bar .sb { display:block; height:100%; }
+    .sb-v { background:#27ae60; } .sb-a { background:#f39c12; } .sb-r { background:#e74c3c; }
+    .sb-empty { background:#e2e8e5; }
+    .sem-chips { display:flex; gap:6px; }
+    .sem-chips .chip {
+        flex:1; text-align:center; font-weight:800; font-size:14px;
+        border-radius:8px; padding:5px 0; color:#fff; line-height:1.1;
+    }
+    .chip-v { background:#27ae60; } .chip-a { background:#f39c12; } .chip-r { background:#e74c3c; }
+    .sem-card-foot {
+        margin-top:8px; font-size:10.5px; color:#7c8a82; text-align:center;
     }
     .sem-kpi-row {
         display: flex; gap: 16px; margin: 16px 0;
@@ -493,25 +512,41 @@ def _css_semaforo():
 
 
 def _render_pipeline_html(pipeline):
-    """Genera el HTML del pipeline visual."""
-    html = '<div class="sem-pipeline">'
-    for i, s in enumerate(STAGES):
-        k = s["key"]
-        data = pipeline.get(k, {"verde": 0, "ambar": 0, "rojo": 0, "total": 0})
-        if i > 0:
-            html += '<div class="sem-arrow">&#10132;</div>'
-        html += f'''
-        <div class="sem-stage">
-            <div class="sem-stage-num">{s["emoji"]} Etapa {s["icon"]}</div>
-            <div class="sem-stage-label">{s["label"]}</div>
-            <div class="sem-badges">
-                <span class="sem-badge sem-badge-v">{data["verde"]}</span>
-                <span class="sem-badge sem-badge-a">{data["ambar"]}</span>
-                <span class="sem-badge sem-badge-r">{data["rojo"]}</span>
-            </div>
-        </div>'''
-    html += '</div>'
-    return html
+    """Grid de 7 tarjetas por etapa: barra de proporción + chips V/Á/R +
+    conformes. El acento del encabezado refleja el peor estado activo."""
+    cards = []
+    for s in STAGES:
+        d = pipeline.get(s["key"], {"verde": 0, "ambar": 0, "rojo": 0,
+                                    "conforme": 0, "excluido": 0, "total": 0})
+        v, a, r = d["verde"], d["ambar"], d["rojo"]
+        conf = d.get("conforme", 0)
+        tot = v + a + r
+        if tot > 0:
+            pv, pa, pr = 100 * v / tot, 100 * a / tot, 100 * r / tot
+            bar = (f'<span class="sb sb-v" style="width:{pv:.2f}%"></span>'
+                   f'<span class="sb sb-a" style="width:{pa:.2f}%"></span>'
+                   f'<span class="sb sb-r" style="width:{pr:.2f}%"></span>')
+            foot = f'{tot:,} en proceso · {conf:,} conformes'
+        else:
+            bar = '<span class="sb sb-empty" style="width:100%"></span>'
+            foot = f'sin alertas · {conf:,} conformes'
+        accent = ("#e74c3c" if r > 0 else "#f39c12" if a > 0
+                  else "#27ae60" if v > 0 else "#cbd5e1")
+        cards.append(f'''
+        <div class="sem-card">
+          <div class="sem-card-head" style="--accent:{accent}">
+            <span class="sem-card-num">{s["icon"]}</span>
+            <span class="sem-card-name">{s["label"]}</span>
+          </div>
+          <div class="sem-bar">{bar}</div>
+          <div class="sem-chips">
+            <span class="chip chip-v" title="En plazo">{v:,}</span>
+            <span class="chip chip-a" title="En riesgo">{a:,}</span>
+            <span class="chip chip-r" title="Vencidos">{r:,}</span>
+          </div>
+          <div class="sem-card-foot">{foot}</div>
+        </div>''')
+    return '<div class="sem-grid">' + "".join(cards) + '</div>'
 
 
 def _render_kpis_html(kpis):
@@ -604,9 +639,30 @@ en las 7 etapas** sobre las 12,914 filas del corte (ver `tools/reconciliar_semaf
         )
         return
 
+    # ── Fecha de corte (equivalente a la celda "FECHA DE REPORTE" del Excel) ──
+    col_fc, col_info = st.columns([1, 2.4])
+    with col_fc:
+        corte_sel = st.date_input(
+            "Fecha de corte",
+            value=pd.Timestamp.now().date(),
+            format="DD/MM/YYYY",
+            help="Congela el cálculo a una fecha, igual que la celda "
+                 "'FECHA DE REPORTE' del Excel. Para reproducir un R1 exacto, "
+                 "ponla en la misma fecha de corte de ese reporte.",
+            key="sem_fecha_corte")
+    today = pd.Timestamp(corte_sel).normalize()
+    with col_info:
+        st.markdown(
+            f'<div class="sem-corte-info"><span class="ms">event</span>'
+            f'<div><b>{len(df):,} avisos</b> al corte '
+            f'<b>{today.strftime("%d/%m/%Y")}</b><br>'
+            f'<span>Días calendario en etapas 1-6 · días hábiles en etapa 7 '
+            f'(Pago) · idéntico al Excel oficial</span></div></div>',
+            unsafe_allow_html=True)
+
     # ── Cálculo ──
-    today = pd.Timestamp.now().normalize()
-    _ck = (datos.get("fecha_corte", ""), datos.get("total_avisos", 0))
+    _ck = (datos.get("fecha_corte", ""), datos.get("total_avisos", 0),
+           today.strftime("%Y-%m-%d"))
     df_sem = compute_semaforo(df, today, cache_key=_ck)
     pipeline = get_pipeline_summary(df_sem)
     kpis = get_kpi_summary(df_sem)
@@ -614,8 +670,11 @@ en las 7 etapas** sobre las 12,914 filas del corte (ver `tools/reconciliar_semaf
     # ── KPIs ──
     st.markdown(_render_kpis_html(kpis), unsafe_allow_html=True)
 
-    # ── Pipeline visual ──
-    st.markdown("#### Pipeline de Procesos")
+    # ── Estado por etapa (conteo INDEPENDIENTE por etapa = hoja R1 del Excel) ──
+    st.markdown("#### Estado por Etapa "
+                "<span style='font-size:12px;font-weight:400;color:#7c8a82'>"
+                "— conteo independiente, coincide con R1 del Excel</span>",
+                unsafe_allow_html=True)
     st.markdown(_render_pipeline_html(pipeline), unsafe_allow_html=True)
 
     # ── Diagrama Sankey ──
@@ -712,12 +771,16 @@ en las 7 etapas** sobre las 12,914 filas del corte (ver `tools/reconciliar_semaf
         if p["total"] == 0:
             continue
 
-        with st.expander(f'{s["emoji"]} {s["label"]} — {p["total"]} alertas '
-                         f'(🟢{p["verde"]} 🟡{p["ambar"]} 🔴{p["rojo"]})'):
-            sub = df_sem[df_sem["SEM_ETAPA"] == k]
+        # Conteo INDEPENDIENTE de esta etapa (consistente con las tarjetas/R1)
+        sem_col = STAGE_SEM_COL[k]
+        alert_col = "ALERTA_" + sem_col.split("_")[1]
+        vals = pd.to_numeric(df_sem[sem_col], errors="coerce")
+        sub = df_sem[vals.isin([1, 2, 3])]      # avisos con alerta activa aquí
 
-            if "DEPARTAMENTO" in sub.columns:
-                top_rojo = (sub[sub["SEM_ALERTA"] == "rojo"]
+        with st.expander(f'{s["emoji"]} {s["label"]} — {p["total"]:,} alertas '
+                         f'(🟢{p["verde"]:,} 🟡{p["ambar"]:,} 🔴{p["rojo"]:,})'):
+            if "DEPARTAMENTO" in df_sem.columns:
+                top_rojo = (df_sem[vals == 3]
                             .groupby("DEPARTAMENTO").size()
                             .sort_values(ascending=False).head(5))
                 if not top_rojo.empty:
@@ -734,8 +797,12 @@ en las 7 etapas** sobre las 12,914 filas del corte (ver `tools/reconciliar_semaf
                     for depto, cnt in top_total.items():
                         st.markdown(f"&nbsp;&nbsp;&nbsp;**{depto}**: {cnt} avisos")
 
-            avg_days = sub["SEM_DIAS"].mean()
-            st.markdown(f"**Promedio de días en esta etapa:** {avg_days:.1f} días")
+            # Promedio de días de ESTA etapa (extraído del texto "(N días)")
+            dias = (df_sem.loc[sub.index, alert_col].astype(str)
+                    .str.extract(r"\((-?\d+)\s*d", expand=False))
+            dias = pd.to_numeric(dias, errors="coerce")
+            if dias.notna().any():
+                st.markdown(f"**Promedio de días en esta etapa:** {dias.mean():.1f} días")
 
     # ── Exportar ──
     st.divider()
