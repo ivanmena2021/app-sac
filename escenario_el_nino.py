@@ -15,9 +15,19 @@ Metodología (toda en hectáreas; monto = ha × S/1000, tasa 2026):
 """
 import os
 import json
+import unicodedata
 
 import pandas as pd
 import streamlit as st
+
+
+def _keynorm(*parts):
+    out = []
+    for p in parts:
+        s = "".join(c for c in unicodedata.normalize("NFD", str(p))
+                    if unicodedata.category(c) != "Mn")
+        out.append(" ".join(s.upper().split()))
+    return "|".join(out)
 
 try:
     _cache = st.cache_data
@@ -42,6 +52,24 @@ def _load():
     if not os.path.exists(_JSON):
         return None
     with open(_JSON, encoding="utf-8") as f:
+        return json.load(f)
+
+
+@_cache(show_spinner=False)
+def _load_sector_metrics():
+    path = os.path.join(os.path.dirname(__file__), "static_data", "escenario_sectores.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+@_cache(show_spinner=False)
+def _load_dep_geojson(fname):
+    path = os.path.join(os.path.dirname(__file__), "static_data", "sectores", fname)
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -242,6 +270,47 @@ def _tabla_departamentos(d):
                                 "Monto S/": st.column_config.NumberColumn(format="S/ %d")})
 
 
+def _mapa_sector(d):
+    try:
+        import plotly.express as px
+    except Exception:
+        return
+    deps = sorted(set(x["departamento"] for x in d["por_departamento"]))
+    default = deps.index("AYACUCHO") if "AYACUCHO" in deps else 0
+    sel = st.selectbox("Departamento", deps, index=default, key="esc_sec_dep",
+                       format_func=lambda s: s.title())
+    fname = _keynorm(sel).replace(" ", "_") + ".geojson"
+    gj = _load_dep_geojson(fname)
+    if gj is None:
+        st.info("Sin geometría de sectores para este departamento.")
+        return
+    metrics = _load_sector_metrics()
+    rows = []
+    for f in gj["features"]:
+        k = f["properties"].get("key", "")
+        m = metrics.get(k)
+        rows.append({"key": k, "Sector": f["properties"].get("NOM_SE", "").title(),
+                     "Distrito": f["properties"].get("NOMBDIST", "").title(),
+                     "ha": m["ha"] if m else 0, "avisos": m["avisos"] if m else 0})
+    dfm = pd.DataFrame(rows)
+    con_datos = int((dfm["ha"] > 0).sum())
+    fig = px.choropleth(
+        dfm, geojson=gj, locations="key", featureidkey="properties.key",
+        color="ha", color_continuous_scale="YlOrRd",
+        hover_name="Sector",
+        hover_data={"key": False, "ha": ":,", "avisos": ":,", "Distrito": True},
+        labels={"ha": "Ha indemnizadas"})
+    fig.update_geos(fitbounds="locations", visible=False, bgcolor="rgba(0,0,0,0)")
+    fig.update_traces(marker_line_width=0.2, marker_line_color="#fff")
+    fig.update_layout(margin=dict(l=0, r=0, t=8, b=0), height=560,
+                      paper_bgcolor="rgba(0,0,0,0)",
+                      coloraxis_colorbar=dict(title="Ha indemn.", thickness=14, len=0.7))
+    st.plotly_chart(fig, use_container_width=True, key="esc_sec_map")
+    st.caption(f"{con_datos} de {len(dfm)} sectores de {sel.title()} con pérdida histórica. "
+               f"Color = hectáreas indemnizadas (envolvente). Los sectores en blanco no "
+               f"registraron siniestros indemnizables en 2021-2025.")
+
+
 def _tabla_sectores(d):
     rows = [{"Departamento": s["departamento"].title(), "Provincia": s["provincia"].title(),
              "Distrito": s["distrito"].title(), "Sector": s["sector"],
@@ -390,6 +459,11 @@ def render_escenario():
     with tabs[2]:
         _bars_cultivo(d)
     with tabs[3]:
+        st.markdown("**Mapa de sectores estadísticos** — la unidad donde dispara el "
+                    "índice del SAC. Elige un departamento para ver dónde se concentró "
+                    "la pérdida histórica.")
+        _mapa_sector(d)
+        st.markdown("**Top 50 sectores críticos a nivel nacional**")
         _tabla_sectores(d)
     with tabs[4]:
         _exposicion(d)
