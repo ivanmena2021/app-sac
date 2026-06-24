@@ -11,6 +11,7 @@
   "tasa_2026": 1000.0,
   "peor_ano": "2024-2025",
   "excluye": "2020-2021 (superficie no comparable)",
+  "region_metodo": "Shock El Niño clasificado por región natural del SECTOR (REG_NAT_LA del shape MIDAGRI; COSTA ≈ <1000 msnm, validado con elevación del centroide), no por departamento.",
   "nota": "Escenario de stress sobre 4 campañas (2021-2025). Cada valor de hectáreas es un máximo histórico observado (envolvente por celda territorio×sector×siniestro×cultivo). Monto = ha × S/1000. No es un pronóstico."
  },
  "exposicion": {
@@ -41,42 +42,50 @@
    "monto": 51276025
   },
   "shock_el_nino": {
-   "ha": 89606,
-   "monto": 89605936,
+   "ha": 54362,
+   "monto": 54362260,
    "costa_lluvia": {
-    "ha": 43223,
-    "monto": 43223281
+    "ha": 9115,
+    "monto": 9114831
    },
    "sierra_seq_hel": {
-    "ha": 46383,
-    "monto": 46382655
+    "ha": 45247,
+    "monto": 45247428
    }
   },
   "campana_el_nino": {
-   "monto": 140881961
+   "monto": 105638284
   },
   "stress_costero": {
-   "supuesto": "30% de siniestralidad en costa norte (anclado en Tumbes 44%/Ica 59% ya observados)",
-   "ha": 135835,
-   "monto": 135835305,
+   "supuesto": "30% de siniestralidad sobre la exposición costera (sectores de región natural COSTA, ≈<1000 msnm) de la costa norte; anclado en Tumbes 44%/Ica 59% observados",
+   "ha": 103146,
+   "monto": 103146058,
    "detalle": {
     "PIURA": {
      "ha_asegurada": 223818,
-     "ha_stress": 67146,
-     "monto": 67145505
+     "frac_costa": 0.82,
+     "ha_costa": 183083,
+     "ha_stress": 54925,
+     "monto": 54925023
     },
     "LAMBAYEQUE": {
      "ha_asegurada": 112331,
-     "ha_stress": 33699,
-     "monto": 33699300
+     "frac_costa": 0.95,
+     "ha_costa": 106827,
+     "ha_stress": 32048,
+     "monto": 32048034
     },
     "LA LIBERTAD": {
      "ha_asegurada": 108333,
-     "ha_stress": 32500,
-     "monto": 32499999
+     "frac_costa": 0.42,
+     "ha_costa": 45608,
+     "ha_stress": 13682,
+     "monto": 13682500
     },
     "TUMBES": {
      "ha_asegurada": 8302,
+     "frac_costa": 1.0,
+     "ha_costa": 8302,
      "ha_stress": 2491,
      "monto": 2490501
     }
@@ -90,7 +99,7 @@
    "ha_asegurada": 87307,
    "ha_envolvente": 28282,
    "monto_envolvente": 28282273,
-   "ha_shock": 11862,
+   "ha_shock": 7156,
    "siniestralidad": 32.4,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "MAIZ AMILACEO"
@@ -101,7 +110,7 @@
    "ha_asegurada": 86887,
    "ha_envolvente": 26970,
    "monto_envolvente": 26969997,
-   "ha_shock": 9534,
+   "ha_shock": 7300,
    "siniestralidad": 31.0,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "MAIZ AMILACEO"
@@ -112,7 +121,7 @@
    "ha_asegurada": 129257,
    "ha_envolvente": 24910,
    "monto_envolvente": 24910180,
-   "ha_shock": 17794,
+   "ha_shock": 10966,
    "siniestralidad": 19.3,
    "top_peligro": "HELADA",
    "top_cultivo": "AVENA FORRAJERA"
@@ -123,7 +132,7 @@
    "ha_asegurada": 89522,
    "ha_envolvente": 17537,
    "monto_envolvente": 17537083,
-   "ha_shock": 8327,
+   "ha_shock": 6847,
    "siniestralidad": 19.6,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "MAIZ AMILACEO"
@@ -134,7 +143,7 @@
    "ha_asegurada": 156250,
    "ha_envolvente": 13318,
    "monto_envolvente": 13317692,
-   "ha_shock": 6726,
+   "ha_shock": 4723,
    "siniestralidad": 8.5,
    "top_peligro": "GRANIZO",
    "top_cultivo": "MAIZ AMILACEO"
@@ -145,7 +154,7 @@
    "ha_asegurada": 98684,
    "ha_envolvente": 7705,
    "monto_envolvente": 7704788,
-   "ha_shock": 2461,
+   "ha_shock": 1960,
    "siniestralidad": 7.8,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "PAPA"
@@ -156,7 +165,7 @@
    "ha_asegurada": 27439,
    "ha_envolvente": 7192,
    "monto_envolvente": 7192218,
-   "ha_shock": 4399,
+   "ha_shock": 1426,
    "siniestralidad": 26.2,
    "top_peligro": "SEQUIA",
    "top_cultivo": "CAFE"
@@ -167,7 +176,7 @@
    "ha_asegurada": 123851,
    "ha_envolvente": 7044,
    "monto_envolvente": 7043777,
-   "ha_shock": 2154,
+   "ha_shock": 1002,
    "siniestralidad": 5.7,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "PAPA"
@@ -178,7 +187,7 @@
    "ha_asegurada": 125000,
    "ha_envolvente": 7030,
    "monto_envolvente": 7029663,
-   "ha_shock": 4680,
+   "ha_shock": 1498,
    "siniestralidad": 5.6,
    "top_peligro": "INUNDACION",
    "top_cultivo": "PAPA"
@@ -189,7 +198,7 @@
    "ha_asegurada": 223818,
    "ha_envolvente": 5217,
    "monto_envolvente": 5216841,
-   "ha_shock": 1305,
+   "ha_shock": 1033,
    "siniestralidad": 2.3,
    "top_peligro": "SEQUIA",
    "top_cultivo": "ARROZ"
@@ -200,7 +209,7 @@
    "ha_asegurada": 8333,
    "ha_envolvente": 5082,
    "monto_envolvente": 5082485,
-   "ha_shock": 1269,
+   "ha_shock": 1300,
    "siniestralidad": 61.0,
    "top_peligro": "PLAGAS",
    "top_cultivo": "PECANO"
@@ -211,7 +220,7 @@
    "ha_asegurada": 14706,
    "ha_envolvente": 4464,
    "monto_envolvente": 4463916,
-   "ha_shock": 1504,
+   "ha_shock": 172,
    "siniestralidad": 30.4,
    "top_peligro": "SEQUIA",
    "top_cultivo": "CAFE"
@@ -222,7 +231,7 @@
    "ha_asegurada": 72917,
    "ha_envolvente": 4396,
    "monto_envolvente": 4395669,
-   "ha_shock": 1748,
+   "ha_shock": 1227,
    "siniestralidad": 6.0,
    "top_peligro": "HUAYCO",
    "top_cultivo": "PALTO"
@@ -244,7 +253,7 @@
    "ha_asegurada": null,
    "ha_envolvente": 3619,
    "monto_envolvente": 3618935,
-   "ha_shock": 1311,
+   "ha_shock": 105,
    "siniestralidad": null,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "PAPA"
@@ -255,7 +264,7 @@
    "ha_asegurada": 45000,
    "ha_envolvente": 3470,
    "monto_envolvente": 3470079,
-   "ha_shock": 1213,
+   "ha_shock": 822,
    "siniestralidad": 7.7,
    "top_peligro": "ALTAS_TEMPERATURAS",
    "top_cultivo": "OLIVO"
@@ -266,7 +275,7 @@
    "ha_asegurada": 108333,
    "ha_envolvente": 2928,
    "monto_envolvente": 2927542,
-   "ha_shock": 627,
+   "ha_shock": 951,
    "siniestralidad": 2.7,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "PAPA"
@@ -277,7 +286,7 @@
    "ha_asegurada": 82386,
    "ha_envolvente": 2620,
    "monto_envolvente": 2620004,
-   "ha_shock": 2471,
+   "ha_shock": 0,
    "siniestralidad": 3.2,
    "top_peligro": "INUNDACION",
    "top_cultivo": "PLATANO"
@@ -288,7 +297,7 @@
    "ha_asegurada": 117188,
    "ha_envolvente": 2572,
    "monto_envolvente": 2571674,
-   "ha_shock": 1834,
+   "ha_shock": 0,
    "siniestralidad": 2.2,
    "top_peligro": "INUNDACION",
    "top_cultivo": "PLATANO"
@@ -299,7 +308,7 @@
    "ha_asegurada": 166667,
    "ha_envolvente": 2078,
    "monto_envolvente": 2077752,
-   "ha_shock": 889,
+   "ha_shock": 0,
    "siniestralidad": 1.2,
    "top_peligro": "SEQUIA",
    "top_cultivo": "MAÍZ AMARILLO DURO"
@@ -310,7 +319,7 @@
    "ha_asegurada": null,
    "ha_envolvente": 1578,
    "monto_envolvente": 1577671,
-   "ha_shock": 1032,
+   "ha_shock": 15,
    "siniestralidad": null,
    "top_peligro": "SEQUIA",
    "top_cultivo": "MAIZ AMARILLO DURO"
@@ -321,7 +330,7 @@
    "ha_asegurada": 18625,
    "ha_envolvente": 1575,
    "monto_envolvente": 1574997,
-   "ha_shock": 993,
+   "ha_shock": 0,
    "siniestralidad": 8.5,
    "top_peligro": "INUNDACION",
    "top_cultivo": "PLATANO"
@@ -332,7 +341,7 @@
    "ha_asegurada": 76923,
    "ha_envolvente": 1540,
    "monto_envolvente": 1539530,
-   "ha_shock": 623,
+   "ha_shock": 545,
    "siniestralidad": 2.0,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "PAPA"
@@ -343,7 +352,7 @@
    "ha_asegurada": 5814,
    "ha_envolvente": 1537,
    "monto_envolvente": 1536802,
-   "ha_shock": 89,
+   "ha_shock": 652,
    "siniestralidad": 26.4,
    "top_peligro": "HELADA",
    "top_cultivo": "ALFALFA"
@@ -354,7 +363,7 @@
    "ha_asegurada": 112331,
    "ha_envolvente": 1348,
    "monto_envolvente": 1347997,
-   "ha_shock": 915,
+   "ha_shock": 820,
    "siniestralidad": 1.2,
    "top_peligro": "INUNDACION",
    "top_cultivo": "MAIZ AMARILLO DURO"
@@ -365,7 +374,7 @@
    "ha_asegurada": 16447,
    "ha_envolvente": 464,
    "monto_envolvente": 463749,
-   "ha_shock": 50,
+   "ha_shock": 47,
    "siniestralidad": 2.8,
    "top_peligro": "ALTAS_TEMPERATURAS",
    "top_cultivo": "OLIVO"
@@ -1172,7 +1181,7 @@
    "ha_asegurada": 223818,
    "ha_envolvente": 5217,
    "monto_envolvente": 5216841,
-   "ha_shock": 1305,
+   "ha_shock": 1033,
    "siniestralidad": 2.3,
    "top_peligro": "SEQUIA",
    "top_cultivo": "ARROZ"
@@ -1183,7 +1192,7 @@
    "ha_asegurada": 166667,
    "ha_envolvente": 2078,
    "monto_envolvente": 2077752,
-   "ha_shock": 889,
+   "ha_shock": 0,
    "siniestralidad": 1.2,
    "top_peligro": "SEQUIA",
    "top_cultivo": "MAÍZ AMARILLO DURO"
@@ -1194,7 +1203,7 @@
    "ha_asegurada": 117188,
    "ha_envolvente": 2572,
    "monto_envolvente": 2571674,
-   "ha_shock": 1834,
+   "ha_shock": 0,
    "siniestralidad": 2.2,
    "top_peligro": "INUNDACION",
    "top_cultivo": "PLATANO"
@@ -1205,7 +1214,7 @@
    "ha_asegurada": 112331,
    "ha_envolvente": 1348,
    "monto_envolvente": 1347997,
-   "ha_shock": 915,
+   "ha_shock": 820,
    "siniestralidad": 1.2,
    "top_peligro": "INUNDACION",
    "top_cultivo": "MAIZ AMARILLO DURO"
@@ -1216,7 +1225,7 @@
    "ha_asegurada": 108333,
    "ha_envolvente": 2928,
    "monto_envolvente": 2927542,
-   "ha_shock": 627,
+   "ha_shock": 951,
    "siniestralidad": 2.7,
    "top_peligro": "ENFERMEDADES",
    "top_cultivo": "PAPA"
@@ -1227,7 +1236,7 @@
    "ha_asegurada": 82386,
    "ha_envolvente": 2620,
    "monto_envolvente": 2620004,
-   "ha_shock": 2471,
+   "ha_shock": 0,
    "siniestralidad": 3.2,
    "top_peligro": "INUNDACION",
    "top_cultivo": "PLATANO"
@@ -1238,7 +1247,7 @@
    "ha_asegurada": 72917,
    "ha_envolvente": 4396,
    "monto_envolvente": 4395669,
-   "ha_shock": 1748,
+   "ha_shock": 1227,
    "siniestralidad": 6.0,
    "top_peligro": "HUAYCO",
    "top_cultivo": "PALTO"
@@ -1249,7 +1258,7 @@
    "ha_asegurada": 18625,
    "ha_envolvente": 1575,
    "monto_envolvente": 1574997,
-   "ha_shock": 993,
+   "ha_shock": 0,
    "siniestralidad": 8.5,
    "top_peligro": "INUNDACION",
    "top_cultivo": "PLATANO"
@@ -1260,7 +1269,7 @@
    "ha_asegurada": 16447,
    "ha_envolvente": 464,
    "monto_envolvente": 463749,
-   "ha_shock": 50,
+   "ha_shock": 47,
    "siniestralidad": 2.8,
    "top_peligro": "ALTAS_TEMPERATURAS",
    "top_cultivo": "OLIVO"
