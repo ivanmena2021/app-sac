@@ -135,6 +135,9 @@ def _banda(d):
     band = d["banda_nacional"]
     ref = _ref(d)
     html = '<div class="esc-block">'
+    if "central" in band:
+        html += _bar("Central (año típico)", band["central"]["monto_S1000"], ref, "#9cc",
+                     band["central"].get("desc", ""))
     html += _bar(f"Peor año real ({band['peor_ano_real']['campana']})",
                  band["peor_ano_real"]["monto_S1000"], ref, GRIS)
     html += _bar("Ancla (peor año × depto)", band["ancla"]["monto_S1000"], ref, "#5a9")

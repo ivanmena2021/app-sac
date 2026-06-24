@@ -22,6 +22,11 @@
   "suma_aseg_ha": 1000.0
  },
  "banda_nacional": {
+  "central": {
+   "ha": 49994,
+   "monto_S1000": 49993968,
+   "desc": "media anual de 4 campañas"
+  },
   "peor_ano_real": {
    "campana": "2024-2025",
    "ha": 63498,
