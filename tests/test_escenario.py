@@ -52,3 +52,16 @@ def test_exposicion_y_render(d):
     assert d["exposicion"]["ha_asegurada_total"] > 1_000_000
     assert d["exposicion"]["suma_aseg_ha"] == 1000
     assert hasattr(E, "render_escenario")
+
+
+def test_presupuesto_y_historico(d):
+    pr = d.get("presupuesto"); hist = d.get("historico")
+    assert pr and hist, "falta la sección presupuesto/historico"
+    assert len(hist) == 5
+    # siniestralidad creciente: año típico < El Niño < techo
+    s = pr["siniestralidad"]
+    assert s["central_pct"] < s["elnino_pct"] < s["techo_pct"]
+    # más recursos → más cobertura SAC; y queda una brecha de crédito positiva
+    a = pr["alcance"]
+    assert a["con_130"]["sac_ha"] >= a["solo_80"]["sac_ha"]
+    assert pr["sagro"]["brecha_credito"] > 0
