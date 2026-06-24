@@ -1279,5 +1279,85 @@
    "top_peligro": "ALTAS_TEMPERATURAS",
    "top_cultivo": "OLIVO"
   }
- ]
+ ],
+ "historico": [
+  {
+   "campana": "2020-2021",
+   "avisos": 11866,
+   "indemnizados": 1114,
+   "ha_indemnizada": 66024,
+   "monto": 42915522
+  },
+  {
+   "campana": "2021-2022",
+   "avisos": 7674,
+   "indemnizados": 994,
+   "ha_indemnizada": 27463,
+   "monto": 21970457
+  },
+  {
+   "campana": "2022-2023",
+   "avisos": 16139,
+   "indemnizados": 2688,
+   "ha_indemnizada": 61310,
+   "monto": 49047950
+  },
+  {
+   "campana": "2023-2024",
+   "avisos": 11438,
+   "indemnizados": 3409,
+   "ha_indemnizada": 47705,
+   "monto": 37194430
+  },
+  {
+   "campana": "2024-2025",
+   "avisos": 19229,
+   "indemnizados": 5068,
+   "ha_indemnizada": 63498,
+   "monto": 49682374
+  }
+ ],
+ "presupuesto": {
+  "tasa_ha": 1000.0,
+  "financiamiento_por_campana": 73727430.55,
+  "prima_neta_sin_igv": 62480873.34,
+  "campanas_cubiertas": [
+   "2025-2026",
+   "2026-2027"
+  ],
+  "asignacion_2027_2028": 80000000,
+  "demanda_adicional": 50000000,
+  "tasa_ha_elnino": 47,
+  "siniestralidad": {
+   "central_pct": 80,
+   "elnino_pct": 169,
+   "techo_pct": 302,
+   "central_monto": 49993968,
+   "elnino_monto": 105638284,
+   "techo_monto": 188474158
+  },
+  "alcance": {
+   "solo_80": {
+    "sac_ha": 1700000,
+    "sac_sin_asegurar_ha": 300000,
+    "sagro_cubierto": 0,
+    "sagro_sin_asegurar": 2056000000
+   },
+   "con_130": {
+    "sac_ha": 2000000,
+    "sac_monto": 94117647,
+    "sagro_cofin": 35882353,
+    "sagro_cubierto": 1025210084,
+    "sagro_sin_asegurar": 1030789916
+   }
+  },
+  "sagro": {
+   "cartera_agroperu": 1000000000,
+   "cartera_privada": 1056000000,
+   "cartera_total": 2056000000,
+   "prima_pct": 0.05,
+   "cofin_pct": 0.7,
+   "brecha_credito": 1030789916
+  }
+ }
 }

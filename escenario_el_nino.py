@@ -327,6 +327,82 @@ def _tabla_sectores(d):
     st.caption("Top 50 sectores estadísticos por envolvente histórica — la unidad donde dispara el índice del SAC.")
 
 
+def _presupuesto(d):
+    pr = d.get("presupuesto")
+    hist = d.get("historico")
+    if not pr or not hist:
+        st.info("Datos de presupuesto no disponibles en este escenario.")
+        return
+
+    # ── Histórico ──
+    st.markdown("**Comportamiento histórico del SAC**")
+    st.caption("Cuánto ha indemnizado el SAC por campaña. El seguro paga una suma fija por "
+               "cada hectárea afectada (S/ 1,000/ha en la campaña vigente).")
+    rows = [{"Campaña": h["campana"], "Avisos": h["avisos"], "Indemnizados": h["indemnizados"],
+             "Ha indemnizadas": h["ha_indemnizada"], "Monto S/": h["monto"]} for h in hist]
+    rows.append({"Campaña": "TOTAL", "Avisos": sum(h["avisos"] for h in hist),
+                 "Indemnizados": sum(h["indemnizados"] for h in hist),
+                 "Ha indemnizadas": sum(h["ha_indemnizada"] for h in hist),
+                 "Monto S/": sum(h["monto"] for h in hist)})
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True,
+                 column_config={"Avisos": st.column_config.NumberColumn(format="%d"),
+                                "Indemnizados": st.column_config.NumberColumn(format="%d"),
+                                "Ha indemnizadas": st.column_config.NumberColumn(format="%d"),
+                                "Monto S/": st.column_config.NumberColumn(format="S/ %d")})
+
+    # ── Siniestralidad (didáctico) ──
+    s = pr["siniestralidad"]
+    st.markdown("**Siniestralidad** "
+                "<span style='font-size:12px;font-weight:400;color:#7c8a82'>— cuánto paga "
+                "el seguro vs cuánto cobra (sobre 100% pierde y sube la tasa)</span>",
+                unsafe_allow_html=True)
+    ref = max(s["techo_pct"], 100) * 1.05
+
+    def _sbar(label, pct, color, sub):
+        w = max(2.0, min(100.0, 100 * pct / ref))
+        return (f'<div class="esc-row"><span class="esc-row-l">{label}</span>'
+                f'<div class="esc-track"><div class="esc-fill" style="width:{w:.1f}%;'
+                f'background:{color}"></div></div>'
+                f'<span class="esc-row-v">{pct}%</span></div>'
+                f'<div class="esc-row-sub">{sub}</div>')
+    html = '<div class="esc-block">'
+    html += _sbar("Año típico", s["central_pct"], VERDE, f"indemnización ~{_M(s['central_monto'])}")
+    html += _sbar("Con El Niño", s["elnino_pct"], SIERRA_C, f"indemnización ~{_M(s['elnino_monto'])}")
+    html += _sbar("Techo combinable", s["techo_pct"], ROJO, f"indemnización ~{_M(s['techo_monto'])}")
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
+
+    # ── ¿Para cuánto alcanza? ──
+    a = pr["alcance"]; sg = pr["sagro"]
+    asig = pr["asignacion_2027_2028"]; dem = pr["demanda_adicional"]
+    st.markdown("**¿Para cuánto alcanza el presupuesto?** "
+                "<span style='font-size:12px;font-weight:400;color:#7c8a82'>"
+                "— prioridad SAC, luego SAGRO</span>", unsafe_allow_html=True)
+    html = (
+        '<table class="esc-tabla"><tr><th></th>'
+        f'<th>Solo {_M(asig)}</th><th>{_M(asig)} + {_M(dem)} = {_M(asig+dem)}</th></tr>'
+        f'<tr><td>SAC (meta 2.0M ha)</td><td>{a["solo_80"]["sac_ha"]/1e6:.1f}M ha</td>'
+        f'<td>{a["con_130"]["sac_ha"]/1e6:.1f}M ha (completo)</td></tr>'
+        f'<tr><td>SAGRO (cartera {_M(sg["cartera_total"])})</td><td>sin recursos</td>'
+        f'<td>~{_M(a["con_130"]["sagro_cubierto"])} cofinanciados</td></tr>'
+        f'<tr class="esc-tr-rojo"><td>Se dejaría de asegurar</td>'
+        f'<td>{a["solo_80"]["sac_sin_asegurar_ha"]/1e3:.0f} mil ha + {_M(a["solo_80"]["sagro_sin_asegurar"])} crédito</td>'
+        f'<td>~{_M(a["con_130"]["sagro_sin_asegurar"])} crédito (AgroPerú)</td></tr></table>')
+    st.markdown(html, unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div class="esc-tail"><div class="esc-tail-h"><span class="ms">warning</span> '
+        f'Brecha de aseguramiento</div><div class="esc-tail-b">Aun con la demanda adicional '
+        f'de {_M(dem)}, quedarían <b>~{_M(sg["brecha_credito"])} de crédito agrario sin '
+        f'protección</b> (la cartera del Fondo AgroPerú), con riesgo social, económico y '
+        f'sistémico para miles de productores y el sistema financiero.</div></div>',
+        unsafe_allow_html=True)
+    st.caption("SAGRO: la cartera de crédito agrario se cofinancia a una prima de "
+               f"{int(sg['prima_pct']*100)}% del valor asegurado, con {int(sg['cofin_pct']*100)}% "
+               "de cofinanciamiento del MIDAGRI. Cartera total ~S/ 2,056 M "
+               "(AgroPerú + sistema financiero privado).")
+
+
 def _exposicion(d):
     from shared.charts import apply_theme
     import plotly.graph_objects as go
@@ -392,6 +468,11 @@ def _css():
     .esc-tail-b{font-size:12.5px;color:#2a3b44;line-height:1.6;margin:6px 0 9px;}
     .esc-tchips{display:flex;flex-wrap:wrap;gap:6px;}
     .esc-tchip{background:#fff;border:1px solid #cfe8f5;color:#00657d;border-radius:8px;padding:4px 10px;font-size:11.5px;font-weight:600;}
+    .esc-tabla{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 4px;}
+    .esc-tabla th,.esc-tabla td{border:1px solid #e6ece8;padding:7px 10px;text-align:center;}
+    .esc-tabla th{background:#1f3d2b;color:#fff;font-weight:700;}
+    .esc-tabla td:first-child,.esc-tabla th:first-child{text-align:left;font-weight:600;color:#1f3d2b;}
+    .esc-tr-rojo td{background:#fbeae8;}
     </style>
     """
 
@@ -443,9 +524,11 @@ def render_escenario():
         _banda(d)
 
     st.divider()
-    tabs = st.tabs(["Mapa y departamentos", "Peligros", "Cultivos",
-                    "Sectores críticos", "Exposición vs riesgo"])
+    tabs = st.tabs(["Presupuesto y cobertura", "Mapa y departamentos", "Peligros",
+                    "Cultivos", "Sectores críticos", "Exposición vs riesgo"])
     with tabs[0]:
+        _presupuesto(d)
+    with tabs[1]:
         if _geojson_disponible():
             c1, c2 = st.columns([1.1, 1])
             with c1:
@@ -455,20 +538,20 @@ def render_escenario():
         else:
             _bars_departamento(d)
         _tabla_departamentos(d)
-    with tabs[1]:
+    with tabs[2]:
         _bars_peligro(d)
         st.caption("La sierra sur (sequía/helada) pesa más que las inundaciones: "
                    "para el SAC, El Niño es sobre todo un golpe andino.")
-    with tabs[2]:
-        _bars_cultivo(d)
     with tabs[3]:
+        _bars_cultivo(d)
+    with tabs[4]:
         st.markdown("**Mapa de sectores estadísticos** — la unidad donde dispara el "
                     "índice del SAC. Elige un departamento para ver dónde se concentró "
                     "la pérdida histórica.")
         _mapa_sector(d)
         st.markdown("**Top 50 sectores críticos a nivel nacional**")
         _tabla_sectores(d)
-    with tabs[4]:
+    with tabs[5]:
         _exposicion(d)
 
     with st.expander("Metodología y supuestos", expanded=False):
