@@ -134,11 +134,12 @@ fig.add_trace(go.Bar(
     showlegend=False,
 ))
 
-# Línea de promedio histórico
-avg_hist = np.mean([all_data[c][key] for c in CAMPANAS_HIST])
+# Línea de promedio — incluye la campaña actual (2025-2026 en fase final,
+# decisión 2026-07: sus resultados ya integran el promedio de desempeño).
+avg_hist = np.mean([all_data[c][key] for c in all_camps])
 add_reference_line(
     fig, y=avg_hist, color=PALETTE["danger"],
-    label=f"Promedio histórico: {fmt.format(avg_hist)}",
+    label=f"Promedio (6 campañas): {fmt.format(avg_hist)}",
 )
 
 apply_theme(
@@ -174,10 +175,10 @@ for c in all_camps:
         "Desembolso": f"S/ {d['desembolso']:,.0f}",
     })
 
-# Fila de promedio
-avg = {k: np.mean([all_data[c][k] for c in CAMPANAS_HIST]) for k in ["avisos", "monto", "ha", "desembolso", "prima_neta", "siniestralidad"]}
+# Fila de promedio — incluye la campaña actual (6 campañas)
+avg = {k: np.mean([all_data[c][k] for c in all_camps]) for k in ["avisos", "monto", "ha", "desembolso", "prima_neta", "siniestralidad"]}
 rows.append({
-    "Campaña": "PROMEDIO HISTÓRICO",
+    "Campaña": "PROMEDIO (6 CAMPAÑAS ★)",
     "Avisos": f"{avg['avisos']:,.0f}",
     "Prima Neta": f"S/ {avg['prima_neta']:,.0f}",
     "Indemnización": f"S/ {avg['monto']:,.0f}",
@@ -748,10 +749,11 @@ with st.expander("Comparativo por Departamento — análisis individual", expand
             ),
             showlegend=False,
         ))
-        avg_hist_d = float(np.mean([dept_data[c][key_d] for c in CAMPANAS_HIST])) if CAMPANAS_HIST else 0
+        # Promedio del dept — incluye la campaña actual (6 campañas)
+        avg_hist_d = float(np.mean([dept_data[c][key_d] for c in all_camps])) if all_camps else 0
         add_reference_line(
             fig_d, y=avg_hist_d, color=PALETTE["danger"],
-            label=f"Promedio histórico: {fmt_d.format(avg_hist_d)}",
+            label=f"Promedio (6 campañas): {fmt_d.format(avg_hist_d)}",
         )
         apply_theme(
             fig_d,
@@ -783,12 +785,13 @@ with st.expander("Comparativo por Departamento — análisis individual", expand
                 "Ha Indemnizadas": f"{d['ha']:,.0f}",
                 "Desembolso": f"S/ {d['desembolso']:,.0f}",
             })
+        # Promedio del dept — incluye la campaña actual (6 campañas)
         avg_d = {
-            k: float(np.mean([dept_data[c][k] for c in CAMPANAS_HIST]))
+            k: float(np.mean([dept_data[c][k] for c in all_camps]))
             for k in ["avisos", "indemnizados", "monto", "ha", "desembolso", "prima_neta", "siniestralidad"]
         }
         rows_d.append({
-            "Campaña": "PROMEDIO HISTÓRICO",
+            "Campaña": "PROMEDIO (6 CAMPAÑAS ★)",
             "Avisos": f"{avg_d['avisos']:,.0f}",
             "Indemnizados": f"{avg_d['indemnizados']:,.0f}",
             "Prima Neta": f"S/ {avg_d['prima_neta']:,.0f}" if avg_d["prima_neta"] > 0 else "—",
