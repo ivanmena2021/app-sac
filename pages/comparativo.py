@@ -607,9 +607,10 @@ with st.expander("Evolución Temporal Comparativa — series mensuales", expande
 
 
 
-# H1 fix: sección colapsable para reducir scroll vertical en página
-# de 945 líneas. Por defecto colapsada — se abre con un click.
-with st.expander("Comparativo por Departamento — análisis individual", expanded=False):
+# Comparativo por Departamento: visible por defecto (expanded=True) para que la
+# tabla comparativa esté disponible a nivel departamental, igual que la nacional.
+# Sigue en expander para poder colapsarlo y aliviar el scroll si se desea.
+with st.expander("Comparativo por Departamento — análisis individual", expanded=True):
     # ═══════════════════════════════════════════════════════════════
     # COMPARATIVO POR DEPARTAMENTO — un dept × 6 campañas
     # ═══════════════════════════════════════════════════════════════
