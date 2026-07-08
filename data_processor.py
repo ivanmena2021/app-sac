@@ -251,7 +251,9 @@ def _normalize_midagri(uploaded_bytes):
         cu = str(c).strip().upper()
         if "CAMPAÑA" in cu:
             col_map[c] = "CAMPAÑA"
-        elif "CÓDIGO DE AVISO" in cu or "CODIGO DE AVISO" in cu:
+        elif "AVISO" in cu and ("CODIGO" in cu or "CÓDIGO" in cu):
+            # Los portales renombraron "CODIGO DE AVISO" → "CODIGO AVISO" (sin
+            # "DE"); se acepta cualquier variante con ambas palabras.
             col_map[c] = "CODIGO_AVISO"
         elif cu == "DEPARTAMENTO":
             col_map[c] = "DEPARTAMENTO"
@@ -375,7 +377,9 @@ def _normalize_siniestros(uploaded_bytes):
         cu = str(c).strip().upper()
         if "CAMPAÑA" in cu:
             col_map[c] = "CAMPAÑA"
-        elif "CODIGO DE AVISO" in cu:
+        elif "AVISO" in cu and ("CODIGO" in cu or "CÓDIGO" in cu):
+            # Los portales renombraron "CODIGO DE AVISO" → "CODIGO AVISO" (sin
+            # "DE"); se acepta cualquier variante con ambas palabras.
             col_map[c] = "CODIGO_AVISO"
         elif cu == "DEPARTAMENTO":
             col_map[c] = "DEPARTAMENTO"
