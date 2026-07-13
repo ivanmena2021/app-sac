@@ -321,11 +321,13 @@ def _normalize_midagri(uploaded_bytes):
             col_map[c] = "N_PRODUCTORES"
         elif "CÓDIGO DE PADRÓN" in cu or "CODIGO DE PADRON" in cu:
             col_map[c] = "CODIGO_PADRON"
-        elif "FECHA DE ENVIO" in cu or "FECHA ENVIO" in cu:
+        elif "FECHA" in cu and "ENVIO" in cu:
             col_map[c] = "FECHA_ENVIO_DRAS"
-        elif "FECHA VALIDACI" in cu:
+        elif "FECHA" in cu and "VALIDACI" in cu:
+            # Los portales renombraron a "FECHA DE VALIDACION/CONFORMIDAD DE
+            # PADRON" (con "DE"); match tolerante a la variante.
             col_map[c] = "FECHA_VALIDACION"
-        elif "FECHA DESEMBOLSO" in cu:
+        elif "FECHA" in cu and "DESEMBOLSO" in cu:
             col_map[c] = "FECHA_DESEMBOLSO"
         elif "PRIORIZADO" in cu:
             col_map[c] = "PRIORIZADO"
@@ -447,11 +449,13 @@ def _normalize_siniestros(uploaded_bytes):
             col_map[c] = "N_PRODUCTORES"
         elif "CÓDIGO DE PADRÓN" in cu or "CODIGO DE PADRON" in cu:
             col_map[c] = "CODIGO_PADRON"
-        elif "FECHA ENVIO" in cu:
+        elif "FECHA" in cu and "ENVIO" in cu:
             col_map[c] = "FECHA_ENVIO_DRAS"
-        elif "FECHA VALIDACI" in cu:
+        elif "FECHA" in cu and "VALIDACI" in cu:
+            # Los portales renombraron a "FECHA DE VALIDACION/CONFORMIDAD DE
+            # PADRON" (con "DE"); match tolerante a la variante.
             col_map[c] = "FECHA_VALIDACION"
-        elif "FECHA DESEMBOLSO" in cu:
+        elif "FECHA" in cu and "DESEMBOLSO" in cu:
             col_map[c] = "FECHA_DESEMBOLSO"
         elif "PRIORIZADO" in cu:
             col_map[c] = "PRIORIZADO"
