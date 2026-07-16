@@ -600,7 +600,7 @@ def render_semaforo_tab(datos):
         st.markdown("""
 **El semáforo evalúa cada aviso en 7 etapas independientes del flujo SAC.** Cada etapa tiene su propio nivel de alerta (verde / ámbar / rojo) según el plazo transcurrido. El "Pipeline" cuenta cada etapa de forma independiente (igual que la hoja R1 del Excel); el indicador de "peor etapa" prioriza por aviso.
 
-**Días calendario** en las etapas 1-6; **días hábiles** (sáb+dom y feriados no laborables) en la etapa 7 (Pago).
+**Días calendario** en las etapas 1-6; **días hábiles** (sáb+dom y feriados no laborables) en la etapa 7 (Pago). En todas las etapas el conteo arranca **el día siguiente** a la fecha inicial (la fecha inicial cuenta como día 0).
 
 **Avisos EXCLUIDOS (no entran al semáforo):** OBSERVACIÓN/DUPLICIDAD = REPETIDO, NULO (incl. OBS 03) o SIN COBERTURA (incl. OBS 08).
 
@@ -614,9 +614,11 @@ def render_semaforo_tab(datos):
 | 6 | **Validación** | ≤6 días | 7-15 días | >15 días |
 | 7 | **Pago SAC** (días hábiles) | ≤11 días | 12-15 días | >15 días |
 
-**Nota:** El motor calcula 14 columnas internas (`ALERTA_01..07` + `SEMAFORO_01..07`),
-port fiel de las fórmulas del Excel oficial. Reconciliación fila-a-fila: **100% de match
-en las 7 etapas** sobre las 12,914 filas del corte (ver `tools/reconciliar_semaforo.py`).
+**Nota:** El motor calcula 14 columnas internas (`ALERTA_01..07` + `SEMAFORO_01..07`).
+Etapas 1-6: port fiel de las fórmulas del Excel oficial (reconciliación fila-a-fila 100%).
+Etapa 7 (Pago): desde julio 2026 cuenta los días hábiles **desde el día siguiente a la
+validación** (decisión del equipo SAC; el Excel original contaba el día inicial y mostraba
+un día de más).
         """)
 
     df = datos.get("midagri")
@@ -657,7 +659,7 @@ en las 7 etapas** sobre las 12,914 filas del corte (ver `tools/reconciliar_semaf
             f'<div><b>{len(df):,} avisos</b> al corte '
             f'<b>{today.strftime("%d/%m/%Y")}</b><br>'
             f'<span>Días calendario en etapas 1-6 · días hábiles en etapa 7 '
-            f'(Pago) · idéntico al Excel oficial</span></div></div>',
+            f'(Pago) · conteo desde el día siguiente a la fecha inicial</span></div></div>',
             unsafe_allow_html=True)
 
     # ── Cálculo ──

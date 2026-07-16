@@ -98,3 +98,46 @@ def test_compute_alerts_smoke():
     })
     res = se.compute_alerts(df, today=pd.Timestamp("2026-06-12"))
     assert res is not None
+
+
+# ─── A07 PAGO: regla 2026-07 — días hábiles desde el DÍA SIGUIENTE ───
+def _pago(validacion, hoy, desembolso=None):
+    df = pd.DataFrame({
+        "DICTAMEN": ["INDEMNIZABLE"],
+        "FECHA_VALIDACION": [pd.Timestamp(validacion)],
+        "FECHA_DESEMBOLSO": [pd.Timestamp(desembolso) if desembolso else pd.NaT],
+        "OBSERVACION": [""],
+    })
+    out = se.compute_alerts(df, today=pd.Timestamp(hoy))
+    return int(out["SEMAFORO_07"].iloc[0]), str(out["ALERTA_07"].iloc[0])
+
+
+def test_pago_dia_de_validacion_cuenta_cero():
+    # Validación lunes 2026-06-01, hoy mismo lunes → 0 días (antes: 1)
+    sem, txt = _pago("2026-06-01", "2026-06-01")
+    assert sem == 1 and "(0 días hábiles)" in txt
+
+
+def test_pago_cuenta_desde_dia_siguiente():
+    # Validación lunes 01, hoy martes 02 → 1 día hábil (antes: 2)
+    sem, txt = _pago("2026-06-01", "2026-06-02")
+    assert sem == 1 and "(1 días hábiles)" in txt
+
+
+def test_pago_limite_15_habiles_sigue_ambar():
+    # Validación lun 2026-06-01; 15 hábiles después (sin feriados en el rango
+    # hasta el 22-jun) = lunes 22-jun → aún ámbar (rojo recién con >15)
+    sem, txt = _pago("2026-06-01", "2026-06-22")
+    assert sem == 2 and "(15 días hábiles)" in txt
+
+
+def test_pago_rojo_recien_al_dia_16():
+    # Martes 23-jun = 16 días hábiles desde el día siguiente → ROJA
+    sem, txt = _pago("2026-06-01", "2026-06-23")
+    assert sem == 3 and "(16 días hábiles)" in txt
+
+
+def test_pago_conforme_en_15_habiles():
+    # Pagado exactamente a los 15 hábiles → CONFORME (antes contaba 16 y daba ROJA)
+    sem, txt = _pago("2026-06-01", "2026-07-01", desembolso="2026-06-22")
+    assert sem == 0 and "(15 días hábiles)" in txt

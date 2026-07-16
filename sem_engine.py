@@ -4,17 +4,23 @@ sem_engine.py — Motor del Semáforo de Alertas SAC (7 etapas)
 Port FIEL de las fórmulas Excel del equipo SAC, archivo de referencia:
 "Dashboard_SAC_25-26_..._SEMAFOROS.xlsx", columnas BK..BX de la hoja AVISOS.
 
-Reglas clave (replican el Excel exacto):
-  - Etapas A01..A06 cuentan DÍAS CALENDARIO: MAX(0, INT(fecha2)-INT(fecha1)).
-  - Etapa A07 (PAGO) cuenta DÍAS HÁBILES: NETWORKDAYS.INTL(inicio, fin, 1,
-    feriados) — sábado y domingo no laborables, lista de feriados BZ2:BZ25.
+Reglas clave:
+  - Etapas A01..A06 cuentan DÍAS CALENDARIO: MAX(0, INT(fecha2)-INT(fecha1))
+    (réplica exacta del Excel — el conteo arranca el día siguiente al inicial).
+  - Etapa A07 (PAGO) cuenta DÍAS HÁBILES desde el DÍA SIGUIENTE a la fecha de
+    validación: NETWORKDAYS.INTL(inicio, fin, 1, feriados) - 1, con sábado y
+    domingo no laborables y la lista de feriados BZ2:BZ25.
+    *** DIVERGENCIA DELIBERADA del Excel original (decisión del equipo SAC,
+    2026-07): el Excel usa NETWORKDAYS inclusivo del día inicial, que mostraba
+    un día de más y hacía saltar la alerta un día antes. ***
   - Semáforo numérico por etapa: -1 EXCLUIDO | 0 CONFORME | 1 VERDE |
     2 ÁMBAR | 3 ROJA | NaN (no aplica / sin fecha base).
   - Exclusión transversal (REPETIDO / NULO / SIN COBERTURA) por OBSERVACIÓN
     y por la columna DUPLIC RESULT.
 
-La fidelidad se verifica fila-a-fila contra el Excel (ver
-tools/reconciliar_semaforo.py y tests/test_reconciliacion_semaforo.py).
+La fidelidad de las etapas 1-6 se verifica fila-a-fila contra el Excel; la
+etapa 7 se verifica contra la regla 2026-07 (ver
+tests/test_reconciliacion_semaforo.py — EXP_07 re-baseado).
 """
 import numpy as np
 import pandas as pd
@@ -385,8 +391,14 @@ def alerta_07_pago(C, today, excl, excl_txt):
     is_ind = (AO == "INDEMNIZABLE")
     hasBA, hasBB = BA.notna(), BB.notna()
     today_s = pd.Series(today, index=idx)
-    d_pago = _networkdays_intl(BA, BB, 1); dp = d_pago.astype(str)
-    d_sin = _networkdays_intl(BA, today_s, 1); dsn = d_sin.astype(str)
+    # Regla del equipo SAC (2026-07): los días hábiles se cuentan a partir del
+    # DÍA SIGUIENTE a la fecha de validación (validación lunes → pago lunes =
+    # 0 días). NETWORKDAYS.INTL del Excel original es inclusivo del día inicial
+    # y mostraba un día de más ("16 días" cuando en verdad eran 15), haciendo
+    # saltar la alerta un día antes. Con esto la etapa 7 queda alineada con las
+    # etapas 1-6, que ya contaban desde el día siguiente (INT(fin)-INT(inicio)).
+    d_pago = (_networkdays_intl(BA, BB, 1) - 1).clip(lower=0); dp = d_pago.astype(str)
+    d_sin = (_networkdays_intl(BA, today_s, 1) - 1).clip(lower=0); dsn = d_sin.astype(str)
     conds = [
         excl,
         ~is_ind,
