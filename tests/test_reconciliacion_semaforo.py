@@ -9,6 +9,12 @@ tools/generar_fixture_semaforo.py a partir del Excel oficial; sus columnas
 EXP_01..07 son los semáforos cacheados por el Excel (la verdad). La fecha de
 corte es la del Excel de referencia (celda BY2).
 
+NOTA (2026-07): EXP_07 fue RE-BASEADO con la regla del equipo SAC de contar
+los días hábiles de PAGO desde el DÍA SIGUIENTE a la validación (el Excel
+original usa NETWORKDAYS inclusivo, un día de más). Cambiaron 14 de 341 filas
+(2 ámbar→verde, 1 roja→ámbar, 11 rojas→conforme). EXP_01..06 siguen siendo
+los valores exactos del Excel oficial.
+
 Validación exhaustiva sobre el archivo completo (12,914 filas):
     python tools/reconciliar_semaforo.py "<ruta_xlsx>"
 """
