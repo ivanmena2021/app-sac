@@ -33,15 +33,31 @@ except Exception:  # pragma: no cover
 
 COLS_MINIMAS = ["FECHA_AVISO", "FECHA_ATENCION"]
 
+# Responsable del plazo de cada etapa (definición DSFFA 2026-07):
+# - "aseguradora": obligación CONTRACTUAL de la empresa de seguros.
+# - "dras": la validación del padrón la realizan las DRA / Gobiernos
+#   Regionales — para ellas el seguimiento de la DSFFA es solo a nivel de
+#   RECOMENDACIÓN (no contractual). Separarlos evita mezclar incumplimientos
+#   de naturaleza distinta. Si el flujo se redefine, ajustar aquí.
+RESPONSABLES = {
+    "aseguradora": {"corto": "Aseguradora", "tipo": "obligación contractual",
+                    "tabla": "Aseguradora (contractual)", "color": "#1a5276"},
+    "dras":        {"corto": "DRA / Gob. Regional", "tipo": "solo recomendación",
+                    "tabla": "DRA/GORE (recomendación)", "color": "#7d3c98"},
+}
+
 STAGES = [
-    {"key": "atencion",        "label": "Atención",        "icon": "1", "emoji": "📋"},
-    {"key": "programacion",    "label": "Programación",    "icon": "2", "emoji": "📅"},
-    {"key": "ajuste",          "label": "Ajuste 01",       "icon": "3", "emoji": "🔍"},
-    {"key": "reprogramacion",  "label": "Reprogramación",  "icon": "4", "emoji": "🔄"},
-    {"key": "padron",          "label": "Padrón",          "icon": "5", "emoji": "📝"},
-    {"key": "validacion",      "label": "Validación",      "icon": "6", "emoji": "✅"},
-    {"key": "pago",            "label": "Pago SAC",        "icon": "7", "emoji": "💰"},
+    {"key": "atencion",        "label": "Atención",        "icon": "1", "emoji": "📋", "resp": "aseguradora"},
+    {"key": "programacion",    "label": "Programación",    "icon": "2", "emoji": "📅", "resp": "aseguradora"},
+    {"key": "ajuste",          "label": "Ajuste 01",       "icon": "3", "emoji": "🔍", "resp": "aseguradora"},
+    {"key": "reprogramacion",  "label": "Reprogramación",  "icon": "4", "emoji": "🔄", "resp": "aseguradora"},
+    {"key": "padron",          "label": "Padrón",          "icon": "5", "emoji": "📝", "resp": "aseguradora"},
+    {"key": "validacion",      "label": "Validación",      "icon": "6", "emoji": "✅", "resp": "dras"},
+    {"key": "pago",            "label": "Pago SAC",        "icon": "7", "emoji": "💰", "resp": "aseguradora"},
 ]
+
+# Etapa (key UI) → responsable del plazo
+STAGE_RESP = {s["key"]: s["resp"] for s in STAGES}
 
 # Etapa (key UI) → columna de semáforo del motor (SEMAFORO_01..07).
 STAGE_SEM_COL = {
@@ -171,6 +187,8 @@ def _compute_semaforo_impl(df, today):
     result["SEM_ALERTA"] = sem_alerta
     result["SEM_DIAS"] = sem_dias
     result["SEM_DETALLE"] = sem_detalle
+    # Responsable del plazo de la etapa crítica (aseguradora | dras)
+    result["SEM_RESP"] = sem_etapa.map(STAGE_RESP).fillna("")
 
     return result
 
@@ -200,6 +218,20 @@ def get_pipeline_summary(df_sem):
             "total": verde + ambar + rojo,
         }
     return summary
+
+
+def get_responsable_summary(pipeline):
+    """Agrega el pipeline (conteo independiente por etapa) por RESPONSABLE del
+    plazo: aseguradora (obligación contractual) vs DRA/GORE (recomendación).
+    Mantiene la lógica R1: un aviso puede contar en ambos grupos si tiene
+    alertas activas en etapas de distinto responsable."""
+    out = {k: {"verde": 0, "ambar": 0, "rojo": 0, "total": 0} for k in RESPONSABLES}
+    for s in STAGES:
+        d = pipeline.get(s["key"], {})
+        o = out[s["resp"]]
+        for c in ("verde", "ambar", "rojo", "total"):
+            o[c] += d.get(c, 0)
+    return out
 
 
 def get_kpi_summary(df_sem):
@@ -378,6 +410,17 @@ def export_semaforo_excel(df_sem, pipeline, kpis):
     ws1.cell(row=row_k+4, column=1, value="% Rojo")
     ws1.cell(row=row_k+4, column=2, value=f"{kpis['pct_rojo']}%")
 
+    # Desglose por responsable del plazo (conteo independiente por etapa)
+    resp_sum = get_responsable_summary(pipeline)
+    row_r = row_k + 6
+    ws1.cell(row=row_r, column=1, value="ALERTAS POR RESPONSABLE DEL PLAZO").font = Font(bold=True, size=12)
+    for i, (key, info) in enumerate(RESPONSABLES.items(), 1):
+        d = resp_sum.get(key, {"verde": 0, "ambar": 0, "rojo": 0, "total": 0})
+        ws1.cell(row=row_r + i, column=1,
+                 value=f"{info['corto']} ({info['tipo']})")
+        ws1.cell(row=row_r + i, column=2, value=d["total"])
+        ws1.cell(row=row_r + i, column=3, value=f"Rojas: {d['rojo']:,}")
+
     for c in range(1, 6):
         ws1.column_dimensions[chr(64 + c)].width = 18
 
@@ -386,10 +429,13 @@ def export_semaforo_excel(df_sem, pipeline, kpis):
 
     display_cols = ["CODIGO_AVISO", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
                     "SECTOR_ESTADISTICO", "TIPO_CULTIVO", "EMPRESA",
-                    "TIPO_SINIESTRO", "SEM_ETAPA", "SEM_ALERTA",
+                    "TIPO_SINIESTRO", "SEM_ETAPA", "SEM_RESP", "SEM_ALERTA",
                     "SEM_DIAS", "SEM_DETALLE"]
     available = [c for c in display_cols if c in df_sem.columns]
     df_export = df_sem[df_sem["SEM_ETAPA"] != "completado"][available].copy()
+    if "SEM_RESP" in df_export.columns:
+        df_export["SEM_RESP"] = df_export["SEM_RESP"].map(
+            lambda k: RESPONSABLES.get(k, {}).get("tabla", ""))
 
     col_labels = {
         "CODIGO_AVISO": "Código Aviso", "DEPARTAMENTO": "Departamento",
@@ -397,6 +443,7 @@ def export_semaforo_excel(df_sem, pipeline, kpis):
         "SECTOR_ESTADISTICO": "Sector", "TIPO_CULTIVO": "Cultivo",
         "EMPRESA": "Empresa",
         "TIPO_SINIESTRO": "Tipo Siniestro", "SEM_ETAPA": "Etapa",
+        "SEM_RESP": "Responsable",
         "SEM_ALERTA": "Alerta", "SEM_DIAS": "Días", "SEM_DETALLE": "Detalle"
     }
 
@@ -532,12 +579,15 @@ def _render_pipeline_html(pipeline):
             foot = f'sin alertas · {conf:,} conformes'
         accent = ("#e74c3c" if r > 0 else "#f39c12" if a > 0
                   else "#27ae60" if v > 0 else "#cbd5e1")
+        _resp = RESPONSABLES[s["resp"]]
         cards.append(f'''
         <div class="sem-card">
           <div class="sem-card-head" style="--accent:{accent}">
             <span class="sem-card-num">{s["icon"]}</span>
             <span class="sem-card-name">{s["label"]}</span>
           </div>
+          <div style="font-size:10px;font-weight:600;color:{_resp["color"]};margin:1px 0 3px 2px;">
+            {_resp["corto"]} · {_resp["tipo"]}</div>
           <div class="sem-bar">{bar}</div>
           <div class="sem-chips">
             <span class="chip chip-v" title="En plazo">{v:,}</span>
@@ -547,6 +597,23 @@ def _render_pipeline_html(pipeline):
           <div class="sem-card-foot">{foot}</div>
         </div>''')
     return '<div class="sem-grid">' + "".join(cards) + '</div>'
+
+
+def _render_responsables_html(resp_summary):
+    """Dos tarjetas que separan los incumplimientos por responsable del plazo:
+    aseguradoras (contractual) vs DRA/GORE (recomendación)."""
+    cards = []
+    for key, info in RESPONSABLES.items():
+        d = resp_summary.get(key, {"verde": 0, "ambar": 0, "rojo": 0, "total": 0})
+        cards.append(f'''
+        <div class="sem-kpi" style="border-left-color:{info["color"]}">
+            <div class="sem-kpi-val">{d["total"]:,}</div>
+            <div class="sem-kpi-label">{info["corto"]} — {info["tipo"]}</div>
+            <div style="font-size:12px;margin-top:4px;">
+                🟢 {d["verde"]:,} &nbsp; 🟡 {d["ambar"]:,} &nbsp; 🔴 {d["rojo"]:,}
+            </div>
+        </div>''')
+    return '<div class="sem-kpi-row">' + "".join(cards) + '</div>'
 
 
 def _render_kpis_html(kpis):
@@ -604,15 +671,20 @@ def render_semaforo_tab(datos):
 
 **Avisos EXCLUIDOS (no entran al semáforo):** OBSERVACIÓN/DUPLICIDAD = REPETIDO, NULO (incl. OBS 03) o SIN COBERTURA (incl. OBS 08).
 
-| # | Etapa | Verde | Ámbar | Rojo |
-|---|-------|-------|-------|------|
-| 1 | **Atención** | ≤6 días | 7-10 días | >10 días |
-| 2 | **Programación** | ≤11 días | 12-15 días | >15 días |
-| 3 | **Ajuste 01** | ≤11 días | 12-15 días | >15 días |
-| 4 | **Reprogramación** | reprog. ya pasó / faltan ≤3 | faltan 4-7 días | faltan >7 días |
-| 5 | **Padrón** | ≤15 días | 16-20 días | >20 días |
-| 6 | **Validación** | ≤6 días | 7-15 días | >15 días |
-| 7 | **Pago SAC** (días hábiles) | ≤11 días | 12-15 días | >15 días |
+**Responsable del plazo:** la etapa de **Validación** del padrón corresponde a las
+**DRA / Gobiernos Regionales** (el seguimiento de la DSFFA es a nivel de **recomendación**);
+las demás etapas son **obligación contractual de las aseguradoras**. La app los separa
+para no mezclar incumplimientos de naturaleza distinta.
+
+| # | Etapa | Responsable | Verde | Ámbar | Rojo |
+|---|-------|-------------|-------|-------|------|
+| 1 | **Atención** | Aseguradora | ≤6 días | 7-10 días | >10 días |
+| 2 | **Programación** | Aseguradora | ≤11 días | 12-15 días | >15 días |
+| 3 | **Ajuste 01** | Aseguradora | ≤11 días | 12-15 días | >15 días |
+| 4 | **Reprogramación** | Aseguradora | reprog. ya pasó / faltan ≤3 | faltan 4-7 días | faltan >7 días |
+| 5 | **Padrón** | Aseguradora | ≤15 días | 16-20 días | >20 días |
+| 6 | **Validación** | **DRA / Gob. Regional** | ≤6 días | 7-15 días | >15 días |
+| 7 | **Pago SAC** (días hábiles) | Aseguradora | ≤11 días | 12-15 días | >15 días |
 
 **Nota:** El motor calcula 14 columnas internas (`ALERTA_01..07` + `SEMAFORO_01..07`).
 Etapas 1-6: port fiel de las fórmulas del Excel oficial (reconciliación fila-a-fila 100%).
@@ -679,6 +751,16 @@ un día de más).
                 unsafe_allow_html=True)
     st.markdown(_render_pipeline_html(pipeline), unsafe_allow_html=True)
 
+    # ── Incumplimientos por responsable del plazo ──
+    st.markdown("#### Alertas por Responsable del Plazo "
+                "<span style='font-size:12px;font-weight:400;color:#7c8a82'>"
+                "— la validación del padrón corresponde a las DRA/Gob. Regionales "
+                "(seguimiento a nivel de recomendación); las demás etapas son "
+                "obligación contractual de las aseguradoras</span>",
+                unsafe_allow_html=True)
+    st.markdown(_render_responsables_html(get_responsable_summary(pipeline)),
+                unsafe_allow_html=True)
+
     # ── Diagrama Sankey ──
     try:
         fig_sankey = generate_sankey_figure(df_sem)
@@ -697,7 +779,7 @@ un día de más).
 
     # ── Filtros ──
     st.markdown("#### Filtros")
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
 
     deptos_list = sorted(df_sem["DEPARTAMENTO"].dropna().unique().tolist()) if "DEPARTAMENTO" in df_sem.columns else []
     empresas_list = sorted(df_sem["EMPRESA"].dropna().unique().tolist()) if "EMPRESA" in df_sem.columns else []
@@ -714,6 +796,13 @@ un día de más).
         fil_alerta = st.multiselect("Nivel de Alerta", alertas_opts,
                                      default=alertas_opts, key="sem_fil_alerta",
                                      format_func=lambda x: {"verde": "🟢 Verde", "ambar": "🟡 Ámbar", "rojo": "🔴 Rojo"}[x])
+    with c5:
+        fil_resp = st.multiselect("Responsable", list(RESPONSABLES.keys()),
+                                   key="sem_fil_resp",
+                                   help="Aseguradora = obligación contractual · "
+                                        "DRA/GORE = validación del padrón, "
+                                        "seguimiento a nivel de recomendación",
+                                   format_func=lambda k: RESPONSABLES[k]["corto"])
 
     # Aplicar filtros (sin .copy() innecesario — solo lectura)
     df_fil = df_sem[df_sem["SEM_ETAPA"] != "completado"]
@@ -727,6 +816,8 @@ un día de más).
             df_fil = df_fil[df_fil["SEM_ETAPA"] == stage_key]
     if fil_alerta:
         df_fil = df_fil[df_fil["SEM_ALERTA"].isin(fil_alerta)]
+    if fil_resp:
+        df_fil = df_fil[df_fil["SEM_RESP"].isin(fil_resp)]
 
     st.markdown(f"**{len(df_fil):,} avisos** con alertas activas "
                 f"(de {kpis['total']:,} totales)")
@@ -736,12 +827,16 @@ un día de más).
 
     display_cols = ["CODIGO_AVISO", "DEPARTAMENTO", "PROVINCIA", "DISTRITO",
                     "SECTOR_ESTADISTICO", "TIPO_CULTIVO", "EMPRESA",
-                    "TIPO_SINIESTRO", "SEM_ETAPA", "SEM_ALERTA", "SEM_DIAS", "SEM_DETALLE"]
+                    "TIPO_SINIESTRO", "SEM_ETAPA", "SEM_RESP",
+                    "SEM_ALERTA", "SEM_DIAS", "SEM_DETALLE"]
     available = [c for c in display_cols if c in df_fil.columns]
 
     df_display = df_fil[available].copy()
     df_display["SEM_ETAPA"] = df_display["SEM_ETAPA"].map(
         _STAGE_KEY_TO_LABEL).fillna(df_display["SEM_ETAPA"])
+    if "SEM_RESP" in df_display.columns:
+        df_display["SEM_RESP"] = df_display["SEM_RESP"].map(
+            lambda k: RESPONSABLES.get(k, {}).get("tabla", ""))
 
     rename_map = {
         "CODIGO_AVISO": "Código Aviso", "DEPARTAMENTO": "Departamento",
@@ -749,6 +844,7 @@ un día de más).
         "SECTOR_ESTADISTICO": "Sector", "TIPO_CULTIVO": "Cultivo",
         "EMPRESA": "Empresa",
         "TIPO_SINIESTRO": "Tipo Siniestro", "SEM_ETAPA": "Etapa",
+        "SEM_RESP": "Responsable",
         "SEM_ALERTA": "Alerta", "SEM_DIAS": "Días", "SEM_DETALLE": "Detalle"
     }
     df_display = df_display.rename(columns={k: v for k, v in rename_map.items() if k in df_display.columns})
@@ -779,8 +875,10 @@ un día de más).
         vals = pd.to_numeric(df_sem[sem_col], errors="coerce")
         sub = df_sem[vals.isin([1, 2, 3])]      # avisos con alerta activa aquí
 
+        _r = RESPONSABLES[s["resp"]]
         with st.expander(f'{s["emoji"]} {s["label"]} — {p["total"]:,} alertas '
-                         f'(🟢{p["verde"]:,} 🟡{p["ambar"]:,} 🔴{p["rojo"]:,})'):
+                         f'(🟢{p["verde"]:,} 🟡{p["ambar"]:,} 🔴{p["rojo"]:,}) '
+                         f'· Responsable: {_r["corto"]} ({_r["tipo"]})'):
             if "DEPARTAMENTO" in df_sem.columns:
                 top_rojo = (df_sem[vals == 3]
                             .groupby("DEPARTAMENTO").size()
